@@ -13,7 +13,18 @@ export const SECTIONS = [
 
 export type SectionId = (typeof SECTIONS)[number]['id'];
 
-export function sectionFromHash(hash: string): SectionId {
-  const id = hash.replace(/^#\/?/, '');
-  return SECTIONS.find((s) => s.id === id)?.id ?? 'hoy';
+export interface Route {
+  section: SectionId;
+  /** Resto de la ruta tras la sección: `#/notas/12/editar` → ['12', 'editar']. */
+  params: string[];
+}
+
+export function routeFromHash(hash: string): Route {
+  const [id = '', ...params] = hash.replace(/^#\/?/, '').split('/').filter(Boolean);
+  const section = SECTIONS.find((s) => s.id === id)?.id;
+  return section ? { section, params } : { section: 'hoy', params: [] };
+}
+
+export function navigate(path: string) {
+  window.location.hash = `#/${path}`;
 }

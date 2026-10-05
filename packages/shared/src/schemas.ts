@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { NOTE_KINDS, NOTIFICATION_CHANNELS } from './enums.js';
+import { NOTE_KINDS, NOTIFICATION_CHANNELS, type NoteKind } from './enums.js';
 
 export const HealthResponse = z.object({
   status: z.literal('ok'),
@@ -23,15 +23,77 @@ export function branchNameForTask(jiraKey: string, summary: string, maxSlug = 40
   return `${BRANCH_PREFIX}${jiraKey.toUpperCase()}${slug ? `-${slug}` : ''}`;
 }
 
+/** Clave de tarea de JIRA, p. ej. ABC-123. Se normaliza a mayúsculas. */
+export const JiraKey = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .regex(/^[A-Z][A-Z0-9_]*-\d+$/, 'Clave de JIRA no válida (ej.: ABC-123)');
+
+const noteFields = {
+  kind: z.enum(NOTE_KINDS),
+  title: z.string().trim().min(1, 'El título es obligatorio'),
+  bodyMd: z.string(),
+  url: z.httpUrl().nullish(),
+  urlTitle: z.string().nullish(),
+  pinned: z.boolean(),
+  archived: z.boolean(),
+  tags: z.array(z.string().trim().toLowerCase().min(1)),
+  taskKeys: z.array(JiraKey),
+};
+
 export const NoteInput = z.object({
-  kind: z.enum(NOTE_KINDS).default('note'),
-  title: z.string().min(1),
-  bodyMd: z.string().default(''),
-  url: z.url().optional(),
-  tags: z.array(z.string().min(1)).default([]),
-  taskKeys: z.array(z.string()).default([]),
+  ...noteFields,
+  kind: noteFields.kind.default('note'),
+  bodyMd: noteFields.bodyMd.default(''),
+  pinned: noteFields.pinned.default(false),
+  archived: noteFields.archived.default(false),
+  tags: noteFields.tags.default([]),
+  taskKeys: noteFields.taskKeys.default([]),
 });
-export type NoteInput = z.infer<typeof NoteInput>;
+export type NoteInput = z.input<typeof NoteInput>;
+
+/** Cambios parciales: sin valores por defecto, para no pisar campos que no se envían. */
+export const NoteUpdate = z.object(noteFields).partial();
+export type NoteUpdate = z.input<typeof NoteUpdate>;
+
+export interface NoteTaskLink {
+  key: string;
+  summary: string;
+  /** false mientras la tarea solo existe como clave escrita a mano (aún no sincronizada con JIRA). */
+  synced: boolean;
+}
+
+export interface Note {
+  id: number;
+  kind: NoteKind;
+  title: string;
+  bodyMd: string;
+  url: string | null;
+  urlTitle: string | null;
+  pinned: boolean;
+  archived: boolean;
+  createdAt: string;
+  updatedAt: string;
+  tags: string[];
+  tasks: NoteTaskLink[];
+}
+
+export const NoteListQuery = z.object({
+  q: z.string().trim().optional(),
+  tag: z.string().trim().toLowerCase().optional(),
+  archived: z.stringbool().default(false),
+});
+export type NoteListQuery = z.output<typeof NoteListQuery>;
+
+export interface TagCount {
+  name: string;
+  count: number;
+}
+
+export interface LinkTitleResponse {
+  title: string | null;
+}
 
 export const ReminderInput = z.object({
   title: z.string().min(1),

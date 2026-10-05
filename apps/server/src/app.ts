@@ -1,10 +1,18 @@
 import cors from '@fastify/cors';
 import Fastify from 'fastify';
 import { sql } from 'drizzle-orm';
+import { ZodError } from 'zod';
 import type { HealthResponse } from '@dev-assistant/shared';
 import type { Db } from './db/client.js';
+import { notesRoutes, type NotesRoutesOptions } from './modules/notes/routes.js';
 
-export async function buildApp(db: Db, opts: { logger?: boolean } = {}) {
+export interface BuildAppOptions {
+  logger?: boolean;
+  /** Permite sustituir la descarga de títulos de enlaces en los tests. */
+  fetchTitle?: NotesRoutesOptions['fetchTitle'];
+}
+
+export async function buildApp(db: Db, opts: BuildAppOptions = {}) {
   const app = Fastify({ logger: opts.logger ?? false });
   await app.register(cors, { origin: [/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/] });
 
@@ -18,6 +26,14 @@ export async function buildApp(db: Db, opts: { logger?: boolean } = {}) {
     return { status: 'ok', version: '0.1.0', db: dbStatus };
   });
 
-  // Los módulos (notes, reminders, jira, dev-sessions...) se registran aquí en los hilos 2 a 4.
+  app.setErrorHandler((err, _req, reply) => {
+    if (err instanceof ZodError) {
+      return reply.code(400).send({ error: err.issues.map((i) => i.message).join('; ') });
+    }
+    return reply.send(err);
+  });
+
+  // Módulos (reminders, jira, dev-sessions... se añaden en sus hilos).
+  await app.register(notesRoutes, { db, fetchTitle: opts.fetchTitle });
   return app;
 }

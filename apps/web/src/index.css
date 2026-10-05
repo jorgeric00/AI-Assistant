@@ -54,3 +54,49 @@
     outline-offset: 2px;
   }
 }
+
+/* Texto Markdown de notas (vista de nota y vista previa del editor). */
+@layer components {
+  .markdown {
+    @apply flex max-w-[720px] flex-col gap-3 break-words;
+  }
+  .markdown :where(p, ul, ol, pre, blockquote, table, h1, h2, h3, h4) {
+    @apply m-0;
+  }
+  .markdown :where(ul, ol) {
+    @apply flex flex-col gap-1 pl-5;
+  }
+  .markdown ul {
+    @apply list-disc;
+  }
+  .markdown ol {
+    @apply list-decimal;
+  }
+  .markdown :where(h1, h2) {
+    @apply text-title font-semibold;
+  }
+  .markdown :where(h3, h4) {
+    @apply text-heading font-semibold;
+  }
+  .markdown a {
+    @apply text-info underline-offset-2 hover:underline;
+  }
+  .markdown code {
+    @apply font-mono text-code;
+  }
+  .markdown pre {
+    @apply overflow-x-auto rounded-md border border-line bg-bg p-3 font-mono text-code;
+  }
+  .markdown blockquote {
+    @apply border-l-2 border-line-strong pl-3 text-ink-muted;
+  }
+  .markdown table {
+    @apply border-collapse;
+  }
+  .markdown :where(th, td) {
+    @apply border border-line px-2 py-1 text-left;
+  }
+  .markdown input[type='checkbox'] {
+    @apply mr-2 accent-accent;
+  }
+}
