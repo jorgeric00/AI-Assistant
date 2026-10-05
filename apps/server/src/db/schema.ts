@@ -93,6 +93,10 @@ export const reminderFires = sqliteTable('reminder_fires', {
   channel: text('channel', { enum: ['app', 'teams'] }).notNull(),
   ok: integer('ok', { mode: 'boolean' }).notNull(),
   error: text('error'),
+  /** Momento previsto del aviso que se disparó (para marcarlo como atrasado si llega tarde). */
+  scheduledFor: text('scheduled_for'),
+  /** Cuándo viste o atendiste el aviso en la app; null = pendiente de mostrar. */
+  seenAt: text('seen_at'),
 });
 
 // ── Diario de trabajo (R5, R16) ─────────────────────────────────────────────

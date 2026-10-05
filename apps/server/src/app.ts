@@ -4,7 +4,9 @@ import { sql } from 'drizzle-orm';
 import { ZodError } from 'zod';
 import type { HealthResponse } from '@dev-assistant/shared';
 import type { Db } from './db/client.js';
+import { journalRoutes } from './modules/journal/routes.js';
 import { notesRoutes, type NotesRoutesOptions } from './modules/notes/routes.js';
+import { remindersRoutes } from './modules/reminders/routes.js';
 
 export interface BuildAppOptions {
   logger?: boolean;
@@ -35,5 +37,7 @@ export async function buildApp(db: Db, opts: BuildAppOptions = {}) {
 
   // Módulos (reminders, jira, dev-sessions... se añaden en sus hilos).
   await app.register(notesRoutes, { db, fetchTitle: opts.fetchTitle });
+  await app.register(remindersRoutes, { db });
+  await app.register(journalRoutes, { db });
   return app;
 }

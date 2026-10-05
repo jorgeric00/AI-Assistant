@@ -1,4 +1,17 @@
-import type { LinkTitleResponse, Note, NoteInput, NoteUpdate, TagCount } from '@dev-assistant/shared';
+import type {
+  JournalEntry,
+  JournalEntryInput,
+  LinkTitleResponse,
+  Note,
+  NoteInput,
+  NoteUpdate,
+  Reminder,
+  ReminderAlert,
+  ReminderInput,
+  ReminderUpdate,
+  SnoozeInput,
+  TagCount,
+} from '@dev-assistant/shared';
 
 async function request<T>(method: string, url: string, body?: unknown): Promise<T> {
   const res = await fetch(url, {
@@ -33,6 +46,19 @@ export const api = {
   deleteNote: (id: number) => request<void>('DELETE', `/api/notes/${id}`),
   listTags: () => request<TagCount[]>('GET', '/api/tags'),
   linkTitle: (url: string) => request<LinkTitleResponse>('GET', `/api/link-title?url=${encodeURIComponent(url)}`),
+
+  listReminders: () => request<Reminder[]>('GET', '/api/reminders'),
+  createReminder: (input: ReminderInput) => request<Reminder>('POST', '/api/reminders', input),
+  updateReminder: (id: number, input: ReminderUpdate) => request<Reminder>('PATCH', `/api/reminders/${id}`, input),
+  deleteReminder: (id: number) => request<void>('DELETE', `/api/reminders/${id}`),
+  completeReminder: (id: number) => request<Reminder>('POST', `/api/reminders/${id}/done`),
+  snoozeReminder: (id: number, until: SnoozeInput['until']) => request<Reminder>('POST', `/api/reminders/${id}/snooze`, { until }),
+  listAlerts: () => request<ReminderAlert[]>('GET', '/api/reminder-alerts'),
+  markAlertSeen: (id: number) => request<void>('POST', `/api/reminder-alerts/${id}/seen`),
+
+  listJournal: (date: string) => request<JournalEntry[]>('GET', `/api/journal?date=${date}`),
+  addJournalEntry: (input: JournalEntryInput) => request<JournalEntry>('POST', '/api/journal', input),
+  deleteJournalEntry: (id: number) => request<void>('DELETE', `/api/journal/${id}`),
 };
 
 /** Claves de consulta de React Query; invalidar `notes` refresca listas, notas y etiquetas. */
@@ -41,4 +67,9 @@ export const queryKeys = {
   noteList: (filter: NotesFilter) => ['notes', 'list', filter] as const,
   note: (id: number) => ['notes', 'one', id] as const,
   tags: ['notes', 'tags'] as const,
+  /** Invalidar `reminders` refresca recordatorios y avisos. */
+  reminders: ['reminders'] as const,
+  reminderList: ['reminders', 'list'] as const,
+  alerts: ['reminders', 'alerts'] as const,
+  journal: (date: string) => ['journal', date] as const,
 };

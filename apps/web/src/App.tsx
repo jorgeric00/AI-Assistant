@@ -1,12 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
-import type { HealthResponse, Note } from '@dev-assistant/shared';
+import type { HealthResponse } from '@dev-assistant/shared';
 import { CircleCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { QuickCapture } from './components/QuickCapture';
+import { QuickCapture, type Saved } from './components/QuickCapture';
+import { ReminderAlerts } from './components/ReminderAlerts';
 import { Sidebar } from './components/Sidebar';
 import { HoyPage } from './pages/HoyPage';
 import { PendingPage } from './pages/PendingPage';
+import { DiarioPage } from './pages/diario/DiarioPage';
 import { NotasPage } from './pages/notas/NotasPage';
+import { RecordatoriosPage } from './pages/recordatorios/RecordatoriosPage';
 import { SECTIONS, routeFromHash, type Route } from './sections';
 
 function useHashRoute(): Route {
@@ -22,7 +25,7 @@ function useHashRoute(): Route {
 export function App() {
   const { section, params } = useHashRoute();
   const [captureOpen, setCaptureOpen] = useState(false);
-  const [savedNote, setSavedNote] = useState<Note | null>(null);
+  const [saved, setSaved] = useState<Saved | null>(null);
   const health = useQuery({
     queryKey: ['health'],
     queryFn: async (): Promise<HealthResponse> => {
@@ -45,10 +48,10 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (!savedNote) return;
-    const t = setTimeout(() => setSavedNote(null), 4000);
+    if (!saved) return;
+    const t = setTimeout(() => setSaved(null), 4000);
     return () => clearTimeout(t);
-  }, [savedNote]);
+  }, [saved]);
 
   const current = SECTIONS.find((s) => s.id === section)!;
 
@@ -57,25 +60,37 @@ export function App() {
       <Sidebar current={section} serverOk={health.isError ? false : health.data ? true : undefined} onQuickCapture={() => setCaptureOpen(true)} />
       <main className="min-w-0 flex-[999_1_560px] p-6">
         <div className="mx-auto w-full max-w-[1120px]">
-          {section === 'hoy' ? <HoyPage /> : section === 'notas' ? <NotasPage params={params} /> : <PendingPage title={current.label} />}
+          {section === 'hoy' ? (
+            <HoyPage />
+          ) : section === 'notas' ? (
+            <NotasPage params={params} />
+          ) : section === 'recordatorios' ? (
+            <RecordatoriosPage />
+          ) : section === 'diario' ? (
+            <DiarioPage params={params} />
+          ) : (
+            <PendingPage title={current.label} />
+          )}
         </div>
       </main>
 
       {captureOpen && (
         <QuickCapture
           onClose={() => setCaptureOpen(false)}
-          onSaved={(note) => {
+          onSaved={(result) => {
             setCaptureOpen(false);
-            setSavedNote(note);
+            setSaved(result);
           }}
         />
       )}
 
-      {savedNote && (
-        <div role="status" className="fixed right-6 bottom-6 z-40 flex items-center gap-3 rounded-md border border-line-strong bg-surface-raised px-4 py-3">
+      <ReminderAlerts />
+
+      {saved && (
+        <div role="status" className="fixed bottom-6 left-1/2 z-40 flex -translate-x-1/2 items-center gap-3 rounded-md border border-line-strong bg-surface-raised px-4 py-3">
           <CircleCheck size={16} className="text-success" aria-hidden />
-          <span>{savedNote.kind === 'link' ? 'Enlace guardado' : 'Nota guardada'}</span>
-          <a href={`#/notas/${savedNote.id}`} onClick={() => setSavedNote(null)} className="text-info">
+          <span>{saved.message}</span>
+          <a href={saved.href} onClick={() => setSaved(null)} className="text-info">
             Ver
           </a>
         </div>
