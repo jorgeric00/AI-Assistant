@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { NOTE_KINDS, NOTIFICATION_CHANNELS, type NoteKind } from './enums.js';
+import { NOTE_KINDS, type JournalSource, type NoteKind, type ReminderStatus } from './enums.js';
 
 export const HealthResponse = z.object({
   status: z.literal('ok'),
@@ -95,13 +95,80 @@ export interface LinkTitleResponse {
   title: string | null;
 }
 
-export const ReminderInput = z.object({
-  title: z.string().min(1),
-  body: z.string().optional(),
-  dueAt: z.iso.datetime(),
-  rrule: z.string().optional(),
-  channels: z.enum(NOTIFICATION_CHANNELS).default('app'),
-  noteId: z.number().int().optional(),
-  taskId: z.number().int().optional(),
+// ── Recordatorios (R4, R12) ─────────────────────────────────────────────────
+
+/** Día ISO de la semana: 1 = lunes … 7 = domingo. */
+export const IsoWeekday = z.number().int().min(1).max(7);
+
+export const Repeat = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('none') }),
+  z.object({ kind: z.literal('daily') }),
+  z.object({ kind: z.literal('weekdays') }),
+  z.object({ kind: z.literal('weekly'), days: z.array(IsoWeekday).min(1, 'Elige al menos un día') }),
+]);
+export type Repeat = z.infer<typeof Repeat>;
+
+const reminderFields = {
+  title: z.string().trim().min(1, 'Escribe qué quieres recordar'),
+  body: z.string().nullish(),
+  /** Primera vez que avisa (ISO con zona). En los recurrentes, la primera repetición. */
+  dueAt: z.iso.datetime({ offset: true }),
+  repeat: Repeat,
+  taskKey: JiraKey.nullish(),
+};
+
+export const ReminderInput = z.object({ ...reminderFields, repeat: reminderFields.repeat.default({ kind: 'none' }) });
+export type ReminderInput = z.input<typeof ReminderInput>;
+
+export const ReminderUpdate = z.object(reminderFields).partial();
+export type ReminderUpdate = z.input<typeof ReminderUpdate>;
+
+/** Opciones de "Posponer" (decisión de Jorge): 10 min, 1 hora o mañana a las 9:00. */
+export const SNOOZE_OPTIONS = ['10m', '1h', 'tomorrow'] as const;
+export const SnoozeInput = z.object({ until: z.enum(SNOOZE_OPTIONS) });
+export type SnoozeInput = z.infer<typeof SnoozeInput>;
+
+export interface Reminder {
+  id: number;
+  title: string;
+  body: string | null;
+  /** Próxima vez que toca (en los recurrentes avanza tras cada aviso). */
+  dueAt: string;
+  repeat: Repeat;
+  status: ReminderStatus;
+  nextFireAt: string | null;
+  snoozedUntil: string | null;
+  taskKey: string | null;
+  createdAt: string;
+}
+
+/** Aviso disparado por el planificador que la app aún no te ha mostrado o que no has atendido. */
+export interface ReminderAlert {
+  id: number;
+  reminderId: number;
+  title: string;
+  repeat: Repeat;
+  firedAt: string;
+  scheduledFor: string | null;
+  /** true si se disparó con más de 2 minutos de retraso (p. ej. el ordenador estaba apagado). */
+  late: boolean;
+}
+
+// ── Diario de trabajo (R5) ──────────────────────────────────────────────────
+
+export const IsoDate = z.iso.date();
+
+export const JournalEntryInput = z.object({
+  date: IsoDate,
+  text: z.string().trim().min(1, 'Escribe la entrada'),
 });
-export type ReminderInput = z.infer<typeof ReminderInput>;
+export type JournalEntryInput = z.input<typeof JournalEntryInput>;
+
+export interface JournalEntry {
+  id: number;
+  date: string;
+  source: JournalSource;
+  text: string;
+  taskKey: string | null;
+  createdAt: string;
+}

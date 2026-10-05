@@ -1,23 +1,68 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Note, NoteKind } from '@dev-assistant/shared';
 import { CircleAlert } from 'lucide-react';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { api, queryKeys } from '../api';
 import { LinkTitleHint } from '../pages/notas/NoteEditor';
 import { isHttpUrl, useLinkTitle } from '../pages/notas/useLinkTitle';
+import { ReminderForm } from '../pages/recordatorios/ReminderForm';
+import { Modal } from './Modal';
 import { TagInput } from './TagInput';
 import { TASK_KEY_RE, inputClass, labelClass, parseTaskKeys, primaryButtonClass, secondaryButtonClass } from './fields';
 
-interface Props {
-  onClose: () => void;
-  onSaved: (note: Note) => void;
+export interface Saved {
+  message: string;
+  href: string;
 }
 
-/** Captura rápida (Alt+N): nota o enlace sin salir de la pantalla actual. */
+interface Props {
+  onClose: () => void;
+  onSaved: (saved: Saved) => void;
+}
+
+type CaptureKind = NoteKind | 'reminder';
+
+/** Captura rápida (Alt+N): nota, enlace o recordatorio sin salir de la pantalla actual. */
 export function QuickCapture({ onClose, onSaved }: Props) {
+  const [kind, setKind] = useState<CaptureKind>('note');
+  const kindClass = (active: boolean) =>
+    `h-8 rounded-sm px-3 text-[13px] ${active ? 'bg-surface-raised font-medium text-ink' : 'text-ink-muted hover:text-ink'}`;
+  const tabs: { kind: CaptureKind; label: string }[] = [
+    { kind: 'note', label: 'Nota' },
+    { kind: 'link', label: 'Enlace' },
+    { kind: 'reminder', label: 'Recordatorio' },
+  ];
+
+  return (
+    <Modal labelledBy="captura-titulo" onClose={onClose}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 id="captura-titulo" className="m-0 text-title font-semibold">
+          Captura rápida
+        </h1>
+        <div role="group" aria-label="Tipo" className="flex gap-1 rounded-md border border-line bg-bg p-1">
+          {tabs.map((t) => (
+            <button key={t.kind} type="button" aria-pressed={kind === t.kind} onClick={() => setKind(t.kind)} className={kindClass(kind === t.kind)}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {kind === 'reminder' ? (
+        <ReminderForm onCancel={onClose} onSaved={() => onSaved({ message: 'Recordatorio guardado', href: '#/recordatorios' })} />
+      ) : (
+        <NoteCapture
+          kind={kind}
+          onCancel={onClose}
+          onSaved={(note) => onSaved({ message: note.kind === 'link' ? 'Enlace guardado' : 'Nota guardada', href: `#/notas/${note.id}` })}
+        />
+      )}
+    </Modal>
+  );
+}
+
+function NoteCapture({ kind, onCancel, onSaved }: { kind: NoteKind; onCancel: () => void; onSaved: (note: Note) => void }) {
   const queryClient = useQueryClient();
   const tagsQuery = useQuery({ queryKey: queryKeys.tags, queryFn: api.listTags });
-  const [kind, setKind] = useState<NoteKind>('note');
   const [url, setUrl] = useState('');
   const [title, setTitle] = useState('');
   const [bodyMd, setBodyMd] = useState('');
@@ -25,9 +70,6 @@ export function QuickCapture({ onClose, onSaved }: Props) {
   const [taskText, setTaskText] = useState('');
   const [error, setError] = useState<string | null>(null);
   const linkTitle = useLinkTitle(title, setTitle);
-  const dialogRef = useRef<HTMLFormElement>(null);
-  const previousFocus = useRef<Element | null>(document.activeElement);
-
   const save = useMutation({
     mutationFn: () =>
       api.createNote({
@@ -56,147 +98,90 @@ export function QuickCapture({ onClose, onSaved }: Props) {
     save.mutate();
   };
 
-  // Esc cierra, Ctrl+Enter guarda, y el foco no sale del diálogo con Tab.
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        onClose();
-      } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-        e.preventDefault();
-        submit();
-      } else if (e.key === 'Tab' && dialogRef.current) {
-        const focusables = dialogRef.current.querySelectorAll<HTMLElement>('input, textarea, button:not([disabled])');
-        const first = focusables[0];
-        const last = focusables[focusables.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last?.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first?.focus();
-        }
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  });
-
-  useEffect(() => () => (previousFocus.current as HTMLElement | null)?.focus?.(), []);
-
-  const kindClass = (active: boolean) =>
-    `h-8 rounded-sm px-3 text-[13px] ${active ? 'bg-surface-raised font-medium text-ink' : 'text-ink-muted hover:text-ink'}`;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-bg/75 px-4 pt-[12vh] pb-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <form
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="captura-titulo"
-        onSubmit={submit}
-        className="flex w-full max-w-[640px] flex-col gap-4 rounded-lg border border-line-strong bg-surface p-6"
-      >
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 id="captura-titulo" className="m-0 text-title font-semibold">
-            Captura rápida
-          </h1>
-          <div role="group" aria-label="Tipo" className="flex gap-1 rounded-md border border-line bg-bg p-1">
-            <button type="button" aria-pressed={kind === 'note'} onClick={() => setKind('note')} className={kindClass(kind === 'note')}>
-              Nota
-            </button>
-            <button type="button" aria-pressed={kind === 'link'} onClick={() => setKind('link')} className={kindClass(kind === 'link')}>
-              Enlace
-            </button>
-            <button type="button" aria-pressed="false" disabled title="Llega con los recordatorios" className="h-8 cursor-not-allowed rounded-sm px-3 text-[13px] text-ink-faint">
-              Recordatorio
-            </button>
-          </div>
-        </div>
-
-        {kind === 'link' && (
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="cap-url" className={labelClass}>
-              URL
-            </label>
-            <input
-              id="cap-url"
-              type="url"
-              value={url}
-              placeholder="https://"
-              autoFocus
-              onChange={(e) => setUrl(e.target.value)}
-              onPaste={(e) => linkTitle.lookup(e.clipboardData.getData('text'))}
-              onBlur={() => linkTitle.lookup(url)}
-              className={`${inputClass} font-mono text-code`}
-            />
-            <LinkTitleHint status={linkTitle.status} />
-          </div>
-        )}
-
+    <form onSubmit={submit} className="flex flex-col gap-4">
+      {kind === 'link' && (
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="cap-titulo" className={labelClass}>
-            Título
+          <label htmlFor="cap-url" className={labelClass}>
+            URL
           </label>
-          <input id="cap-titulo" type="text" value={title} autoFocus={kind === 'note'} onChange={(e) => setTitle(e.target.value)} className={inputClass} />
+          <input
+            id="cap-url"
+            type="url"
+            value={url}
+            placeholder="https://"
+            autoFocus
+            onChange={(e) => setUrl(e.target.value)}
+            onPaste={(e) => linkTitle.lookup(e.clipboardData.getData('text'))}
+            onBlur={() => linkTitle.lookup(url)}
+            className={`${inputClass} font-mono text-code`}
+          />
+          <LinkTitleHint status={linkTitle.status} />
         </div>
+      )}
 
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="cap-texto" className={labelClass}>
-            Texto (Markdown)
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="cap-titulo" className={labelClass}>
+          Título
+        </label>
+        <input id="cap-titulo" type="text" value={title} autoFocus={kind === 'note'} onChange={(e) => setTitle(e.target.value)} className={inputClass} />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="cap-texto" className={labelClass}>
+          Texto (Markdown)
+        </label>
+        <textarea
+          id="cap-texto"
+          value={bodyMd}
+          placeholder={kind === 'link' ? 'Por qué te interesa (opcional)' : 'Escribe la nota'}
+          onChange={(e) => setBodyMd(e.target.value)}
+          className="min-h-[120px] resize-y rounded-md border border-line-strong bg-surface-raised px-3 py-2.5 text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none"
+        />
+      </div>
+
+      <div className="flex flex-wrap gap-3">
+        <div className="flex flex-[1_1_200px] flex-col gap-1.5">
+          <label htmlFor="cap-tags" className={labelClass}>
+            Etiquetas
           </label>
-          <textarea
-            id="cap-texto"
-            value={bodyMd}
-            placeholder={kind === 'link' ? 'Por qué te interesa (opcional)' : 'Escribe la nota'}
-            onChange={(e) => setBodyMd(e.target.value)}
-            className="min-h-[120px] resize-y rounded-md border border-line-strong bg-surface-raised px-3 py-2.5 text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none"
+          <TagInput id="cap-tags" value={tags} onChange={setTags} suggestions={tagsQuery.data?.map((t) => t.name)} />
+        </div>
+        <div className="flex flex-[1_1_200px] flex-col gap-1.5">
+          <label htmlFor="cap-tarea" className={labelClass}>
+            Vincular a tarea
+          </label>
+          <input
+            id="cap-tarea"
+            type="text"
+            value={taskText}
+            placeholder="ABC-123"
+            onChange={(e) => setTaskText(e.target.value)}
+            className={`${inputClass} font-mono text-code text-info`}
           />
         </div>
+      </div>
 
-        <div className="flex flex-wrap gap-3">
-          <div className="flex flex-[1_1_200px] flex-col gap-1.5">
-            <label htmlFor="cap-tags" className={labelClass}>
-              Etiquetas
-            </label>
-            <TagInput id="cap-tags" value={tags} onChange={setTags} suggestions={tagsQuery.data?.map((t) => t.name)} />
-          </div>
-          <div className="flex flex-[1_1_200px] flex-col gap-1.5">
-            <label htmlFor="cap-tarea" className={labelClass}>
-              Vincular a tarea
-            </label>
-            <input
-              id="cap-tarea"
-              type="text"
-              value={taskText}
-              placeholder="ABC-123"
-              onChange={(e) => setTaskText(e.target.value)}
-              className={`${inputClass} font-mono text-code text-info`}
-            />
-          </div>
+      {error && (
+        <p role="alert" className="m-0 flex items-center gap-2 text-danger">
+          <CircleAlert size={16} aria-hidden />
+          {error}
+        </p>
+      )}
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <span className="text-small text-ink-faint">
+          <kbd className="font-mono">Esc</kbd> cerrar · <kbd className="font-mono">Ctrl+Enter</kbd> guardar
+        </span>
+        <div className="flex gap-2">
+          <button type="button" onClick={onCancel} className={secondaryButtonClass}>
+            Cancelar
+          </button>
+          <button type="submit" disabled={save.isPending} className={primaryButtonClass}>
+            {save.isPending ? 'Guardando…' : 'Guardar'}
+          </button>
         </div>
-
-        {error && (
-          <p role="alert" className="m-0 flex items-center gap-2 text-danger">
-            <CircleAlert size={16} aria-hidden />
-            {error}
-          </p>
-        )}
-
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <span className="text-small text-ink-faint">
-            <kbd className="font-mono">Esc</kbd> cerrar · <kbd className="font-mono">Ctrl+Enter</kbd> guardar
-          </span>
-          <div className="flex gap-2">
-            <button type="button" onClick={onClose} className={secondaryButtonClass}>
-              Cancelar
-            </button>
-            <button type="submit" disabled={save.isPending} className={primaryButtonClass}>
-              {save.isPending ? 'Guardando…' : 'Guardar'}
-            </button>
-          </div>
-        </div>
-      </form>
-    </div>
+      </div>
+    </form>
   );
 }

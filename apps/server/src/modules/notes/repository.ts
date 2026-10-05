@@ -2,9 +2,7 @@ import { and, desc, eq, inArray, notExists, sql } from 'drizzle-orm';
 import { NoteInput, NoteUpdate, type Note, type NoteListQuery, type TagCount } from '@dev-assistant/shared';
 import type { Db } from '../../db/client.js';
 import { notes, noteTags, noteTasks, tags, tasks } from '../../db/schema.js';
-
-/** Estado con el que se crea una tarea escrita a mano hasta que la sincronización de JIRA la complete. */
-export const UNSYNCED_TASK_STATUS = 'sin_sincronizar';
+import { UNSYNCED_TASK_STATUS, ensureTaskId } from '../tasks/ensure-task.js';
 
 type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
 type NoteRow = typeof notes.$inferSelect;
@@ -142,9 +140,7 @@ export class NotesRepository {
   private setTasks(tx: Tx, noteId: number, keys: string[]) {
     tx.delete(noteTasks).where(eq(noteTasks.noteId, noteId)).run();
     for (const jiraKey of new Set(keys)) {
-      tx.insert(tasks).values({ jiraKey, summary: jiraKey, status: UNSYNCED_TASK_STATUS }).onConflictDoNothing().run();
-      const task = tx.select({ id: tasks.id }).from(tasks).where(eq(tasks.jiraKey, jiraKey)).get()!;
-      tx.insert(noteTasks).values({ noteId, taskId: task.id }).run();
+      tx.insert(noteTasks).values({ noteId, taskId: ensureTaskId(tx, jiraKey) }).run();
     }
   }
 

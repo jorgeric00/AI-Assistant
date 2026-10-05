@@ -23,3 +23,52 @@ export function dayAndTime(iso: string, now = new Date()): string {
   const day = diff === 0 ? 'hoy' : diff === 1 ? 'ayer' : `el ${dayMonth.format(date).replace('.', '')}`;
   return `${day} a las ${time.format(date)}`;
 }
+
+const weekdayDay = new Intl.DateTimeFormat('es-ES', { weekday: 'short', day: 'numeric' });
+const longDate = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+
+/** "10:05". */
+export function hhmm(iso: string | Date): string {
+  return time.format(new Date(iso));
+}
+
+/** Fecha local "YYYY-MM-DD" (la que usa el diario). */
+export function localDate(date = new Date()): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/** "YYYY-MM-DD" → Date a las 00:00 locales. */
+export function parseLocalDate(text: string): Date {
+  const [y, m, d] = text.split('-').map(Number);
+  return new Date(y!, m! - 1, d!);
+}
+
+export function addDays(date: Date, days: number): Date {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+export function capitalize(text: string): string {
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/** "Lunes 5 de octubre". */
+export function longDay(date: Date): string {
+  return capitalize(longDate.format(date).replace(',', ''));
+}
+
+/** "Mié 7 · 10:00" o "12:00" si es hoy. */
+export function whenLabel(iso: string, now = new Date()): string {
+  const date = new Date(iso);
+  if (dayDiff(date, now) === 0) return hhmm(date);
+  return `${capitalize(weekdayDay.format(date).replace('.', '').replace(',', ''))} · ${hhmm(date)}`;
+}
+
+/** Días entre hoy y la fecha (negativo = futuro). */
+export function daysAgo(iso: string, now = new Date()): number {
+  return dayDiff(new Date(iso), now);
+}

@@ -15,6 +15,13 @@
       "when": 1791217509320,
       "tag": "0001_notes_fts",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1791231443347,
+      "tag": "0002_reminder_alerts",
+      "breakpoints": true
     }
   ]
 }
