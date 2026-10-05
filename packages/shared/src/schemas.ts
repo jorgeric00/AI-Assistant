@@ -172,3 +172,37 @@ export interface JournalEntry {
   taskKey: string | null;
   createdAt: string;
 }
+
+// ── IA: resumen para la daily y preguntas sobre las notas ───────────────────
+
+export const DailySummaryInput = z.object({ date: IsoDate });
+export type DailySummaryInput = z.input<typeof DailySummaryInput>;
+
+export interface DailySummary {
+  id: number;
+  date: string;
+  /** Día laborable anterior que se usó como "Ayer". */
+  since: string;
+  contentMd: string;
+  generatedAt: string;
+}
+
+export const AskInput = z.object({
+  question: z.string().trim().min(3, 'Escribe una pregunta').max(500, 'La pregunta es demasiado larga'),
+});
+export type AskInput = z.input<typeof AskInput>;
+
+export interface AskSource {
+  /** Número con el que la respuesta cita la nota: [1], [2]... */
+  ref: number;
+  id: number;
+  title: string;
+  kind: NoteKind;
+  /** true si la respuesta cita esta nota. */
+  cited: boolean;
+}
+
+export interface AskResponse {
+  answer: string;
+  sources: AskSource[];
+}

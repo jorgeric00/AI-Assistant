@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { Clock } from 'lucide-react';
+import { Clock, Sparkles } from 'lucide-react';
 import { api, queryKeys } from '../api';
 import { Card, EmptyState } from '../components/Card';
 import { capitalize, daysAgo, hhmm, localDate } from '../dates';
@@ -17,13 +17,13 @@ export function HoyPage() {
           <h1 className="m-0 text-display font-semibold">Hoy</h1>
           <p className="mt-1 mb-0 text-ink-muted">{capitalize(dateFormatter.format(new Date()))}</p>
         </div>
-        <button
-          type="button"
-          disabled
-          className="h-10 rounded-md border border-line-strong bg-surface-raised px-4 font-medium text-ink disabled:cursor-not-allowed disabled:text-ink-faint"
+        <a
+          href="#/diario/resumen"
+          className="flex h-10 items-center gap-2 rounded-md border border-line-strong bg-surface-raised px-4 font-medium text-ink no-underline hover:border-accent"
         >
+          <Sparkles size={16} strokeWidth={1.5} className="text-accent" aria-hidden />
           Resumen para la daily
-        </button>
+        </a>
       </header>
 
       <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,420px),1fr))] gap-4">

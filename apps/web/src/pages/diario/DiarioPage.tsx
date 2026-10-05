@@ -1,16 +1,32 @@
 import type { JournalEntry } from '@dev-assistant/shared';
 import { ChevronLeft, ChevronRight, GitCommitHorizontal, PenLine, Sparkles, Trash2 } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import { primaryButtonClass } from '../../components/fields';
 import { addDays, hhmm, localDate, longDay, parseLocalDate } from '../../dates';
 import { navigate } from '../../sections';
+import { DailySummaryPanel, useDailySummary } from './DailySummaryPanel';
 import { JournalAddForm } from './JournalAddForm';
 import { useJournal } from './useJournal';
 
-/** Sección "Diario" (diseño: Diario). Ruta `#/diario` u `#/diario/YYYY-MM-DD`. */
+/**
+ * Sección "Diario" (diseño: Diario). Ruta `#/diario` u `#/diario/YYYY-MM-DD`;
+ * `#/diario/resumen` (botón del panel Hoy) abre hoy y genera el resumen si aún no hay uno.
+ */
 export function DiarioPage({ params }: { params: string[] }) {
   const today = localDate();
   const date = params[0] && /^\d{4}-\d{2}-\d{2}$/.test(params[0]) ? params[0] : today;
   const day = parseLocalDate(date);
   const { entries, add, remove } = useJournal(date);
+  const summary = useDailySummary(date);
+
+  const autoGenerate = params[0] === 'resumen';
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (!autoGenerate || autoStarted.current || !summary.summary.isSuccess) return;
+    autoStarted.current = true;
+    navigate('diario');
+    if (!summary.summary.data) summary.generate.mutate();
+  }, [autoGenerate, summary.summary.isSuccess, summary.summary.data, summary.generate]);
 
   const go = (d: Date) => navigate(localDate(d) === today ? 'diario' : `diario/${localDate(d)}`);
   const navButton = 'flex size-8 items-center justify-center rounded-md border border-line-strong text-ink hover:bg-surface-raised';
@@ -35,12 +51,7 @@ export function DiarioPage({ params }: { params: string[] }) {
             )}
           </div>
         </div>
-        <button
-          type="button"
-          disabled
-          title="Llega con la parte de IA"
-          className="flex h-10 cursor-not-allowed items-center gap-2 rounded-md bg-accent px-4 font-semibold text-on-accent opacity-50"
-        >
+        <button type="button" disabled={summary.generate.isPending} onClick={() => summary.generate.mutate()} className={primaryButtonClass}>
           <Sparkles size={16} strokeWidth={2} aria-hidden />
           Resumen para la daily
         </button>
@@ -65,16 +76,7 @@ export function DiarioPage({ params }: { params: string[] }) {
           )}
         </section>
 
-        <aside aria-labelledby="h-resumen" className="flex min-w-0 flex-[1_1_340px] flex-col gap-3 rounded-lg border border-line bg-surface p-5">
-          <h2 id="h-resumen" className="m-0 text-heading font-semibold">
-            Resumen para la daily
-          </h2>
-          <p className="m-0 text-ink-muted">
-            Con el botón "Resumen para la daily", opencode preparará ayer, hoy y bloqueos con las entradas desde el último día laborable. No se envía a
-            ningún sitio: lo copias tú.
-          </p>
-          <p className="m-0 text-small text-ink-faint">Disponible cuando conectemos la IA.</p>
-        </aside>
+        <DailySummaryPanel date={date} state={summary} />
       </div>
     </div>
   );

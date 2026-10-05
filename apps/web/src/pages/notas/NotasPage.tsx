@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { Note } from '@dev-assistant/shared';
-import { ExternalLink, FileText, Link2, MoreHorizontal, Pin, Plus, Search } from 'lucide-react';
+import type { AskResponse, Note } from '@dev-assistant/shared';
+import { ExternalLink, FileText, Link2, MoreHorizontal, Pin, Plus, Search, Sparkles } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { api, queryKeys } from '../../api';
 import { Markdown } from '../../components/Markdown';
@@ -37,17 +37,31 @@ function excerpt(note: Note): string {
   return line ?? '';
 }
 
+type SearchMode = 'texto' | 'pregunta';
+
 function NotesBrowser({ selectedId }: { selectedId?: number }) {
+  const [mode, setMode] = useState<SearchMode>('texto');
   const [search, setSearch] = useState('');
+  const [question, setQuestion] = useState('');
   const [tag, setTag] = useState<string | undefined>();
   const [archived, setArchived] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   const q = useDebounced(search.trim(), 200);
-  const filter = { q: q || undefined, tag, archived };
+  const asking = mode === 'pregunta';
+  // En modo pregunta la lista parte de todas las notas activas y luego muestra las relacionadas.
+  const filter = asking ? {} : { q: q || undefined, tag, archived };
 
   const notes = useQuery({ queryKey: queryKeys.noteList(filter), queryFn: () => api.listNotes(filter), placeholderData: (prev) => prev });
   const tags = useQuery({ queryKey: queryKeys.tags, queryFn: api.listTags });
+  const ask = useMutation({ mutationFn: (text: string) => api.ask(text) });
 
-  const list = notes.data ?? [];
+  const switchMode = (next: SearchMode) => {
+    setMode(next);
+    inputRef.current?.focus();
+  };
+
+  const answer = asking ? ask.data : undefined;
+  const list = answer ? answer.sources.flatMap((s) => notes.data?.find((n) => n.id === s.id) ?? []) : (notes.data ?? []);
   const selected = list.find((n) => n.id === selectedId) ?? (selectedId === undefined ? list[0] : undefined);
 
   const chipClass = (active: boolean) =>
@@ -67,58 +81,81 @@ function NotesBrowser({ selectedId }: { selectedId?: number }) {
         <section aria-label="Lista de notas" className="flex max-w-full min-w-0 flex-[1_1_340px] flex-col gap-3">
           <div className="flex flex-col gap-2">
             <div role="group" aria-label="Tipo de búsqueda" className="flex gap-1 self-start rounded-md border border-line bg-surface p-1">
-              <button type="button" aria-pressed="true" className="h-8 rounded-sm bg-surface-raised px-3 text-[13px] font-medium text-ink">
-                Texto
-              </button>
-              <button
-                type="button"
-                aria-pressed="false"
-                disabled
-                title="Llega con la búsqueda con IA"
-                className="h-8 cursor-not-allowed rounded-sm px-3 text-[13px] text-ink-faint"
-              >
-                Pregunta
-              </button>
-            </div>
-            <div className="relative">
-              <label htmlFor="buscar-notas" className="sr-only">
-                Buscar en notas
-              </label>
-              <Search size={16} strokeWidth={1.5} className="absolute top-3 left-3 text-ink-faint" aria-hidden />
-              <input
-                id="buscar-notas"
-                type="search"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar en notas y enlaces"
-                className="h-10 w-full rounded-md border border-line-strong bg-surface-raised pr-3 pl-9 text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none"
-              />
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              <button type="button" aria-pressed={!tag} onClick={() => setTag(undefined)} className={chipClass(!tag)}>
-                Todas
-              </button>
-              {tags.data?.map((t) => (
-                <button key={t.name} type="button" aria-pressed={tag === t.name} onClick={() => setTag(tag === t.name ? undefined : t.name)} className={chipClass(tag === t.name)}>
-                  {t.name}
+              {(['texto', 'pregunta'] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  aria-pressed={mode === m}
+                  onClick={() => switchMode(m)}
+                  className={`h-8 rounded-sm px-3 text-[13px] ${mode === m ? 'bg-surface-raised font-medium text-ink' : 'text-ink-muted hover:text-ink'}`}
+                >
+                  {m === 'texto' ? 'Texto' : 'Pregunta'}
                 </button>
               ))}
-              <button type="button" aria-pressed={archived} onClick={() => setArchived(!archived)} className={chipClass(archived)}>
-                Archivadas
-              </button>
             </div>
+            <form
+              role="search"
+              className="relative"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (asking && question.trim()) ask.mutate(question.trim());
+              }}
+            >
+              <label htmlFor="buscar-notas" className="sr-only">
+                {asking ? 'Pregunta sobre tus notas' : 'Buscar en notas'}
+              </label>
+              {asking ? (
+                <Sparkles size={16} strokeWidth={1.5} className="absolute top-3 left-3 text-accent" aria-hidden />
+              ) : (
+                <Search size={16} strokeWidth={1.5} className="absolute top-3 left-3 text-ink-faint" aria-hidden />
+              )}
+              <input
+                ref={inputRef}
+                id="buscar-notas"
+                type="search"
+                value={asking ? question : search}
+                onChange={(e) => (asking ? setQuestion(e.target.value) : setSearch(e.target.value))}
+                placeholder={asking ? '¿Cómo se despliega en pre?' : 'Buscar en notas y enlaces'}
+                className="h-10 w-full rounded-md border border-line-strong bg-surface-raised pr-3 pl-9 text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none"
+              />
+            </form>
+            {asking ? (
+              <p className="m-0 text-small text-ink-faint">Pulsa Enter. opencode responde solo con lo que hay en tus notas y enlaces no archivados.</p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                <button type="button" aria-pressed={!tag} onClick={() => setTag(undefined)} className={chipClass(!tag)}>
+                  Todas
+                </button>
+                {tags.data?.map((t) => (
+                  <button
+                    key={t.name}
+                    type="button"
+                    aria-pressed={tag === t.name}
+                    onClick={() => setTag(tag === t.name ? undefined : t.name)}
+                    className={chipClass(tag === t.name)}
+                  >
+                    {t.name}
+                  </button>
+                ))}
+                <button type="button" aria-pressed={archived} onClick={() => setArchived(!archived)} className={chipClass(archived)}>
+                  Archivadas
+                </button>
+              </div>
+            )}
           </div>
+
+          {asking && <AskResult pending={ask.isPending} error={ask.error} answer={answer} />}
 
           {notes.isError ? (
             <p className="m-0 text-danger">No se pudieron cargar las notas.</p>
           ) : notes.isPending ? (
             <p className="m-0 text-ink-muted">Cargando…</p>
-          ) : list.length === 0 ? (
+          ) : asking && (ask.isPending || answer?.sources.length === 0) ? null : list.length === 0 ? (
             <p className="m-0 py-2 text-ink-muted">
               {q || tag ? 'No hay notas que coincidan.' : archived ? 'No hay notas archivadas.' : 'Aún no tienes notas. Crea una con "Nueva nota" o con Alt+N.'}
             </p>
           ) : (
-            <ul className="flex flex-col gap-1">
+            <ul aria-label={answer ? 'Notas relacionadas' : undefined} className="flex flex-col gap-1">
               {list.map((note) => (
                 <li key={note.id}>
                   <NoteListItem note={note} active={note.id === selected?.id} />
@@ -135,6 +172,47 @@ function NotesBrowser({ selectedId }: { selectedId?: number }) {
         )}
       </div>
     </div>
+  );
+}
+
+function AskResult({ pending, error, answer }: { pending: boolean; error: Error | null; answer?: AskResponse }) {
+  if (pending) {
+    return (
+      <p role="status" className="m-0 flex items-center gap-2 rounded-lg border border-line bg-surface p-4 text-ink-muted">
+        <Sparkles size={16} strokeWidth={1.5} className="text-accent" aria-hidden />
+        Pensando…
+      </p>
+    );
+  }
+  if (error) {
+    return (
+      <p role="alert" className="m-0 rounded-lg border border-line bg-surface p-4 text-danger">
+        {error.message}
+      </p>
+    );
+  }
+  if (!answer) return null;
+  const cited = answer.sources.filter((s) => s.cited);
+  return (
+    <section aria-label="Respuesta" className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-4">
+      <span className="flex items-center gap-2 text-small font-medium tracking-[.04em] text-ink-muted uppercase">
+        <Sparkles size={14} strokeWidth={1.5} className="text-accent" aria-hidden />
+        Respuesta
+      </span>
+      <Markdown>{answer.answer}</Markdown>
+      {cited.length > 0 && (
+        <ul className="m-0 flex flex-col gap-1 border-t border-line pt-3 text-small">
+          {cited.map((s) => (
+            <li key={s.id} className="flex gap-2">
+              <span className="font-mono text-ink-faint">[{s.ref}]</span>
+              <a href={`#/notas/${s.id}`} className="text-info">
+                {s.title}
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 

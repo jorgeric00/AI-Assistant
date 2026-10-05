@@ -19,6 +19,28 @@ export function toFtsQuery(text: string): string | null {
   return words.map((w) => `"${w}"*`).join(' ');
 }
 
+// Palabras que no ayudan a encontrar notas relacionadas con una pregunta.
+const STOPWORDS = new Set(
+  (
+    'que qué cual cuál cuales cómo como donde dónde cuando cuándo quien quién para por con sin sobre entre desde hasta ' +
+    'los las del una uno unos unas este esta esto estos estas ese esa eso esos esas aquel mis tus sus nuestro nuestra ' +
+    'hay has han hemos tengo tiene tienen tenía puedo puede pueden hacer hago hice hizo ser son era fue está están estaba ' +
+    'mas más muy pero también tambien algo alguna alguno todo toda todos todas cosa cosas nota notas apunté apunte ' +
+    'dime sabes recuerdas qué the and for what how'
+  ).split(' '),
+);
+
+/**
+ * Consulta FTS5 para una pregunta en lenguaje natural: las palabras significativas como
+ * prefijos unidos con OR, para que baste con que una nota comparta alguna.
+ */
+export function toRelatedFtsQuery(question: string): string | null {
+  const words = [...new Set((question.toLowerCase().match(/[\p{L}\p{N}_]+/gu) ?? []).filter((w) => w.length >= 3 && !STOPWORDS.has(w)))];
+  if (!words.length) return null;
+  // Raíz aproximada: sin las últimas letras, "despliega" encuentra también "despliegue".
+  return [...new Set(words.map((w) => (w.length > 5 ? w.slice(0, Math.max(5, w.length - 3)) : w)))].map((w) => `"${w}"*`).join(' OR ');
+}
+
 export class NotesRepository {
   constructor(private readonly db: Db) {}
 
@@ -55,6 +77,22 @@ export class NotesRepository {
         .orderBy(desc(notes.pinned), desc(notes.updatedAt), desc(notes.id))
         .all();
     }
+    return this.hydrate(rows);
+  }
+
+  /** Notas no archivadas que más se parecen a una pregunta (como mucho `limit`), por relevancia. */
+  related(question: string, limit: number): Note[] {
+    const fts = toRelatedFtsQuery(question);
+    if (!fts) return [];
+    const rows = this.db
+      .select({ note: notes })
+      .from(notes)
+      .innerJoin(sql`notes_fts`, sql`notes_fts.rowid = ${notes.id}`)
+      .where(and(sql`notes_fts match ${fts}`, eq(notes.archived, false)))
+      .orderBy(sql`bm25(notes_fts, 5.0, 1.0, 1.0)`)
+      .limit(limit)
+      .all()
+      .map((r) => r.note);
     return this.hydrate(rows);
   }
 
