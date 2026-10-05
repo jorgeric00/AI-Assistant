@@ -8,16 +8,19 @@ El diseño completo está en `diseno-arquitectura.md`, en la carpeta `arquitectu
 ## Requisitos
 
 - Node.js 22+
-- pnpm 10 (`corepack enable`)
+- pnpm 10 (`corepack enable`, o sin instalar nada: `npx pnpm@10.28.0 …`)
 - opencode instalado y configurado (con los MCP de JIRA y GitHub)
 
 ## Puesta en marcha
 
 ```bash
 pnpm install
-cp .env.example .env     # ajusta rutas si hace falta
+cp .env.example .env     # en Windows: copy .env.example .env
 pnpm dev                 # backend en 127.0.0.1:4321 y frontend en http://127.0.0.1:5173
 ```
+
+Si no tienes pnpm en el PATH, usa `npx pnpm@10.28.0 install` y `npx pnpm@10.28.0 dev`.
+No hace falta Visual Studio ni compilar nada: SQLite (better-sqlite3) trae binarios para Windows, Linux y macOS.
 
 ## Estructura
 
