@@ -72,3 +72,12 @@ export function whenLabel(iso: string, now = new Date()): string {
 export function daysAgo(iso: string, now = new Date()): number {
   return dayDiff(new Date(iso), now);
 }
+
+/** "hace un momento", "hace 3 min", "hace 2 h" o "el 2 oct a las 09:00". */
+export function timeAgo(iso: string, now = new Date()): string {
+  const minutes = Math.floor((now.getTime() - new Date(iso).getTime()) / 60_000);
+  if (minutes < 1) return 'hace un momento';
+  if (minutes < 60) return `hace ${minutes} min`;
+  if (minutes < 12 * 60) return `hace ${Math.floor(minutes / 60)} h`;
+  return dayAndTime(iso, now);
+}

@@ -206,3 +206,46 @@ export interface AskResponse {
   answer: string;
   sources: AskSource[];
 }
+
+// ── Tareas de JIRA (R9) ─────────────────────────────────────────────────────
+
+export const TaskListQuery = z.object({ done: z.stringbool().default(false) });
+export type TaskListQuery = z.output<typeof TaskListQuery>;
+
+/** Categoría de estado de JIRA: por hacer, en curso o terminada. */
+export type TaskStatusCategory = 'new' | 'indeterminate' | 'done';
+
+export interface Task {
+  key: string;
+  summary: string;
+  status: string;
+  statusCategory: TaskStatusCategory | null;
+  priority: string | null;
+  issueType: string | null;
+  project: string | null;
+  url: string | null;
+  /** Última modificación en JIRA. */
+  updatedAt: string | null;
+  /** false mientras la tarea solo existe como clave escrita en una nota. */
+  synced: boolean;
+}
+
+export interface TaskNoteLink {
+  id: number;
+  title: string;
+  kind: NoteKind;
+}
+
+export interface TaskDetail extends Task {
+  description: string | null;
+  notes: TaskNoteLink[];
+}
+
+export interface JiraSyncStatus {
+  /** false si faltan JIRA_URL o JIRA_TOKEN en .env. */
+  configured: boolean;
+  syncing: boolean;
+  lastSyncedAt: string | null;
+  /** Error de la última sincronización, si falló. */
+  lastError: string | null;
+}

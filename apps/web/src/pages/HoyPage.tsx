@@ -5,6 +5,7 @@ import { Card, EmptyState } from '../components/Card';
 import { capitalize, daysAgo, hhmm, localDate } from '../dates';
 import { JournalAddForm } from './diario/JournalAddForm';
 import { useJournal } from './diario/useJournal';
+import { useJiraSync, useTaskList } from './tareas/useTasks';
 import { dueLabel, isDue } from './recordatorios/RecordatoriosPage';
 
 const dateFormatter = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -31,7 +32,7 @@ export function HoyPage() {
           <TodayReminders />
         </Card>
         <Card title="Tareas en curso" action={<a href="#/tareas" className="text-small text-info">Ver tareas</a>}>
-          <EmptyState>Conecta JIRA para ver tus tareas.</EmptyState>
+          <TasksInProgress />
         </Card>
         <Card title="Avisos de tus PR">
           <EmptyState>Sin avisos. Aquí verás CI en rojo y comentarios nuevos.</EmptyState>
@@ -70,6 +71,28 @@ function TodayReminders() {
           </li>
         );
       })}
+    </ul>
+  );
+}
+
+/** Tareas de JIRA en curso (categoría de estado "en curso"). */
+function TasksInProgress() {
+  const { status } = useJiraSync();
+  const tasks = useTaskList(false);
+  if (status.data?.configured === false) return <EmptyState>Conecta JIRA para ver tus tareas.</EmptyState>;
+  const inProgress = (tasks.data ?? []).filter((t) => t.statusCategory === 'indeterminate').slice(0, 6);
+  if (!inProgress.length) return <EmptyState>No tienes tareas en curso.</EmptyState>;
+  return (
+    <ul className="flex flex-col">
+      {inProgress.map((t) => (
+        <li key={t.key} className="flex items-center gap-3 border-b border-line py-2 last:border-b-0">
+          <a href={`#/tareas/${t.key}`} className="shrink-0 font-mono text-code text-info">
+            {t.key}
+          </a>
+          <span className="min-w-0 grow truncate">{t.summary}</span>
+          <span className="shrink-0 text-small text-ink-muted">{t.status}</span>
+        </li>
+      ))}
     </ul>
   );
 }

@@ -307,10 +307,12 @@ function NoteDetail({ note }: { note: Note }) {
               <span>
                 Vinculada a{' '}
                 {note.tasks.map((t, i) => (
-                  <code key={t.key} className="font-mono text-info" title={t.synced ? t.summary : 'Aún sin sincronizar con JIRA'}>
+                  <span key={t.key}>
                     {i > 0 && ', '}
-                    {t.key}
-                  </code>
+                    <a href={`#/tareas/${t.key}`} className="font-mono text-info" title={t.synced ? t.summary : 'Aún sin sincronizar con JIRA'}>
+                      {t.key}
+                    </a>
+                  </span>
                 ))}
               </span>
             )}
