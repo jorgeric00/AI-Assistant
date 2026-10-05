@@ -1,4 +1,6 @@
 import type {
+  AskResponse,
+  DailySummary,
   JournalEntry,
   JournalEntryInput,
   LinkTitleResponse,
@@ -59,6 +61,10 @@ export const api = {
   listJournal: (date: string) => request<JournalEntry[]>('GET', `/api/journal?date=${date}`),
   addJournalEntry: (input: JournalEntryInput) => request<JournalEntry>('POST', '/api/journal', input),
   deleteJournalEntry: (id: number) => request<void>('DELETE', `/api/journal/${id}`),
+
+  getDailySummary: (date: string) => request<DailySummary | null>('GET', `/api/daily-summary?date=${date}`),
+  generateDailySummary: (date: string) => request<DailySummary>('POST', '/api/daily-summary', { date }),
+  ask: (question: string) => request<AskResponse>('POST', '/api/search/ask', { question }),
 };
 
 /** Claves de consulta de React Query; invalidar `notes` refresca listas, notas y etiquetas. */
@@ -72,4 +78,5 @@ export const queryKeys = {
   reminderList: ['reminders', 'list'] as const,
   alerts: ['reminders', 'alerts'] as const,
   journal: (date: string) => ['journal', date] as const,
+  dailySummary: (date: string) => ['daily-summary', date] as const,
 };
