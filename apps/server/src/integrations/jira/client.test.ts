@@ -83,6 +83,9 @@ describe('cliente de JIRA', () => {
   it('una incidencia que no existe devuelve null y un 401 explica qué revisar', async () => {
     const notFound = new JiraClient({ baseUrl: 'https://j', token: 't' }, fakeFetch(() => ({ status: 404 })).impl);
     expect(await notFound.getIssue('ABC-9')).toBeNull();
+    // En cambio, un 404 en la búsqueda o en /myself es que JIRA_URL no apunta a JIRA.
+    await expect(notFound.search('x')).rejects.toThrow(/Revisa JIRA_URL/);
+    await expect(notFound.myself()).rejects.toThrow(/Revisa JIRA_URL/);
 
     const denied = new JiraClient({ baseUrl: 'https://j', token: 't' }, fakeFetch(() => ({ status: 401 })).impl);
     await expect(denied.search('x')).rejects.toThrow(JiraError);

@@ -108,9 +108,8 @@ export class JiraClient {
 
   /** Usuario con el que entra el token: confirma que JIRA lo acepta (y no lo trata como anónimo). */
   async myself(): Promise<string> {
-    const { body } = await this.get<{ displayName?: string; name?: string; emailAddress?: string }>('/myself', {});
-    if (!body) throw new JiraError(`JIRA no encontró la API en ${this.baseUrl}. ¿Es correcta JIRA_URL?`);
-    return body.displayName ?? body.name ?? body.emailAddress ?? 'desconocido';
+    const me = this.required(await this.get<{ displayName?: string; name?: string; emailAddress?: string }>('/myself', {}));
+    return me.displayName ?? me.name ?? me.emailAddress ?? 'desconocido';
   }
 
   /** Todas las incidencias de una JQL (hasta 1000). */
@@ -122,26 +121,36 @@ export class JiraClient {
       do {
         const params: Record<string, string> = { jql, fields, maxResults: String(PAGE_SIZE) };
         if (nextPageToken) params.nextPageToken = nextPageToken;
-        const { body } = await this.get<{ issues: RawIssue[]; nextPageToken?: string; isLast?: boolean }>('/search/jql', params);
-        issues.push(...(body?.issues ?? []));
-        nextPageToken = body?.isLast ? undefined : body?.nextPageToken;
+        const body = this.required(await this.get<{ issues: RawIssue[]; nextPageToken?: string; isLast?: boolean }>('/search/jql', params));
+        issues.push(...(body.issues ?? []));
+        nextPageToken = body.isLast ? undefined : body.nextPageToken;
       } while (nextPageToken && issues.length < MAX_ISSUES);
     } else {
       let startAt = 0;
       for (;;) {
-        const { body } = await this.get<{ issues: RawIssue[]; total: number }>('/search', {
+        const body = this.required(await this.get<{ issues: RawIssue[]; total: number }>('/search', {
           jql,
           fields,
           startAt: String(startAt),
           maxResults: String(PAGE_SIZE),
-        });
-        const page = body?.issues ?? [];
+        }));
+        const page = body.issues ?? [];
         issues.push(...page);
         startAt += page.length;
-        if (!page.length || startAt >= (body?.total ?? 0) || issues.length >= MAX_ISSUES) break;
+        if (!page.length || startAt >= (body.total ?? 0) || issues.length >= MAX_ISSUES) break;
       }
     }
     return issues.slice(0, MAX_ISSUES).map((i) => this.normalize(i));
+  }
+
+  /** Un 404 en la API general significa que JIRA_URL no apunta a JIRA (p. ej. falta /jira al final). */
+  private required<T>({ body }: { body: T | null }): T {
+    if (!body) {
+      throw new JiraError(
+        `JIRA no encontró la API en ${this.baseUrl}/rest/api. Revisa JIRA_URL: debe ser la parte de la dirección de una tarea anterior a /browse/.`,
+      );
+    }
+    return body;
   }
 
   /** Una incidencia por clave; null si no existe o no se puede ver. */
