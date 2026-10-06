@@ -33,7 +33,7 @@ startReminderScheduler(new RemindersRepository(db), desktopNotifier, app.log);
 // Tareas de JIRA: al arrancar y cada 15 minutos (si JIRA está configurado en .env).
 jiraSync.start(app.log);
 
-// Avisos de tus PR: al arrancar y cada 2 minutos (si GITHUB_TOKEN está en .env).
+// Avisos de tus PR: al arrancar y cada 10 minutos (si GITHUB_TOKEN está en .env).
 prWatcher.start(app.log);
 
 // Copia de la base de datos: una al día en ~/.dev-assistant/copias (se guardan 7).

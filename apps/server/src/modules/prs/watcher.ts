@@ -1,4 +1,4 @@
-// "Avisos de tus PR": cada 2 minutos se consultan tus PR abiertas en GitHub y se comparan con la foto
+// "Avisos de tus PR": cada 10 minutos se consultan tus PR abiertas en GitHub y se comparan con la foto
 // anterior. Lo que cambia (CI en rojo, comentarios o revisiones de otros, cambios pedidos, aprobada,
 // mergeada) queda como aviso en la app (tarjeta de Hoy) y sale como notificación del sistema.
 import type { FastifyBaseLogger } from 'fastify';
@@ -8,7 +8,7 @@ import type { Db } from '../../db/client.js';
 import { prAlerts, pullRequests, settings } from '../../db/schema.js';
 import { GithubError, type GhPullRequest, type GithubClient } from '../../integrations/github/client.js';
 
-const INTERVAL_MS = 2 * 60_000;
+const INTERVAL_MS = 10 * 60_000;
 const STATUS_KEY = 'github.prWatch';
 
 /** Notificación del sistema (en Windows, el centro de notificaciones). */
@@ -193,7 +193,7 @@ export class PrWatcher {
       .map(({ activityCursor: _c, lastSeenAt: _l, ...pr }) => pr);
   }
 
-  /** Comprueba al arrancar y cada 2 minutos. Sin GITHUB_TOKEN no hace nada. */
+  /** Comprueba al arrancar y cada 10 minutos. Sin GITHUB_TOKEN no hace nada. */
   start(log: FastifyBaseLogger) {
     if (!this.client) return () => {};
     const tick = () => this.check().catch((err: unknown) => log.warn(`No se pudieron consultar tus PR en GitHub: ${err instanceof Error ? err.message : String(err)}`));
