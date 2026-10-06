@@ -25,6 +25,10 @@ const issue = (key: string, extra: Partial<JiraIssue> = {}): JiraIssue => ({
 function fakeClient(assigned: JiraIssue[], others: JiraIssue[] = []) {
   const state = { assigned, others, fail: null as Error | null };
   const client = {
+    myself: async () => {
+      if (state.fail) throw state.fail;
+      return 'Jorge';
+    },
     search: async () => {
       if (state.fail) throw state.fail;
       return [...state.assigned];
@@ -36,7 +40,7 @@ function fakeClient(assigned: JiraIssue[], others: JiraIssue[] = []) {
 
 async function setup(client: JiraClient | null) {
   const { db } = openDatabase(':memory:');
-  const jiraSync = new JiraSync(new TasksRepository(db), client, 'assignee = currentUser()');
+  const jiraSync = new JiraSync(db, new TasksRepository(db), client, 'assignee = currentUser()');
   const app = await buildApp(db, { jiraSync });
   const get = async <T>(url: string) => (await app.inject({ method: 'GET', url })).json() as T;
   const sync = () => app.inject({ method: 'POST', url: '/api/jira/sync' });
@@ -58,7 +62,7 @@ describe('tareas de JIRA', () => {
     ctx = await setup(client);
     const res = await ctx.sync();
     expect(res.statusCode, res.body).toBe(200);
-    expect(res.json<JiraSyncStatus>()).toMatchObject({ configured: true, syncing: false, lastError: null });
+    expect(res.json<JiraSyncStatus>()).toMatchObject({ configured: true, syncing: false, user: 'Jorge', lastCount: 3, lastError: null });
     expect(res.json<JiraSyncStatus>().lastSyncedAt).not.toBeNull();
 
     expect((await ctx.get<Task[]>('/api/tasks')).map((t) => t.key)).toEqual(['ABC-2', 'ABC-1']);
@@ -88,6 +92,14 @@ describe('tareas de JIRA', () => {
     expect(keys).toEqual(expect.arrayContaining([['ABC-1', true], ['XYZ-7', true], ['NOPE-1', false]]));
   });
 
+  it('una sincronización sin tareas también queda registrada, con el usuario', async () => {
+    ctx = await setup(fakeClient([]).client);
+    await ctx.sync();
+    const status = await ctx.get<JiraSyncStatus>('/api/jira/status');
+    expect(status).toMatchObject({ user: 'Jorge', lastCount: 0, lastError: null });
+    expect(status.lastSyncedAt).not.toBeNull();
+  });
+
   it('una tarea que deja de estar asignada no se borra', async () => {
     const { client, state } = fakeClient([issue('ABC-1'), issue('ABC-2')]);
     ctx = await setup(client);
@@ -111,7 +123,14 @@ describe('tareas de JIRA', () => {
 
   it('sin JIRA configurado lo indica y la ficha de una tarea desconocida da 404', async () => {
     ctx = await setup(null);
-    expect(await ctx.get<JiraSyncStatus>('/api/jira/status')).toEqual({ configured: false, syncing: false, lastSyncedAt: null, lastError: null });
+    expect(await ctx.get<JiraSyncStatus>('/api/jira/status')).toEqual({
+      configured: false,
+      syncing: false,
+      lastSyncedAt: null,
+      user: null,
+      lastCount: null,
+      lastError: null,
+    });
     const res = await ctx.sync();
     expect(res.statusCode).toBe(503);
     expect(res.json().error).toContain('JIRA_URL');

@@ -59,6 +59,6 @@ export async function buildApp(db: Db, opts: BuildAppOptions = {}) {
   await app.register(remindersRoutes, { db });
   await app.register(journalRoutes, { db });
   await app.register(aiRoutes, { db, llm: opts.llm ?? noLlm });
-  await app.register(tasksRoutes, { db, jiraSync: opts.jiraSync ?? new JiraSync(new TasksRepository(db), null, '') });
+  await app.register(tasksRoutes, { db, jiraSync: opts.jiraSync ?? new JiraSync(db, new TasksRepository(db), null, '') });
   return app;
 }

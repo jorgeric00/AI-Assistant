@@ -74,6 +74,12 @@ describe('cliente de JIRA', () => {
     expect(calls[0]!.headers.authorization).toBe(`Basic ${Buffer.from('yo@x.com:tok').toString('base64')}`);
   });
 
+  it('myself devuelve el nombre del usuario del token', async () => {
+    const { impl, calls } = fakeFetch(() => ({ body: { displayName: 'Jorge Rico', name: 'jorger' } }));
+    expect(await new JiraClient({ baseUrl: 'https://j', token: 't' }, impl).myself()).toBe('Jorge Rico');
+    expect(calls[0]!.url.pathname).toBe('/rest/api/2/myself');
+  });
+
   it('una incidencia que no existe devuelve null y un 401 explica qué revisar', async () => {
     const notFound = new JiraClient({ baseUrl: 'https://j', token: 't' }, fakeFetch(() => ({ status: 404 })).impl);
     expect(await notFound.getIssue('ABC-9')).toBeNull();

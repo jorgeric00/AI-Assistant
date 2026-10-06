@@ -17,8 +17,14 @@ export async function tasksRoutes(app: FastifyInstance, { db, jiraSync }: { db: 
 
   app.get('/api/jira/status', async () => jiraSync.status());
 
-  app.post('/api/jira/sync', async () => {
-    await jiraSync.sync();
+  app.post('/api/jira/sync', async (req) => {
+    try {
+      const last = await jiraSync.sync();
+      req.log.info(`JIRA sincronizado como ${last.user}: ${last.count} tareas`);
+    } catch (err) {
+      req.log.warn(`No se pudo sincronizar JIRA: ${err instanceof Error ? err.message : String(err)}`);
+      throw err;
+    }
     return jiraSync.status();
   });
 }

@@ -106,6 +106,13 @@ export class JiraClient {
     }
   }
 
+  /** Usuario con el que entra el token: confirma que JIRA lo acepta (y no lo trata como anónimo). */
+  async myself(): Promise<string> {
+    const { body } = await this.get<{ displayName?: string; name?: string; emailAddress?: string }>('/myself', {});
+    if (!body) throw new JiraError(`JIRA no encontró la API en ${this.baseUrl}. ¿Es correcta JIRA_URL?`);
+    return body.displayName ?? body.name ?? body.emailAddress ?? 'desconocido';
+  }
+
   /** Todas las incidencias de una JQL (hasta 1000). */
   async search(jql: string): Promise<JiraIssue[]> {
     const issues: RawIssue[] = [];

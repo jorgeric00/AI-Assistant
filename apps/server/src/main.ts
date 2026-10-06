@@ -13,7 +13,7 @@ const config = loadConfig();
 const { db } = openDatabase(config.databasePath);
 // opencode arranca solo la primera vez que se usa la IA (o se usa el que indique OPENCODE_URL).
 const llm = createOpencodeLlm({ url: config.opencodeUrl });
-const jiraSync = new JiraSync(new TasksRepository(db), config.jira ? new JiraClient(config.jira) : null, config.jira?.jql ?? '');
+const jiraSync = new JiraSync(db, new TasksRepository(db), config.jira ? new JiraClient(config.jira) : null, config.jira?.jql ?? '');
 const app = await buildApp(db, { logger: true, llm, jiraSync });
 app.addHook('onClose', async () => llm.close());
 await app.listen({ host: config.host, port: config.port });

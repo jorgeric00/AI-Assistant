@@ -246,6 +246,10 @@ export interface JiraSyncStatus {
   configured: boolean;
   syncing: boolean;
   lastSyncedAt: string | null;
+  /** Usuario de JIRA con el que entró el token en la última sincronización correcta. */
+  user: string | null;
+  /** Tareas que devolvió la última sincronización correcta. */
+  lastCount: number | null;
   /** Error de la última sincronización, si falló. */
   lastError: string | null;
 }

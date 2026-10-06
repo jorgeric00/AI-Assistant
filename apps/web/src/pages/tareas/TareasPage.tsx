@@ -18,6 +18,7 @@ export function TareasPage({ params }: { params: string[] }) {
   const current = selectedKey ?? list[0]?.key;
   const configured = status.data?.configured;
   const lastSyncedAt = status.data?.lastSyncedAt;
+  const user = status.data?.user;
   const syncing = sync.isPending || status.data?.syncing;
   const error = sync.error?.message ?? status.data?.lastError;
 
@@ -27,7 +28,8 @@ export function TareasPage({ params }: { params: string[] }) {
         <div>
           <h1 className="m-0 text-display font-semibold">Tareas de JIRA</h1>
           <p className="mt-1 mb-0 text-ink-muted">
-            Asignadas a ti{lastSyncedAt ? ` · sincronizado ${timeAgo(lastSyncedAt)}` : configured ? ' · aún sin sincronizar' : ''}
+            {user ? `Asignadas a ${user}` : 'Asignadas a ti'}
+            {lastSyncedAt ? ` · sincronizado ${timeAgo(lastSyncedAt)}` : configured ? ' · aún sin sincronizar' : ''}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -61,7 +63,15 @@ export function TareasPage({ params }: { params: string[] }) {
       ) : list.length === 0 ? (
         configured && (
           <p className="m-0 py-2 text-ink-muted">
-            {lastSyncedAt ? (showDone ? 'No tienes tareas asignadas.' : 'No tienes tareas pendientes.') : 'Pulsa "Sincronizar" para traer tus tareas.'}
+            {syncing
+              ? 'Sincronizando con JIRA…'
+              : status.data?.lastCount === 0
+                ? 'JIRA no devolvió ninguna tarea asignada a ti.'
+                : lastSyncedAt
+                  ? showDone
+                    ? 'No tienes tareas asignadas.'
+                    : 'No tienes tareas pendientes.'
+                  : 'Pulsa "Sincronizar" para traer tus tareas.'}
           </p>
         )
       ) : (
