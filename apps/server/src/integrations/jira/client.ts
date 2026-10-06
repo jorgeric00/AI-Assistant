@@ -75,11 +75,21 @@ export class JiraClient {
     try {
       res = await this.fetchImpl(url, {
         headers: { authorization, accept: 'application/json' },
+        // Sin seguir redirecciones: un login corporativo (p. ej. Microsoft) delante de JIRA responde
+        // con una redirección a su página, y así se puede explicar en vez de leer HTML como JSON.
+        redirect: 'manual',
         signal: AbortSignal.timeout(TIMEOUT_MS),
       });
     } catch (err) {
       const cause = err instanceof Error ? (err.cause instanceof Error ? err.cause.message : err.message) : String(err);
       throw new JiraError(`No se pudo conectar con JIRA en ${this.baseUrl}: ${cause}`);
+    }
+    if (res.type === 'opaqueredirect' || (res.status >= 300 && res.status < 400)) {
+      const location = res.headers.get('location');
+      const host = location ? ` (${new URL(location, this.baseUrl).host})` : '';
+      throw new JiraError(
+        `JIRA redirige a una página de inicio de sesión${host}: desde esta red la API no acepta el token. Prueba desde la red de la empresa o con la VPN.`,
+      );
     }
     if (res.status === 401) throw new JiraError('JIRA rechazó las credenciales (401). Revisa JIRA_TOKEN (y JIRA_EMAIL si es JIRA Cloud).');
     if (res.status === 403) throw new JiraError('JIRA no da permiso a este token (403).');
@@ -88,7 +98,12 @@ export class JiraClient {
       const data = (await res.json().catch(() => null)) as { errorMessages?: string[] } | null;
       throw new JiraError(`JIRA respondió ${res.status}${data?.errorMessages?.length ? `: ${data.errorMessages.join('; ')}` : ''}`);
     }
-    return { status: res.status, body: (await res.json()) as T };
+    const text = await res.text();
+    try {
+      return { status: res.status, body: JSON.parse(text) as T };
+    } catch {
+      throw new JiraError(`JIRA no devolvió datos de la API (respondió una página web). ¿Es correcta JIRA_URL? (${this.baseUrl})`);
+    }
   }
 
   /** Todas las incidencias de una JQL (hasta 1000). */

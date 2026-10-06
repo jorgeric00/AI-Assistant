@@ -83,6 +83,17 @@ describe('cliente de JIRA', () => {
     await expect(denied.search('x')).rejects.toThrow(/JIRA_TOKEN/);
   });
 
+  it('un login corporativo delante de JIRA da un mensaje claro', async () => {
+    const sso = (async () =>
+      new Response(null, { status: 302, headers: { location: 'https://login.microsoftonline.com/x/oauth2' } })) as typeof fetch;
+    await expect(new JiraClient({ baseUrl: 'https://j', token: 't' }, sso).search('x')).rejects.toThrow(
+      /inicio de sesión \(login\.microsoftonline\.com\)/,
+    );
+
+    const html = (async () => new Response('<html>Sign in</html>', { status: 200 })) as typeof fetch;
+    await expect(new JiraClient({ baseUrl: 'https://j', token: 't' }, html).search('x')).rejects.toThrow(/página web/);
+  });
+
   it('un fallo de red se convierte en un mensaje con la URL', async () => {
     const offline = (async () => {
       throw new TypeError('fetch failed', { cause: new Error('getaddrinfo ENOTFOUND j') });
