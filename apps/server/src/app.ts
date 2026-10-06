@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import cors from '@fastify/cors';
 import Fastify from 'fastify';
 import { sql } from 'drizzle-orm';
@@ -8,6 +9,7 @@ import type { Db } from './db/client.js';
 import { JiraError, type JiraClient } from './integrations/jira/client.js';
 import { LlmUnavailableError, type Llm } from './integrations/opencode/llm.js';
 import { aiRoutes } from './modules/ai/routes.js';
+import { DiaryFeed } from './modules/journal/feed.js';
 import { journalRoutes } from './modules/journal/routes.js';
 import { notesRoutes, type NotesRoutesOptions } from './modules/notes/routes.js';
 import type { GitRunner } from './modules/repos/git.js';
@@ -18,6 +20,12 @@ import { JiraSync } from './modules/tasks/jira-sync.js';
 import { JiraUpdateService } from './modules/tasks/jira-update.js';
 import { TasksRepository } from './modules/tasks/repository.js';
 import { tasksRoutes } from './modules/tasks/routes.js';
+import { PrWatcher } from './modules/prs/watcher.js';
+import { prsRoutes } from './modules/prs/routes.js';
+import { webRoutes } from './modules/system/web.js';
+import { Autostart, REPO_ROOT } from './modules/system/autostart.js';
+import { Backups } from './modules/system/backup.js';
+import { systemRoutes } from './modules/system/routes.js';
 import { DevSessionService, type TerminalLauncher } from './modules/tasks/session.js';
 
 export interface BuildAppOptions {
@@ -28,6 +36,13 @@ export interface BuildAppOptions {
   llm?: Llm;
   /** Sincronización con JIRA. Sin ella, la sección de tareas indica que falta configurar JIRA. */
   jiraSync?: JiraSync;
+  prWatcher?: PrWatcher;
+  /** Carpeta de la web compilada que sirve el servidor; por defecto apps/web/dist si existe. */
+  webDist?: string;
+  /** Arranque automático (Ajustes); por defecto, el de este equipo. */
+  autostart?: Autostart;
+  /** Copias de la base de datos (Ajustes); sin ellas, Ajustes dice que no hay. */
+  backups?: Backups;
   /** Cliente REST de JIRA (estados posibles y refresco tras actualizar). */
   jiraClient?: JiraClient | null;
   /** Carpeta de trabajo (worktrees y ficheros de cada tarea). Por defecto ~/.dev-assistant. */
@@ -73,10 +88,12 @@ export async function buildApp(db: Db, opts: BuildAppOptions = {}) {
   // Módulos (dev-sessions, repos... se añaden en sus hilos).
   await app.register(notesRoutes, { db, fetchTitle: opts.fetchTitle });
   await app.register(remindersRoutes, { db });
-  await app.register(journalRoutes, { db });
-  await app.register(aiRoutes, { db, llm: opts.llm ?? noLlm });
   const config = loadConfig();
   const devAssistantHome = opts.devAssistantHome ?? config.devAssistantHome;
+  // Los commits que anota opencode en HISTORIAL.md entran en el diario antes de leerlo.
+  const diaryFeed = new DiaryFeed(db, devAssistantHome);
+  await app.register(journalRoutes, { db, diaryFeed });
+  await app.register(aiRoutes, { db, llm: opts.llm ?? noLlm, diaryFeed });
   const tasksRepo = new TasksRepository(db);
   await app.register(tasksRoutes, {
     db,
@@ -85,6 +102,14 @@ export async function buildApp(db: Db, opts: BuildAppOptions = {}) {
     devAssistantHome,
     sessions: new DevSessionService(db, tasksRepo, devAssistantHome, opts.git, opts.terminalLauncher),
   });
+  await app.register(systemRoutes, {
+    autostart:
+      opts.autostart ??
+      new Autostart(db, { platform: process.platform, appData: process.env.APPDATA, repoRoot: REPO_ROOT, logFile: join(devAssistantHome, 'logs', 'app.log') }),
+    backups: opts.backups ?? new Backups(null, join(devAssistantHome, 'copias')),
+  });
+  await app.register(webRoutes, { dist: opts.webDist });
+  await app.register(prsRoutes, { prWatcher: opts.prWatcher ?? new PrWatcher(db, null) });
   await app.register(reposRoutes, { db, llm: opts.llm ?? noLlm, git: opts.git });
   await app.register(opencodeSkillRoutes, { skillsDir: opts.opencodeSkillsDir ?? config.opencodeSkillsDir });
   return app;

@@ -4,6 +4,7 @@ import { api, queryKeys } from '../api';
 import { Card, EmptyState } from '../components/Card';
 import { capitalize, daysAgo, hhmm, localDate } from '../dates';
 import { JournalAddForm } from './diario/JournalAddForm';
+import { PrAlertsList } from './prs/PrWidgets';
 import { useJournal } from './diario/useJournal';
 import { useJiraSync, useTaskList } from './tareas/useTasks';
 import { dueLabel, isDue } from './recordatorios/RecordatoriosPage';
@@ -35,7 +36,7 @@ export function HoyPage() {
           <TasksInProgress />
         </Card>
         <Card title="Avisos de tus PR">
-          <EmptyState>Sin avisos. Aquí verás CI en rojo y comentarios nuevos.</EmptyState>
+          <PrAlertsList />
         </Card>
         <Card title="Diario de hoy" action={<a href="#/diario" className="text-small text-info">Ver diario</a>}>
           <TodayJournal />

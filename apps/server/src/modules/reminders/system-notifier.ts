@@ -53,18 +53,12 @@ export async function registerWindowsAppId(deps: RegisterDeps = defaultDeps()): 
 let appId: Promise<string | undefined> | undefined;
 
 /** Notificación del sistema (en Windows, el centro de notificaciones) aunque el navegador esté cerrado. */
-export const desktopNotifier: SystemNotifier = async ({ reminder, late }) => {
+export async function notifyDesktop(title: string, message: string) {
   appId ??= registerWindowsAppId();
   const id = await appId;
   await new Promise<void>((resolve, reject) => {
-    notifier.notify(
-      {
-        title: late ? 'Recordatorio atrasado' : 'Recordatorio',
-        message: reminder.title,
-        appID: id,
-        wait: false,
-      },
-      (err) => (err ? reject(err) : resolve()),
-    );
+    notifier.notify({ title, message, appID: id, wait: false }, (err) => (err ? reject(err) : resolve()));
   });
-};
+}
+
+export const desktopNotifier: SystemNotifier = ({ reminder, late }) => notifyDesktop(late ? 'Recordatorio atrasado' : 'Recordatorio', reminder.title);

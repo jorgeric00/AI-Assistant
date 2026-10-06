@@ -3,13 +3,14 @@ import { z } from 'zod';
 import { AskInput, DailySummaryInput, IsoDate } from '@dev-assistant/shared';
 import type { Db } from '../../db/client.js';
 import type { Llm } from '../../integrations/opencode/llm.js';
+import type { DiaryFeed } from '../journal/feed.js';
 import { AskService } from './ask.js';
 import { DailySummaryService, NothingToSummarizeError } from './daily-summary.js';
 
 const DateQuery = z.object({ date: IsoDate });
 
 /** Funciones con IA (R5 resumen para la daily, R7 búsqueda en lenguaje natural) a través de opencode. */
-export async function aiRoutes(app: FastifyInstance, { db, llm }: { db: Db; llm: Llm }) {
+export async function aiRoutes(app: FastifyInstance, { db, llm, diaryFeed }: { db: Db; llm: Llm; diaryFeed: DiaryFeed }) {
   const daily = new DailySummaryService(db, llm);
   const ask = new AskService(db, llm);
 
@@ -17,6 +18,7 @@ export async function aiRoutes(app: FastifyInstance, { db, llm }: { db: Db; llm:
 
   app.post('/api/daily-summary', async (req, reply) => {
     const { date } = DailySummaryInput.parse(req.body);
+    await diaryFeed.importCommits();
     try {
       return reply.code(201).send(await daily.generate(date));
     } catch (err) {

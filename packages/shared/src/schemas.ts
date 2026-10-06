@@ -187,6 +187,10 @@ export interface JournalEntry {
   source: JournalSource;
   text: string;
   taskKey: string | null;
+  /** De dónde sale: escrita a mano, un commit de opencode, un cambio de estado en JIRA u otra automática. */
+  origin: 'manual' | 'commit' | 'jira' | 'auto';
+  /** Enlace de una entrada automática: el commit en GitHub. */
+  url: string | null;
   createdAt: string;
 }
 
@@ -491,4 +495,75 @@ export interface RepoInspection {
   name: string;
   github: string;
   defaultBranch: string | null;
+}
+
+// ── Avisos de tus PR (GitHub) ───────────────────────────────────────────────
+
+export const PR_ALERT_KINDS = ['ci_failed', 'comments', 'changes_requested', 'approved', 'merged'] as const;
+export type PrAlertKind = (typeof PR_ALERT_KINDS)[number];
+
+export type PrState = 'open' | 'merged' | 'closed';
+export type PrChecksState = 'success' | 'failure' | 'pending';
+
+/** Una PR tuya tal como la vio la última consulta a GitHub. */
+export interface PullRequestInfo {
+  id: string;
+  /** owner/repo */
+  repo: string;
+  number: number;
+  title: string;
+  url: string;
+  state: PrState;
+  isDraft: boolean;
+  headRef: string;
+  /** Clave de JIRA sacada de la rama o del título. */
+  taskKey: string | null;
+  checks: PrChecksState | null;
+  failingChecks: string[];
+  /** Revisión vigente: quién aprobó, quién pidió cambios y cuántos comentarios de otros hay. */
+  approvedBy: string[];
+  changesRequestedBy: string[];
+  comments: number;
+  updatedAt: string;
+}
+
+export interface PrAlert {
+  id: number;
+  kind: PrAlertKind;
+  repo: string;
+  number: number;
+  url: string;
+  taskKey: string | null;
+  /** "CI en rojo", "2 comentarios nuevos"... */
+  title: string;
+  detail: string | null;
+  createdAt: string;
+}
+
+export interface PrWatchStatus {
+  configured: boolean;
+  user: string | null;
+  lastCheckedAt: string | null;
+  lastError: string | null;
+}
+
+// ── Ajustes: arranque automático y copias de seguridad ─────────────────────
+
+export interface AutostartStatus {
+  /** false fuera de Windows: no hay carpeta Inicio en la que dejar el script. */
+  supported: boolean;
+  enabled: boolean;
+  openBrowser: boolean;
+  /** Fichero donde escribe la app cuando arranca sola. */
+  logFile: string;
+}
+
+export const AutostartUpdate = z.object({ enabled: z.boolean().optional(), openBrowser: z.boolean().optional() });
+export type AutostartUpdate = z.infer<typeof AutostartUpdate>;
+
+export interface BackupStatus {
+  supported: boolean;
+  dir: string;
+  count: number;
+  last: { name: string; at: string; bytes: number } | null;
 }

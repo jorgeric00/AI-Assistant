@@ -18,6 +18,8 @@ export interface AppConfig {
   opencodeSkillsDir: string;
   /** Lectura de JIRA por API REST; sin URL y token la sección de tareas indica cómo configurarla. */
   jira: { baseUrl: string; token: string; email: string | undefined; jql: string } | undefined;
+  /** Avisos de tus PR: token de GitHub de solo lectura. Sin él no se consulta GitHub. */
+  github: { token: string; graphqlUrl: string | undefined } | undefined;
 }
 
 /** Todas las tareas asignadas, no solo el sprint activo (R9). */
@@ -38,5 +40,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       env.JIRA_URL && env.JIRA_TOKEN
         ? { baseUrl: env.JIRA_URL, token: env.JIRA_TOKEN, email: env.JIRA_EMAIL || undefined, jql: env.JIRA_JQL || DEFAULT_JIRA_JQL }
         : undefined,
+    github: env.GITHUB_TOKEN ? { token: env.GITHUB_TOKEN, graphqlUrl: env.GITHUB_GRAPHQL_URL || undefined } : undefined,
   };
 }

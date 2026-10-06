@@ -1,5 +1,5 @@
 import type { JournalEntry } from '@dev-assistant/shared';
-import { ChevronLeft, ChevronRight, GitCommitHorizontal, PenLine, Sparkles, Trash2 } from 'lucide-react';
+import { ArrowRightLeft, ChevronLeft, ChevronRight, GitCommitHorizontal, PenLine, Sparkles, Trash2, Zap } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { primaryButtonClass } from '../../components/fields';
 import { addDays, hhmm, localDate, longDay, parseLocalDate } from '../../dates';
@@ -83,7 +83,8 @@ export function DiarioPage({ params }: { params: string[] }) {
 }
 
 function EntryRow({ entry: e, onDelete }: { entry: JournalEntry; onDelete: () => void }) {
-  const Icon = e.source === 'auto' ? GitCommitHorizontal : PenLine;
+  const Icon = e.origin === 'commit' ? GitCommitHorizontal : e.origin === 'jira' ? ArrowRightLeft : e.origin === 'auto' ? Zap : PenLine;
+  const label = e.origin === 'commit' ? 'Commit de opencode' : e.origin === 'jira' ? 'JIRA' : e.origin === 'auto' ? 'Automática' : 'Manual';
   return (
     <li className="group flex gap-3 border-b border-line px-4 py-3 last:border-b-0">
       <span className="w-10 shrink-0 font-mono text-small leading-[21px] text-ink-faint">{hhmm(e.createdAt)}</span>
@@ -91,8 +92,19 @@ function EntryRow({ entry: e, onDelete }: { entry: JournalEntry; onDelete: () =>
       <div className="flex min-w-0 grow flex-col gap-0.5">
         <span className="break-words">{e.text}</span>
         <span className="text-small text-ink-muted">
-          {e.taskKey && <code className="font-mono text-info">{e.taskKey} · </code>}
-          {e.source === 'auto' ? 'Automática' : 'Manual'}
+          {e.taskKey && (
+            <a href={`#/tareas/${e.taskKey}/detalle`} className="font-mono text-info">
+              {e.taskKey}
+            </a>
+          )}
+          {e.taskKey && ' · '}
+          {e.url ? (
+            <a href={e.url} target="_blank" rel="noreferrer" className="text-info">
+              {label}
+            </a>
+          ) : (
+            label
+          )}
         </span>
       </div>
       {e.source === 'manual' && (

@@ -97,6 +97,20 @@ la ficha de cada uno (convenciones, comandos de tests y arquitectura). Léelo an
     que AI-Assistant enseña en "Documentación". Si ya existe (la tarea se retomó), actualízalo entero.
 20. Ahí termina tu trabajo: la revisión y el merge son de las personas.
 
+## Cuando Jorge pide cambios
+
+Jorge puede hablarte en cualquier momento de la sesión para corregir el rumbo. Atiende lo que pida antes de seguir con el plan.
+
+- **El plan, antes de aprobarlo:** edita `PLAN.md` y vuelve a pedir la aprobación, tantas veces como haga falta.
+- **El plan, ya aprobado:** para lo que estés haciendo, edita `PLAN.md` (añade, quita o cambia pasos; los pasos hechos se
+  quedan marcados) y enséñale qué ha cambiado. **Pregunta a Jorge** si aprueba el plan nuevo; no sigas hasta que lo apruebe.
+- **Un cambio que no le gusta y aún no tiene commit:** rehazlo como pida y vuelve a enseñárselo antes de preguntar por el commit.
+- **Un cambio que ya tiene commit, sin push:** corrígelo con un commit nuevo. Si Jorge lo pide expresamente, puedes
+  rehacer ese commit local (`git commit --amend` o `git reset --soft`), porque aún no está subido.
+- **Un cambio ya subido:** corrígelo siempre con un commit nuevo, con su línea en `HISTORIAL.md`. Nunca reescribas
+  historia ya subida ni uses `push --force`.
+- Si el cambio afecta al alcance de la tarea, avisa a Jorge por si quiere comentarlo en JIRA (él decide; no lo hagas tú).
+
 ## Formato de PLAN.md
 
 ```markdown

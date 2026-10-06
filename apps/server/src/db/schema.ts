@@ -12,8 +12,11 @@ import {
   NOTIFICATION_CHANNELS,
   PENDING_ACTION_KINDS,
   PENDING_ACTION_STATUSES,
+  PR_ALERT_KINDS,
   REMINDER_STATUSES,
   type CommitRef,
+  type PrChecksState,
+  type PrState,
 } from '@dev-assistant/shared';
 
 const id = () => integer('id').primaryKey({ autoIncrement: true });
@@ -115,9 +118,13 @@ export const journalEntries = sqliteTable(
     text: text('text').notNull(),
     refTable: text('ref_table'),
     refId: integer('ref_id'),
+    /** Origen de una entrada automática ("commit:CLAVE:repo@sha", "jira:CLAVE:fecha"): evita apuntarla dos veces. */
+    refKey: text('ref_key'),
+    /** Enlace de la entrada automática (p. ej. el commit en GitHub). */
+    url: text('url'),
     createdAt: createdAt(),
   },
-  (t) => [index('journal_date_idx').on(t.date)],
+  (t) => [index('journal_date_idx').on(t.date), uniqueIndex('journal_ref_key_idx').on(t.refKey)],
 );
 
 export const dailySummaries = sqliteTable('daily_summaries', {
@@ -248,3 +255,37 @@ export const settings = sqliteTable('settings', {
   key: text('key').primaryKey(),
   valueJson: text('value_json', { mode: 'json' }).notNull(),
 });
+
+// ── Avisos de tus PR (GitHub) ───────────────────────────────────────────────
+
+/** Última foto de cada PR tuya; al compararla con la siguiente consulta salen los avisos. */
+export const pullRequests = sqliteTable('pull_requests', {
+  /** id de nodo de GitHub */
+  id: text('id').primaryKey(),
+  repo: text('repo').notNull(),
+  number: integer('number').notNull(),
+  title: text('title').notNull(),
+  url: text('url').notNull(),
+  state: text('state').$type<PrState>().notNull(),
+  isDraft: integer('is_draft', { mode: 'boolean' }).notNull(),
+  headRef: text('head_ref').notNull(),
+  taskKey: text('task_key'),
+  checks: text('checks').$type<PrChecksState>(),
+  failingChecks: text('failing_checks', { mode: 'json' }).$type<string[]>().notNull(),
+  approvedBy: text('approved_by', { mode: 'json' }).$type<string[]>().notNull(),
+  changesRequestedBy: text('changes_requested_by', { mode: 'json' }).$type<string[]>().notNull(),
+  comments: integer('comments').notNull(),
+  /** Fecha de la última revisión o comentario de otra persona ya avisado. */
+  activityCursor: text('activity_cursor'),
+  updatedAt: text('updated_at').notNull(),
+  lastSeenAt: text('last_seen_at').notNull(),
+}, (t) => [index('pull_requests_task_idx').on(t.taskKey)]);
+
+export const prAlerts = sqliteTable('pr_alerts', {
+  id: id(),
+  prId: text('pr_id').notNull().references(() => pullRequests.id, { onDelete: 'cascade' }),
+  kind: text('kind', { enum: PR_ALERT_KINDS }).notNull(),
+  title: text('title').notNull(),
+  detail: text('detail'),
+  createdAt: createdAt(),
+}, (t) => [index('pr_alerts_created_idx').on(t.createdAt)]);
