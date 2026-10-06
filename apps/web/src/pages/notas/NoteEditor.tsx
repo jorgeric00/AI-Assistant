@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { Note, NoteKind } from '@dev-assistant/shared';
+import type { CommitRef, Note, NoteKind } from '@dev-assistant/shared';
 import { CircleCheck, CircleAlert, LoaderCircle } from 'lucide-react';
 import { useEffect, useId, useState, type FormEvent } from 'react';
 import { api, queryKeys } from '../../api';
@@ -13,11 +13,19 @@ import {
   primaryButtonClass,
   secondaryButtonClass,
 } from '../../components/fields';
-import { navigate } from '../../sections';
+import { CommitSelect, TaskOptions } from '../../components/TaskFields';
+import { navigate, noteHref } from '../../sections';
 import { isHttpUrl, useLinkTitle } from './useLinkTitle';
 
-/** Pantalla "Editar nota o enlace" (diseño: NotaEditor). Sin `noteId` crea una nota nueva. */
-export function NoteEditor({ noteId }: { noteId?: number }) {
+/** Dónde vive cada tipo: sección de vuelta y cómo se llama. */
+export const KIND_INFO: Record<NoteKind, { section: string; label: string; noun: string }> = {
+  note: { section: 'notas', label: 'Notas', noun: 'nota' },
+  link: { section: 'enlaces', label: 'Enlaces', noun: 'enlace' },
+  doc: { section: 'documentacion/propia', label: 'Documentación', noun: 'documento' },
+};
+
+/** Pantalla de edición de una nota, un enlace o un documento propio (diseño: NotaEditor). Sin `noteId` crea uno nuevo de tipo `kind`. */
+export function NoteEditor({ noteId, kind = 'note' }: { noteId?: number; kind?: NoteKind }) {
   const existing = useQuery({
     queryKey: queryKeys.note(noteId ?? 0),
     queryFn: () => api.getNote(noteId!),
@@ -27,26 +35,32 @@ export function NoteEditor({ noteId }: { noteId?: number }) {
   if (noteId !== undefined && !existing.data) {
     return <p className="text-ink-muted">{existing.isError ? 'No se encontró la nota.' : 'Cargando…'}</p>;
   }
-  return <EditorForm key={noteId ?? 'nueva'} note={existing.data} />;
+  return <EditorForm key={noteId ?? 'nueva'} note={existing.data} newKind={kind} />;
 }
 
-function EditorForm({ note }: { note?: Note }) {
+function EditorForm({ note, newKind }: { note?: Note; newKind: NoteKind }) {
   const queryClient = useQueryClient();
   const ids = useId();
-  const tagsQuery = useQuery({ queryKey: queryKeys.tags, queryFn: api.listTags });
+  const kind = note?.kind ?? newKind;
+  const info = KIND_INFO[kind];
+  const tagsQuery = useQuery({ queryKey: queryKeys.tags(kind), queryFn: () => api.listTags(kind) });
 
-  const [kind, setKind] = useState<NoteKind>(note?.kind ?? 'note');
   const [url, setUrl] = useState(note?.url ?? '');
   const [title, setTitle] = useState(note?.title ?? '');
   const [bodyMd, setBodyMd] = useState(note?.bodyMd ?? '');
   const [tags, setTags] = useState(note?.tags ?? []);
   const [taskText, setTaskText] = useState(note?.tasks.map((t) => t.key).join(', ') ?? '');
+  // El commit se elige para una tarea concreta: si cambia la tarea, deja de valer.
+  const [commitPick, setCommitPick] = useState<{ task: string | null; commit: CommitRef | null }>({ task: note?.tasks[0]?.key ?? null, commit: note?.commit ?? null });
   const [pinned, setPinned] = useState(note?.pinned ?? false);
   const [mode, setMode] = useState<'write' | 'preview'>('write');
   const [error, setError] = useState<string | null>(null);
   const linkTitle = useLinkTitle(title, setTitle);
 
-  const taskKeys = parseTaskKeys(taskText);
+  const taskKeys = kind === 'doc' ? [] : parseTaskKeys(taskText);
+  // El commit es de la primera tarea vinculada.
+  const commitTask = taskKeys[0] ?? null;
+  const commitToSave = kind === 'note' && commitTask && commitPick.task === commitTask ? commitPick.commit : null;
   const syncedKeys = new Set(note?.tasks.filter((t) => t.synced).map((t) => t.key));
   const unsyncedKeys = taskKeys.filter((k) => !syncedKeys.has(k));
 
@@ -60,18 +74,19 @@ function EditorForm({ note }: { note?: Note }) {
         urlTitle: kind === 'link' ? (linkTitle.urlTitle ?? note?.urlTitle ?? null) : null,
         tags,
         taskKeys,
+        commit: commitToSave,
         pinned,
       };
       return note ? api.updateNote(note.id, input) : api.createNote(input);
     },
     onSuccess: async (saved) => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.notes });
-      navigate(`notas/${saved.id}`);
+      navigate(noteHref(saved).slice(2));
     },
     onError: (e) => setError(e.message),
   });
 
-  const cancel = () => navigate(note ? `notas/${note.id}` : 'notas');
+  const cancel = () => navigate(note ? noteHref(note).slice(2) : info.section);
 
   const submit = (e?: FormEvent) => {
     e?.preventDefault();
@@ -99,18 +114,16 @@ function EditorForm({ note }: { note?: Note }) {
 
   const tabClass = (active: boolean) =>
     `h-7 rounded-sm border px-2.5 text-small text-ink ${active ? 'border-accent' : 'border-line-strong hover:border-ink-muted'}`;
-  const kindClass = (active: boolean) =>
-    `h-8 rounded-sm px-3 text-[13px] ${active ? 'bg-surface-raised font-medium text-ink' : 'text-ink-muted hover:text-ink'}`;
 
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2">
-          <a href="#/notas" className="text-ink-muted no-underline hover:text-ink">
-            Notas y enlaces
+          <a href={`#/${info.section}`} className="text-ink-muted no-underline hover:text-ink">
+            {info.label}
           </a>
           <span className="text-line-strong">/</span>
-          <h1 className="m-0 text-display font-semibold">{note ? 'Editar' : 'Nueva'}</h1>
+          <h1 className="m-0 text-display font-semibold">{note ? `Editar ${info.noun}` : kind === 'note' ? 'Nueva nota' : `Nuevo ${info.noun}`}</h1>
         </div>
         <div className="flex gap-2">
           <button type="button" onClick={cancel} className={secondaryButtonClass}>
@@ -123,15 +136,6 @@ function EditorForm({ note }: { note?: Note }) {
       </header>
 
       <form id={`${ids}-form`} onSubmit={submit} className="flex flex-col gap-4 rounded-lg border border-line bg-surface p-6">
-        <div role="group" aria-label="Tipo" className="flex gap-1 self-start rounded-md border border-line bg-bg p-1">
-          <button type="button" aria-pressed={kind === 'note'} onClick={() => setKind('note')} className={kindClass(kind === 'note')}>
-            Nota
-          </button>
-          <button type="button" aria-pressed={kind === 'link'} onClick={() => setKind('link')} className={kindClass(kind === 'link')}>
-            Enlace
-          </button>
-        </div>
-
         {kind === 'link' && (
           <div className="flex flex-col gap-1.5">
             <label htmlFor={`${ids}-url`} className={labelClass}>
@@ -160,7 +164,7 @@ function EditorForm({ note }: { note?: Note }) {
             id={`${ids}-title`}
             type="text"
             value={title}
-            autoFocus={!note && kind === 'note'}
+            autoFocus={!note && kind !== 'link'}
             onChange={(e) => setTitle(e.target.value)}
             className={`${inputClass} text-[16px] font-medium`}
           />
@@ -201,22 +205,34 @@ function EditorForm({ note }: { note?: Note }) {
             </label>
             <TagInput id={`${ids}-tags`} value={tags} onChange={setTags} suggestions={tagsQuery.data?.map((t) => t.name)} />
           </div>
-          <div className="flex flex-[1_1_280px] flex-col gap-1.5">
-            <label htmlFor={`${ids}-task`} className={labelClass}>
-              Vincular a tarea de JIRA
-            </label>
-            <input
-              id={`${ids}-task`}
-              type="text"
-              value={taskText}
-              placeholder="Clave, p. ej. ABC-123"
-              onChange={(e) => setTaskText(e.target.value)}
-              className={`${inputClass} font-mono text-code text-info`}
-            />
-            {unsyncedKeys.length > 0 && (
-              <span className="text-small text-ink-muted">Aún sin sincronizar con JIRA. Se enlazará sola cuando llegue la tarea.</span>
-            )}
-          </div>
+          {kind !== 'doc' && (
+            <div className="flex flex-[1_1_280px] flex-col gap-1.5">
+              <label htmlFor={`${ids}-task`} className={labelClass}>
+                Vincular a tarea de JIRA
+              </label>
+              <input
+                id={`${ids}-task`}
+                type="text"
+                list={`${ids}-tasks`}
+                value={taskText}
+                placeholder="Clave, p. ej. ABC-123"
+                onChange={(e) => setTaskText(e.target.value)}
+                className={`${inputClass} font-mono text-code text-info`}
+              />
+              <TaskOptions id={`${ids}-tasks`} />
+              {unsyncedKeys.length > 0 && (
+                <span className="text-small text-ink-muted">Aún sin sincronizar con JIRA. Se enlazará sola cuando llegue la tarea.</span>
+              )}
+            </div>
+          )}
+          {kind === 'note' && (
+            <div className="flex flex-[1_1_280px] flex-col gap-1.5">
+              <label htmlFor={`${ids}-commit`} className={labelClass}>
+                Commit de la tarea (opcional)
+              </label>
+              <CommitSelect id={`${ids}-commit`} taskKey={commitTask} value={commitToSave} onChange={(c) => setCommitPick({ task: commitTask, commit: c })} />
+            </div>
+          )}
         </div>
 
         {error && (

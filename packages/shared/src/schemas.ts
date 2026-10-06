@@ -30,6 +30,15 @@ export const JiraKey = z
   .toUpperCase()
   .regex(/^[A-Z][A-Z0-9_]*-\d+$/, 'Clave de JIRA no válida (ej.: ABC-123)');
 
+/** Commit de una tarea (de su HISTORIAL.md) al que se asocia una nota o un recordatorio. */
+export const CommitRef = z.object({
+  repo: z.string().trim().min(1),
+  sha: z.string().trim().min(4),
+  url: z.httpUrl().nullable(),
+  text: z.string(),
+});
+export type CommitRef = z.infer<typeof CommitRef>;
+
 const noteFields = {
   kind: z.enum(NOTE_KINDS),
   title: z.string().trim().min(1, 'El título es obligatorio'),
@@ -40,6 +49,7 @@ const noteFields = {
   archived: z.boolean(),
   tags: z.array(z.string().trim().toLowerCase().min(1)),
   taskKeys: z.array(JiraKey),
+  commit: CommitRef.nullable(),
 };
 
 export const NoteInput = z.object({
@@ -50,6 +60,7 @@ export const NoteInput = z.object({
   archived: noteFields.archived.default(false),
   tags: noteFields.tags.default([]),
   taskKeys: noteFields.taskKeys.default([]),
+  commit: noteFields.commit.default(null),
 });
 export type NoteInput = z.input<typeof NoteInput>;
 
@@ -77,9 +88,13 @@ export interface Note {
   updatedAt: string;
   tags: string[];
   tasks: NoteTaskLink[];
+  commit: CommitRef | null;
 }
 
 export const NoteListQuery = z.object({
+  kind: z.enum(NOTE_KINDS).optional(),
+  /** con: solo las vinculadas a alguna tarea; sin: solo las que no tienen tarea. */
+  task: z.enum(['con', 'sin']).optional(),
   q: z.string().trim().optional(),
   tag: z.string().trim().toLowerCase().optional(),
   archived: z.stringbool().default(false),
@@ -115,6 +130,7 @@ const reminderFields = {
   dueAt: z.iso.datetime({ offset: true }),
   repeat: Repeat,
   taskKey: JiraKey.nullish(),
+  commit: CommitRef.nullish(),
 };
 
 export const ReminderInput = z.object({ ...reminderFields, repeat: reminderFields.repeat.default({ kind: 'none' }) });
@@ -139,6 +155,7 @@ export interface Reminder {
   nextFireAt: string | null;
   snoozedUntil: string | null;
   taskKey: string | null;
+  commit: CommitRef | null;
   createdAt: string;
 }
 
@@ -381,6 +398,21 @@ export interface DevSession {
 export interface SessionOpenResult {
   opened: boolean;
   command: string;
+}
+
+/** RESUMEN.md que escribe opencode al cerrar una tarea (Documentación › De tareas). */
+export interface TaskDoc {
+  key: string;
+  /** Título del resumen (su primera cabecera, sin la clave). */
+  title: string;
+  repos: string[];
+  /** Enlaces a PR que aparecen en el resumen. */
+  prCount: number;
+  updatedAt: string;
+}
+
+export interface TaskDocDetail extends TaskDoc {
+  markdown: string;
 }
 
 export interface OpencodeSkillStatus {

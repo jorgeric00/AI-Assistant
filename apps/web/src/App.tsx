@@ -8,6 +8,8 @@ import { Sidebar } from './components/Sidebar';
 import { HoyPage } from './pages/HoyPage';
 import { PendingPage } from './pages/PendingPage';
 import { DiarioPage } from './pages/diario/DiarioPage';
+import { DocumentacionPage } from './pages/documentacion/DocumentacionPage';
+import { EnlacesPage } from './pages/enlaces/EnlacesPage';
 import { NotasPage } from './pages/notas/NotasPage';
 import { RecordatoriosPage } from './pages/recordatorios/RecordatoriosPage';
 import { AjustesPage } from './pages/AjustesPage';
@@ -65,8 +67,12 @@ export function App() {
         <div className="mx-auto w-full max-w-[1120px]">
           {section === 'hoy' ? (
             <HoyPage />
+          ) : section === 'documentacion' ? (
+            <DocumentacionPage params={params} />
           ) : section === 'notas' ? (
             <NotasPage params={params} />
+          ) : section === 'enlaces' ? (
+            <EnlacesPage params={params} />
           ) : section === 'recordatorios' ? (
             <RecordatoriosPage />
           ) : section === 'diario' ? (

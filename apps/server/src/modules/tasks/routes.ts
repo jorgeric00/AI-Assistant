@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { JiraDraftInput, JiraKey, JiraUpdateInput, TaskListQuery, type JiraSyncStatus } from '@dev-assistant/shared';
 import { readTaskDevInfo } from './dev-files.js';
+import { getTaskDoc, listTaskDocs } from './task-docs.js';
 import type { Db } from '../../db/client.js';
 import type { JiraSync } from './jira-sync.js';
 import { JiraUpdateInputError, type JiraUpdateService } from './jira-update.js';
@@ -34,6 +35,14 @@ export async function tasksRoutes(
 
   // Plan e histórico que escribe opencode en la carpeta de la tarea (aunque la tarea no esté sincronizada).
   app.get('/api/tasks/:key/dev', async (req) => readTaskDevInfo(devAssistantHome, KeyParams.parse(req.params).key));
+
+  // Documentación de tareas: el RESUMEN.md que escribe opencode al cerrar cada tarea.
+  app.get('/api/task-docs', async (req) => listTaskDocs(devAssistantHome, z.object({ q: z.string().trim().optional() }).parse(req.query).q));
+
+  app.get('/api/task-docs/:key', async (req, reply) => {
+    const { key } = KeyParams.parse(req.params);
+    return (await getTaskDoc(devAssistantHome, key)) ?? reply.code(404).send({ error: `${key} aún no tiene resumen` });
+  });
 
   // Sesión de desarrollo: estado de los repos de la tarea y botón para abrir opencode en la terminal.
   app.get('/api/tasks/:key/session', async (req) => sessions.get(KeyParams.parse(req.params).key));

@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import type { DevPlan, HistoryEntry, TaskDetail } from '@dev-assistant/shared';
-import { Check, ExternalLink, FileText, Link2, SquareTerminal } from 'lucide-react';
+import { BookOpen, Check, ExternalLink, FileText, Link2, SquareTerminal } from 'lucide-react';
 import { api, queryKeys } from '../../api';
+import { noteHref } from '../../sections';
 import { primaryButtonClass, secondaryButtonClass } from '../../components/fields';
 import { dayAndTime, timeAgo } from '../../dates';
 import { ActualizarJiraButton, JiraUpdatesList } from './ActualizarJira';
@@ -206,6 +207,7 @@ export function HistoryCard({ history, loading }: { history: HistoryEntry[]; loa
 }
 
 function JiraCard({ task }: { task: TaskDetail }) {
+  const doc = useQuery({ queryKey: queryKeys.taskDoc(task.key), queryFn: () => api.getTaskDoc(task.key), retry: false });
   return (
     <aside aria-labelledby="jira-titulo" className={`${card} flex-[1_1_320px]`}>
       <h2 id="jira-titulo" className="m-0 text-heading font-semibold">
@@ -217,6 +219,17 @@ function JiraCard({ task }: { task: TaskDetail }) {
         <p className="m-0 text-ink-faint">{task.synced ? 'Sin descripción.' : 'Aún sin sincronizar con JIRA.'}</p>
       )}
       <div className="flex flex-col gap-2">
+        <h3 className={subheading}>Documentación</h3>
+        {doc.data ? (
+          <a href={`#/documentacion/tareas/${task.key}`} className="flex items-center gap-2 text-ink no-underline hover:underline">
+            <BookOpen size={16} strokeWidth={1.5} className="shrink-0 text-ink-muted" aria-hidden />
+            <span className="min-w-0 truncate">Resumen de la tarea</span>
+          </a>
+        ) : (
+          <p className="m-0 text-ink-faint">opencode escribe el resumen al cerrar la tarea.</p>
+        )}
+      </div>
+      <div className="flex flex-col gap-2">
         <h3 className={subheading}>Notas vinculadas</h3>
         {task.notes.length ? (
           <ul className="flex flex-col gap-1">
@@ -224,7 +237,7 @@ function JiraCard({ task }: { task: TaskDetail }) {
               const Icon = n.kind === 'link' ? Link2 : FileText;
               return (
                 <li key={n.id}>
-                  <a href={`#/notas/${n.id}`} className="flex items-center gap-2 text-ink no-underline hover:underline">
+                  <a href={noteHref(n)} className="flex items-center gap-2 text-ink no-underline hover:underline">
                     <Icon size={16} strokeWidth={1.5} className="shrink-0 text-ink-muted" aria-hidden />
                     <span className="min-w-0 truncate">{n.title}</span>
                   </a>

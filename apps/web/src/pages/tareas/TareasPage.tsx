@@ -3,6 +3,7 @@ import type { Task, TaskDetail } from '@dev-assistant/shared';
 import { ExternalLink, FileText, Link2, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { api, queryKeys } from '../../api';
+import { noteHref } from '../../sections';
 import { primaryButtonClass, secondaryButtonClass } from '../../components/fields';
 import { timeAgo } from '../../dates';
 import { ActualizarJiraButton, JiraUpdatesList } from './ActualizarJira';
@@ -206,7 +207,7 @@ function TaskDetailView({ task, className }: { task: TaskDetail; className: stri
               const Icon = n.kind === 'link' ? Link2 : FileText;
               return (
                 <li key={n.id}>
-                  <a href={`#/notas/${n.id}`} className="flex items-center gap-2 text-ink no-underline hover:underline">
+                  <a href={noteHref(n)} className="flex items-center gap-2 text-ink no-underline hover:underline">
                     <Icon size={16} strokeWidth={1.5} className="shrink-0 text-ink-muted" aria-hidden />
                     <span className="min-w-0 truncate">{n.title}</span>
                   </a>

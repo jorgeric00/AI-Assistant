@@ -46,6 +46,7 @@ export class RemindersRepository {
         rrule: repeatToRrule(data.repeat),
         nextFireAt: dueAt,
         taskId: data.taskKey ? ensureTaskId(this.db, data.taskKey) : null,
+        commitJson: data.taskKey ? (data.commit ?? null) : null,
       })
       .returning({ id: reminders.id })
       .get();
@@ -61,6 +62,9 @@ export class RemindersRepository {
     if (data.title !== undefined) set.title = data.title;
     if (data.body !== undefined) set.body = data.body ?? null;
     if (data.taskKey !== undefined) set.taskId = data.taskKey ? ensureTaskId(this.db, data.taskKey) : null;
+    // El commit es de la tarea: sin tarea no hay commit.
+    if (data.commit !== undefined) set.commitJson = data.commit ?? null;
+    if (data.taskKey === null) set.commitJson = null;
     if (data.dueAt !== undefined || data.repeat !== undefined) {
       // Cambiar cuándo avisa reprograma el recordatorio desde cero.
       const repeat = data.repeat ?? rruleToRepeat(current.rrule);
@@ -188,6 +192,7 @@ function toReminder(r: Row, taskKey: string | null): Reminder {
     nextFireAt: r.nextFireAt,
     snoozedUntil: r.snoozedUntil,
     taskKey,
+    commit: r.commitJson ?? null,
     createdAt: r.createdAt,
   };
 }

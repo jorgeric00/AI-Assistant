@@ -13,6 +13,7 @@ import {
   PENDING_ACTION_KINDS,
   PENDING_ACTION_STATUSES,
   REMINDER_STATUSES,
+  type CommitRef,
 } from '@dev-assistant/shared';
 
 const id = () => integer('id').primaryKey({ autoIncrement: true });
@@ -30,6 +31,8 @@ export const notes = sqliteTable('notes', {
   urlTitle: text('url_title'),
   pinned: integer('pinned', { mode: 'boolean' }).notNull().default(false),
   archived: integer('archived', { mode: 'boolean' }).notNull().default(false),
+  /** Commit de la tarea al que se refiere la nota. */
+  commitJson: text('commit_json', { mode: 'json' }).$type<CommitRef>(),
   createdAt: createdAt(),
   updatedAt: updatedAt(),
 });
@@ -81,6 +84,7 @@ export const reminders = sqliteTable(
     snoozedUntil: text('snoozed_until'),
     noteId: integer('note_id').references(() => notes.id, { onDelete: 'set null' }),
     taskId: integer('task_id').references(() => tasks.id, { onDelete: 'set null' }),
+    commitJson: text('commit_json', { mode: 'json' }).$type<CommitRef>(),
     createdAt: createdAt(),
   },
   (t) => [index('reminders_next_fire_idx').on(t.status, t.nextFireAt)],

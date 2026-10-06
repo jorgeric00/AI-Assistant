@@ -1,5 +1,5 @@
-import { and, desc, eq, inArray, notExists, sql } from 'drizzle-orm';
-import { NoteInput, NoteUpdate, type Note, type NoteListQuery, type TagCount } from '@dev-assistant/shared';
+import { and, desc, eq, inArray, not, notExists, sql } from 'drizzle-orm';
+import { NoteInput, NoteUpdate, type Note, type NoteKind, type NoteListQuery, type TagCount } from '@dev-assistant/shared';
 import type { Db } from '../../db/client.js';
 import { notes, noteTags, noteTasks, tags, tasks } from '../../db/schema.js';
 import { UNSYNCED_TASK_STATUS, ensureTaskId } from '../tasks/ensure-task.js';
@@ -46,6 +46,11 @@ export class NotesRepository {
 
   list(query: NoteListQuery): Note[] {
     const conditions = [eq(notes.archived, query.archived)];
+    if (query.kind) conditions.push(eq(notes.kind, query.kind));
+    if (query.task) {
+      const linked = inArray(notes.id, this.db.select({ id: noteTasks.noteId }).from(noteTasks));
+      conditions.push(query.task === 'con' ? linked : not(linked));
+    }
     if (query.tag) {
       conditions.push(
         inArray(
@@ -114,6 +119,7 @@ export class NotesRepository {
           urlTitle: data.urlTitle ?? null,
           pinned: data.pinned,
           archived: data.archived,
+          commitJson: data.commit,
         })
         .returning({ id: notes.id })
         .get();
@@ -127,10 +133,10 @@ export class NotesRepository {
   update(id: number, input: NoteUpdate): Note | undefined {
     const data = NoteUpdate.parse(input);
     const found = this.db.transaction((tx) => {
-      const { tags: tagNames, taskKeys, ...fields } = data;
+      const { tags: tagNames, taskKeys, commit, ...fields } = data;
       const res = tx
         .update(notes)
-        .set({ ...fields, updatedAt: now() })
+        .set({ ...fields, ...(commit !== undefined && { commitJson: commit }), updatedAt: now() })
         .where(eq(notes.id, id))
         .returning({ id: notes.id })
         .get();
@@ -151,14 +157,15 @@ export class NotesRepository {
   }
 
   /** Etiquetas usadas en notas no archivadas, de más a menos usada. */
-  tagCounts(): TagCount[] {
+  /** Etiquetas en uso en notas no archivadas; con `kind`, solo las de ese tipo (notas, enlaces o documentos). */
+  tagCounts(kind?: NoteKind): TagCount[] {
     const count = sql<number>`count(*)`.mapWith(Number);
     return this.db
       .select({ name: tags.name, count })
       .from(tags)
       .innerJoin(noteTags, eq(noteTags.tagId, tags.id))
       .innerJoin(notes, eq(notes.id, noteTags.noteId))
-      .where(eq(notes.archived, false))
+      .where(and(eq(notes.archived, false), kind ? eq(notes.kind, kind) : undefined))
       .groupBy(tags.id)
       .orderBy(desc(count), tags.name)
       .all();
@@ -206,8 +213,9 @@ export class NotesRepository {
       .orderBy(tasks.jiraKey)
       .all();
 
-    return rows.map((r) => ({
+    return rows.map(({ commitJson, ...r }) => ({
       ...r,
+      commit: commitJson ?? null,
       tags: tagRows.filter((t) => t.noteId === r.id).map((t) => t.name),
       tasks: taskRows
         .filter((t) => t.noteId === r.id)

@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { NoteInput, NoteListQuery, NoteUpdate, type LinkTitleResponse } from '@dev-assistant/shared';
+import { NOTE_KINDS, NoteInput, NoteListQuery, NoteUpdate, type LinkTitleResponse } from '@dev-assistant/shared';
 import type { Db } from '../../db/client.js';
 import { fetchLinkTitle } from './link-title.js';
 import { NotesRepository } from './repository.js';
@@ -36,7 +36,7 @@ export async function notesRoutes(app: FastifyInstance, { db, fetchTitle = fetch
     return deleted ? reply.code(204).send() : reply.code(404).send({ error: 'Nota no encontrada' });
   });
 
-  app.get('/api/tags', async () => repo.tagCounts());
+  app.get('/api/tags', async (req) => repo.tagCounts(z.object({ kind: z.enum(NOTE_KINDS).optional() }).parse(req.query).kind));
 
   app.get('/api/link-title', async (req): Promise<LinkTitleResponse> => ({
     title: await fetchTitle(LinkTitleQuery.parse(req.query).url),

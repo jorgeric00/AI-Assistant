@@ -90,6 +90,11 @@ function ReminderRow({ reminder: r, onEdit }: { reminder: Reminder; onEdit: () =
       <button type="button" onClick={onEdit} className="min-w-[200px] grow text-left text-ink hover:underline">
         {r.title}
         {r.taskKey && <code className="ml-2 font-mono text-code text-info">{r.taskKey}</code>}
+        {r.commit && (
+          <code className="ml-2 font-mono text-code text-info" title={r.commit.text}>
+            {r.commit.repo}@{r.commit.sha}
+          </code>
+        )}
       </button>
       <span className={`flex items-center gap-1 text-small ${label.urgent ? 'text-accent' : 'text-ink-muted'}`}>
         {label.urgent && <Clock size={14} strokeWidth={1.5} aria-hidden />}
