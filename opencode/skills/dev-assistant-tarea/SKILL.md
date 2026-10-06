@@ -31,11 +31,12 @@ Cada tarea tiene una carpeta fuera de los repositorios de la empresa:
   PLAN.md         ← el plan de desarrollo (lo escribes tú)
   HISTORIAL.md    ← una línea por cada cambio subido (la añades tú)
   TAREA.md        ← contexto que deja AI-Assistant al abrir la sesión (no lo edites)
+  RESUMEN.md      ← la documentación de la tarea, al cerrarla (la escribes tú)
 ```
 
 `<CLAVE>` es la clave de JIRA en mayúsculas (p. ej. `SGARFIDIN-1024`). En Windows, `~` es la carpeta del usuario
 (`C:\Users\<usuario>`). Crea la carpeta si no existe. El código se trabaja en el **clon de siempre** de cada
-repositorio, en la ruta que indica AI-Assistant (o Jorge); esta carpeta solo guarda el plan y el historial.
+repositorio, en la ruta que indica AI-Assistant (o Jorge); esta carpeta guarda el plan, el historial y la documentación de la tarea.
 
 `TAREA.md` trae los repositorios dados de alta en AI-Assistant (nombre, ruta local, rama base y repo de GitHub) y
 la ficha de cada uno (convenciones, comandos de tests y arquitectura). Léelo antes de empezar y sigue esas fichas.
@@ -92,7 +93,9 @@ la ficha de cada uno (convenciones, comandos de tests y arquitectura). Léelo an
 18. Si lo valida, **pregunta a Jorge** si pasas las PR a "ready for review". Cuando lo confirme:
     - Pasa cada PR a "ready for review" con el MCP de GitHub.
     - En JIRA, pasa la tarea a "In Review" y añade un comentario con un resumen del cambio y el enlace a cada PR.
-19. Ahí termina tu trabajo: la revisión y el merge son de las personas.
+19. Escribe `RESUMEN.md` en la carpeta de la tarea con el formato de abajo: es la documentación de la tarea
+    que AI-Assistant enseña en "Documentación". Si ya existe (la tarea se retomó), actualízalo entero.
+20. Ahí termina tu trabajo: la revisión y el merge son de las personas.
 
 ## Formato de PLAN.md
 
@@ -127,6 +130,36 @@ Reglas del plan:
 - Si la tarea toca varios repositorios, usa una sección `## Implementación · <repo>` por repositorio.
 - Cada paso es una casilla `- [ ]` en una sola línea, corto y verificable. Cada paso de implementación acaba en un commit.
 - Marca cada paso con `- [x]` en cuanto lo termines, sin esperar al final. Si el plan cambia, edítalo.
+
+## Formato de RESUMEN.md
+
+Documentación para quien lea la tarea dentro de meses (incluido Jorge): qué se hizo y por qué, no un diario.
+En español, en Markdown, con estas secciones en este orden (omite una solo si de verdad no aplica):
+
+```markdown
+# <CLAVE> · <resumen del ticket>
+
+Fecha: <AAAA-MM-DD> · Rama: <rama> · Repos: <repo>, <otro repo>
+
+## Qué se pidió
+Una o dos frases con el objetivo del ticket.
+
+## Qué se hizo
+- Cambios principales, por repositorio.
+
+## Decisiones
+- Decisiones de diseño y alternativas descartadas, con el motivo.
+
+## Cómo probarlo
+- Comandos de test y pasos manuales para comprobarlo.
+
+## PR y commits
+- <repo>: [PR #<n>](<url>)
+- Commits principales con su enlace (los de HISTORIAL.md).
+
+## Pendiente
+- Lo que queda fuera o para otra tarea, si hay algo.
+```
 
 ## Formato de HISTORIAL.md
 
