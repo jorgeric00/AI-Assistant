@@ -5,11 +5,17 @@ import { useState } from 'react';
 import { api, queryKeys } from '../../api';
 import { secondaryButtonClass } from '../../components/fields';
 import { timeAgo } from '../../dates';
+import { TareaDetallePage } from './TareaDetallePage';
 import { useJiraSync, useTaskList } from './useTasks';
 
-/** Sección "Tareas de JIRA": `#/tareas` y `#/tareas/:clave` (ficha a la derecha). */
+/** Sección "Tareas de JIRA": `#/tareas`, `#/tareas/:clave` (ficha a la derecha) y `#/tareas/:clave/detalle`. */
 export function TareasPage({ params }: { params: string[] }) {
   const selectedKey = params[0]?.toUpperCase();
+  if (selectedKey && params[1] === 'detalle') return <TareaDetallePage taskKey={selectedKey} />;
+  return <TaskBrowser selectedKey={selectedKey} />;
+}
+
+function TaskBrowser({ selectedKey }: { selectedKey?: string }) {
   const [showDone, setShowDone] = useState(false);
   const { status, sync } = useJiraSync();
   const tasks = useTaskList(showDone);
@@ -209,6 +215,10 @@ function TaskDetailView({ task, className }: { task: TaskDetail; className: stri
           <p className="m-0 text-ink-faint">Ninguna. Escribe {task.key} en una nota para vincularla.</p>
         )}
       </div>
+
+      <a href={`#/tareas/${task.key}/detalle`} className={`${secondaryButtonClass} self-start no-underline`}>
+        Ver detalle
+      </a>
     </aside>
   );
 }

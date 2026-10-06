@@ -12,6 +12,10 @@ export interface AppConfig {
   opencodeConfigPath: string;
   opencodeUrl: string | undefined;
   teamsWebhookUrl: string | undefined;
+  /** Carpeta de trabajo de la app: worktrees/<CLAVE>/ con PLAN.md e HISTORIAL.md de cada tarea. */
+  devAssistantHome: string;
+  /** Carpeta global de skills de opencode, donde se instala la skill de la app. */
+  opencodeSkillsDir: string;
   /** Lectura de JIRA por API REST; sin URL y token la sección de tareas indica cómo configurarla. */
   jira: { baseUrl: string; token: string; email: string | undefined; jql: string } | undefined;
 }
@@ -28,6 +32,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     opencodeConfigPath: expandHome(env.OPENCODE_CONFIG ?? '~/.config/opencode/opencode.json'),
     opencodeUrl: env.OPENCODE_URL || undefined,
     teamsWebhookUrl: env.TEAMS_WEBHOOK_URL || undefined,
+    devAssistantHome: expandHome(env.DEV_ASSISTANT_HOME ?? '~/.dev-assistant'),
+    opencodeSkillsDir: expandHome(env.OPENCODE_SKILLS_DIR ?? '~/.config/opencode/skill'),
     jira:
       env.JIRA_URL && env.JIRA_TOKEN
         ? { baseUrl: env.JIRA_URL, token: env.JIRA_TOKEN, email: env.JIRA_EMAIL || undefined, jql: env.JIRA_JQL || DEFAULT_JIRA_JQL }

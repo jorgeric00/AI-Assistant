@@ -3,12 +3,14 @@ import Fastify from 'fastify';
 import { sql } from 'drizzle-orm';
 import { ZodError } from 'zod';
 import type { HealthResponse } from '@dev-assistant/shared';
+import { loadConfig } from './config.js';
 import type { Db } from './db/client.js';
 import { JiraError } from './integrations/jira/client.js';
 import { LlmUnavailableError, type Llm } from './integrations/opencode/llm.js';
 import { aiRoutes } from './modules/ai/routes.js';
 import { journalRoutes } from './modules/journal/routes.js';
 import { notesRoutes, type NotesRoutesOptions } from './modules/notes/routes.js';
+import { opencodeSkillRoutes } from './modules/opencode/skill.js';
 import { remindersRoutes } from './modules/reminders/routes.js';
 import { JiraSync } from './modules/tasks/jira-sync.js';
 import { TasksRepository } from './modules/tasks/repository.js';
@@ -22,6 +24,10 @@ export interface BuildAppOptions {
   llm?: Llm;
   /** Sincronización con JIRA. Sin ella, la sección de tareas indica que falta configurar JIRA. */
   jiraSync?: JiraSync;
+  /** Carpeta de trabajo (worktrees y ficheros de cada tarea). Por defecto ~/.dev-assistant. */
+  devAssistantHome?: string;
+  /** Carpeta global de skills de opencode. Por defecto ~/.config/opencode/skill. */
+  opencodeSkillsDir?: string;
 }
 
 const noLlm: Llm = {
@@ -59,6 +65,12 @@ export async function buildApp(db: Db, opts: BuildAppOptions = {}) {
   await app.register(remindersRoutes, { db });
   await app.register(journalRoutes, { db });
   await app.register(aiRoutes, { db, llm: opts.llm ?? noLlm });
-  await app.register(tasksRoutes, { db, jiraSync: opts.jiraSync ?? new JiraSync(db, new TasksRepository(db), null, '') });
+  const config = loadConfig();
+  await app.register(tasksRoutes, {
+    db,
+    jiraSync: opts.jiraSync ?? new JiraSync(db, new TasksRepository(db), null, ''),
+    devAssistantHome: opts.devAssistantHome ?? config.devAssistantHome,
+  });
+  await app.register(opencodeSkillRoutes, { skillsDir: opts.opencodeSkillsDir ?? config.opencodeSkillsDir });
   return app;
 }

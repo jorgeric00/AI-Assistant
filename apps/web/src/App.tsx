@@ -10,6 +10,7 @@ import { PendingPage } from './pages/PendingPage';
 import { DiarioPage } from './pages/diario/DiarioPage';
 import { NotasPage } from './pages/notas/NotasPage';
 import { RecordatoriosPage } from './pages/recordatorios/RecordatoriosPage';
+import { AjustesPage } from './pages/AjustesPage';
 import { TareasPage } from './pages/tareas/TareasPage';
 import { SECTIONS, routeFromHash, type Route } from './sections';
 
@@ -71,6 +72,8 @@ export function App() {
             <DiarioPage params={params} />
           ) : section === 'tareas' ? (
             <TareasPage params={params} />
+          ) : section === 'ajustes' ? (
+            <AjustesPage />
           ) : (
             <PendingPage title={current.label} />
           )}

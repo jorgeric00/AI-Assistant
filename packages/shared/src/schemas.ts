@@ -253,3 +253,61 @@ export interface JiraSyncStatus {
   /** Error de la última sincronización, si falló. */
   lastError: string | null;
 }
+
+// ── Desarrollo de una tarea: PLAN.md e HISTORIAL.md que mantiene opencode ───
+
+/** Fases del plan, en orden (skill de opencode "dev-assistant-tarea"). */
+export const PLAN_PHASES = ['Análisis', 'Plan aprobado', 'Implementación', 'Pruebas y PR'] as const;
+
+export interface PlanStep {
+  text: string;
+  done: boolean;
+}
+
+export interface PlanSection {
+  /** Título completo de la sección, p. ej. "Implementación · orders-api". */
+  title: string;
+  /** Fase a la que pertenece (parte del título antes de " · "). */
+  phase: string;
+  steps: PlanStep[];
+}
+
+export interface PlanPhase {
+  name: string;
+  done: number;
+  total: number;
+}
+
+export interface DevPlan {
+  sections: PlanSection[];
+  phases: PlanPhase[];
+  /** Primera fase con pasos pendientes; null si todo está hecho. */
+  currentPhase: string | null;
+  done: number;
+  total: number;
+  updatedAt: string;
+}
+
+export interface HistoryEntry {
+  /** "AAAA-MM-DD HH:MM" tal como lo escribe opencode (hora local). */
+  date: string;
+  repo: string;
+  sha: string;
+  url: string | null;
+  text: string;
+}
+
+export interface TaskDevInfo {
+  plan: DevPlan | null;
+  /** Del más reciente al más antiguo. */
+  history: HistoryEntry[];
+  /** Carpeta de la tarea donde opencode escribe los ficheros. */
+  folder: string;
+}
+
+export interface OpencodeSkillStatus {
+  installed: boolean;
+  /** false si la instalada es distinta de la versión de la app. */
+  upToDate: boolean;
+  path: string;
+}
