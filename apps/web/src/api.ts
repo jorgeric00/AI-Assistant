@@ -8,6 +8,7 @@ import type {
   Note,
   NoteInput,
   NoteUpdate,
+  OpencodeSkillStatus,
   Reminder,
   ReminderAlert,
   ReminderInput,
@@ -16,6 +17,7 @@ import type {
   TagCount,
   Task,
   TaskDetail,
+  TaskDevInfo,
 } from '@dev-assistant/shared';
 
 async function request<T>(method: string, url: string, body?: unknown): Promise<T> {
@@ -71,8 +73,12 @@ export const api = {
 
   listTasks: (done: boolean) => request<Task[]>('GET', `/api/tasks${done ? '?done=true' : ''}`),
   getTask: (key: string) => request<TaskDetail>('GET', `/api/tasks/${encodeURIComponent(key)}`),
+  getTaskDev: (key: string) => request<TaskDevInfo>('GET', `/api/tasks/${encodeURIComponent(key)}/dev`),
   jiraStatus: () => request<JiraSyncStatus>('GET', '/api/jira/status'),
   syncJira: () => request<JiraSyncStatus>('POST', '/api/jira/sync'),
+
+  opencodeSkill: () => request<OpencodeSkillStatus>('GET', '/api/opencode/skill'),
+  installOpencodeSkill: () => request<OpencodeSkillStatus>('POST', '/api/opencode/skill/install'),
 };
 
 /** Claves de consulta de React Query; invalidar `notes` refresca listas, notas y etiquetas. */
@@ -92,4 +98,6 @@ export const queryKeys = {
   taskList: (done: boolean) => ['tasks', 'list', done] as const,
   task: (key: string) => ['tasks', 'one', key] as const,
   jiraStatus: ['tasks', 'jira-status'] as const,
+  taskDev: (key: string) => ['tasks', 'dev', key] as const,
+  opencodeSkill: ['opencode-skill'] as const,
 };
