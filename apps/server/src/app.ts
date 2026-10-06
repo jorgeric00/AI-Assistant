@@ -19,6 +19,8 @@ import { JiraSync } from './modules/tasks/jira-sync.js';
 import { JiraUpdateService } from './modules/tasks/jira-update.js';
 import { TasksRepository } from './modules/tasks/repository.js';
 import { tasksRoutes } from './modules/tasks/routes.js';
+import { PrWatcher } from './modules/prs/watcher.js';
+import { prsRoutes } from './modules/prs/routes.js';
 import { DevSessionService, type TerminalLauncher } from './modules/tasks/session.js';
 
 export interface BuildAppOptions {
@@ -29,6 +31,7 @@ export interface BuildAppOptions {
   llm?: Llm;
   /** Sincronización con JIRA. Sin ella, la sección de tareas indica que falta configurar JIRA. */
   jiraSync?: JiraSync;
+  prWatcher?: PrWatcher;
   /** Cliente REST de JIRA (estados posibles y refresco tras actualizar). */
   jiraClient?: JiraClient | null;
   /** Carpeta de trabajo (worktrees y ficheros de cada tarea). Por defecto ~/.dev-assistant. */
@@ -88,6 +91,7 @@ export async function buildApp(db: Db, opts: BuildAppOptions = {}) {
     devAssistantHome,
     sessions: new DevSessionService(db, tasksRepo, devAssistantHome, opts.git, opts.terminalLauncher),
   });
+  await app.register(prsRoutes, { prWatcher: opts.prWatcher ?? new PrWatcher(db, null) });
   await app.register(reposRoutes, { db, llm: opts.llm ?? noLlm, git: opts.git });
   await app.register(opencodeSkillRoutes, { skillsDir: opts.opencodeSkillsDir ?? config.opencodeSkillsDir });
   return app;

@@ -496,3 +496,53 @@ export interface RepoInspection {
   github: string;
   defaultBranch: string | null;
 }
+
+// ── Avisos de tus PR (GitHub) ───────────────────────────────────────────────
+
+export const PR_ALERT_KINDS = ['ci_failed', 'comments', 'changes_requested', 'approved', 'merged'] as const;
+export type PrAlertKind = (typeof PR_ALERT_KINDS)[number];
+
+export type PrState = 'open' | 'merged' | 'closed';
+export type PrChecksState = 'success' | 'failure' | 'pending';
+
+/** Una PR tuya tal como la vio la última consulta a GitHub. */
+export interface PullRequestInfo {
+  id: string;
+  /** owner/repo */
+  repo: string;
+  number: number;
+  title: string;
+  url: string;
+  state: PrState;
+  isDraft: boolean;
+  headRef: string;
+  /** Clave de JIRA sacada de la rama o del título. */
+  taskKey: string | null;
+  checks: PrChecksState | null;
+  failingChecks: string[];
+  /** Revisión vigente: quién aprobó, quién pidió cambios y cuántos comentarios de otros hay. */
+  approvedBy: string[];
+  changesRequestedBy: string[];
+  comments: number;
+  updatedAt: string;
+}
+
+export interface PrAlert {
+  id: number;
+  kind: PrAlertKind;
+  repo: string;
+  number: number;
+  url: string;
+  taskKey: string | null;
+  /** "CI en rojo", "2 comentarios nuevos"... */
+  title: string;
+  detail: string | null;
+  createdAt: string;
+}
+
+export interface PrWatchStatus {
+  configured: boolean;
+  user: string | null;
+  lastCheckedAt: string | null;
+  lastError: string | null;
+}

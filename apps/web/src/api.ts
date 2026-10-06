@@ -15,6 +15,9 @@ import type {
   NoteInput,
   NoteUpdate,
   OpencodeSkillStatus,
+  PrAlert,
+  PrWatchStatus,
+  PullRequestInfo,
   Reminder,
   Repo,
   RepoDetail,
@@ -112,6 +115,11 @@ export const api = {
   deleteRepo: (id: number) => request<void>('DELETE', `/api/repos/${id}`),
   draftRepoProfile: (id: number) => request<RepoDetail>('POST', `/api/repos/${id}/profile/draft`),
 
+  prStatus: () => request<PrWatchStatus>('GET', '/api/prs/status'),
+  checkPrs: () => request<PrWatchStatus>('POST', '/api/prs/check'),
+  listPrAlerts: () => request<PrAlert[]>('GET', '/api/pr-alerts'),
+  getTaskPrs: (key: string) => request<PullRequestInfo[]>('GET', `/api/tasks/${encodeURIComponent(key)}/prs`),
+
   opencodeSkill: () => request<OpencodeSkillStatus>('GET', '/api/opencode/skill'),
   installOpencodeSkill: () => request<OpencodeSkillStatus>('POST', '/api/opencode/skill/install'),
 };
@@ -139,6 +147,11 @@ export const queryKeys = {
   taskSession: (key: string) => ['tasks', 'session', key] as const,
   jiraTransitions: (key: string) => ['tasks', 'transitions', key] as const,
   opencodeSkill: ['opencode-skill'] as const,
+  /** Invalidar `prs` refresca avisos, estado y PR de las tareas. */
+  prs: ['prs'] as const,
+  prStatus: ['prs', 'status'] as const,
+  prAlerts: ['prs', 'alerts'] as const,
+  taskPrs: (key: string) => ['prs', 'task', key] as const,
   /** Invalidar `repos` refresca la lista y las fichas. */
   repos: ['repos'] as const,
   repoList: ['repos', 'list'] as const,

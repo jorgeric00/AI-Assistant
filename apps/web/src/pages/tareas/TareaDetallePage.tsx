@@ -5,6 +5,7 @@ import { api, queryKeys } from '../../api';
 import { noteHref } from '../../sections';
 import { primaryButtonClass, secondaryButtonClass } from '../../components/fields';
 import { dayAndTime, timeAgo } from '../../dates';
+import { TaskPullRequests } from '../prs/PrWidgets';
 import { ActualizarJiraButton, JiraUpdatesList } from './ActualizarJira';
 
 const card = 'flex min-w-0 flex-col gap-4 rounded-lg border border-line bg-surface p-4';
@@ -35,6 +36,7 @@ export function TareaDetallePage({ taskKey }: { taskKey: string }) {
           <Header task={task.data} />
           <div className="flex flex-wrap items-start gap-4">
             <div className="flex min-w-0 flex-[999_1_560px] flex-col gap-4">
+              <TaskPullRequests taskKey={taskKey} className={`${card} gap-3`} />
               <PlanCard plan={dev.data?.plan ?? null} loading={dev.isPending} />
               <HistoryCard history={dev.data?.history ?? []} loading={dev.isPending} />
               {dev.data && (
