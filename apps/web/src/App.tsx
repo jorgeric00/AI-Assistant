@@ -10,6 +10,7 @@ import { PendingPage } from './pages/PendingPage';
 import { DiarioPage } from './pages/diario/DiarioPage';
 import { NotasPage } from './pages/notas/NotasPage';
 import { RecordatoriosPage } from './pages/recordatorios/RecordatoriosPage';
+import { TareasPage } from './pages/tareas/TareasPage';
 import { SECTIONS, routeFromHash, type Route } from './sections';
 
 function useHashRoute(): Route {
@@ -68,6 +69,8 @@ export function App() {
             <RecordatoriosPage />
           ) : section === 'diario' ? (
             <DiarioPage params={params} />
+          ) : section === 'tareas' ? (
+            <TareasPage params={params} />
           ) : (
             <PendingPage title={current.label} />
           )}

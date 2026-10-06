@@ -1,6 +1,7 @@
 import type {
   AskResponse,
   DailySummary,
+  JiraSyncStatus,
   JournalEntry,
   JournalEntryInput,
   LinkTitleResponse,
@@ -13,6 +14,8 @@ import type {
   ReminderUpdate,
   SnoozeInput,
   TagCount,
+  Task,
+  TaskDetail,
 } from '@dev-assistant/shared';
 
 async function request<T>(method: string, url: string, body?: unknown): Promise<T> {
@@ -65,6 +68,11 @@ export const api = {
   getDailySummary: (date: string) => request<DailySummary | null>('GET', `/api/daily-summary?date=${date}`),
   generateDailySummary: (date: string) => request<DailySummary>('POST', '/api/daily-summary', { date }),
   ask: (question: string) => request<AskResponse>('POST', '/api/search/ask', { question }),
+
+  listTasks: (done: boolean) => request<Task[]>('GET', `/api/tasks${done ? '?done=true' : ''}`),
+  getTask: (key: string) => request<TaskDetail>('GET', `/api/tasks/${encodeURIComponent(key)}`),
+  jiraStatus: () => request<JiraSyncStatus>('GET', '/api/jira/status'),
+  syncJira: () => request<JiraSyncStatus>('POST', '/api/jira/sync'),
 };
 
 /** Claves de consulta de React Query; invalidar `notes` refresca listas, notas y etiquetas. */
@@ -79,4 +87,9 @@ export const queryKeys = {
   alerts: ['reminders', 'alerts'] as const,
   journal: (date: string) => ['journal', date] as const,
   dailySummary: (date: string) => ['daily-summary', date] as const,
+  /** Invalidar `tasks` refresca la lista, las fichas y el estado de la sincronización. */
+  tasks: ['tasks'] as const,
+  taskList: (done: boolean) => ['tasks', 'list', done] as const,
+  task: (key: string) => ['tasks', 'one', key] as const,
+  jiraStatus: ['tasks', 'jira-status'] as const,
 };

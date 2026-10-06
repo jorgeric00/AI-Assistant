@@ -4,11 +4,15 @@ import { sql } from 'drizzle-orm';
 import { ZodError } from 'zod';
 import type { HealthResponse } from '@dev-assistant/shared';
 import type { Db } from './db/client.js';
+import { JiraError } from './integrations/jira/client.js';
 import { LlmUnavailableError, type Llm } from './integrations/opencode/llm.js';
 import { aiRoutes } from './modules/ai/routes.js';
 import { journalRoutes } from './modules/journal/routes.js';
 import { notesRoutes, type NotesRoutesOptions } from './modules/notes/routes.js';
 import { remindersRoutes } from './modules/reminders/routes.js';
+import { JiraSync } from './modules/tasks/jira-sync.js';
+import { TasksRepository } from './modules/tasks/repository.js';
+import { tasksRoutes } from './modules/tasks/routes.js';
 
 export interface BuildAppOptions {
   logger?: boolean;
@@ -16,6 +20,8 @@ export interface BuildAppOptions {
   fetchTitle?: NotesRoutesOptions['fetchTitle'];
   /** Modelo de IA (opencode). Sin él, las funciones con IA responden que no está disponible. */
   llm?: Llm;
+  /** Sincronización con JIRA. Sin ella, la sección de tareas indica que falta configurar JIRA. */
+  jiraSync?: JiraSync;
 }
 
 const noLlm: Llm = {
@@ -42,16 +48,17 @@ export async function buildApp(db: Db, opts: BuildAppOptions = {}) {
     if (err instanceof ZodError) {
       return reply.code(400).send({ error: err.issues.map((i) => i.message).join('; ') });
     }
-    if (err instanceof LlmUnavailableError) {
+    if (err instanceof LlmUnavailableError || err instanceof JiraError) {
       return reply.code(503).send({ error: err.message });
     }
     return reply.send(err);
   });
 
-  // Módulos (reminders, jira, dev-sessions... se añaden en sus hilos).
+  // Módulos (dev-sessions, repos... se añaden en sus hilos).
   await app.register(notesRoutes, { db, fetchTitle: opts.fetchTitle });
   await app.register(remindersRoutes, { db });
   await app.register(journalRoutes, { db });
   await app.register(aiRoutes, { db, llm: opts.llm ?? noLlm });
+  await app.register(tasksRoutes, { db, jiraSync: opts.jiraSync ?? new JiraSync(db, new TasksRepository(db), null, '') });
   return app;
 }
