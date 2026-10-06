@@ -130,8 +130,7 @@ describe('tareas de JIRA', () => {
       user: null,
       lastCount: null,
       lastError: null,
-      writeServer: null,
-      writeProblem: 'La escritura en JIRA no está configurada.',
+      writeProblem: 'JIRA no está configurado: añade JIRA_URL y JIRA_TOKEN al fichero .env.',
     });
     const res = await ctx.sync();
     expect(res.statusCode).toBe(503);

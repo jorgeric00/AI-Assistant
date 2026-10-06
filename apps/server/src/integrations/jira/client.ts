@@ -1,5 +1,5 @@
-// Lectura de JIRA por su API REST (decisión de Jorge: leer por API gasta menos tokens que el MCP;
-// las escrituras, comentario y cambio de estado, irán por el MCP de JIRA).
+// JIRA por su API REST: lectura de tareas y, desde "Actualizar JIRA", comentario y cambio de estado.
+// (Decisión de Jorge: lo que hace él a mano va por la API; el MCP de JIRA queda para lo automático de opencode.)
 // - JIRA Cloud (*.atlassian.net): JIRA_EMAIL + token de API, autenticación Basic, API v3.
 // - JIRA Server / Data Center: token personal (PAT) como Bearer, API v2.
 import { adfToText } from './adf.js';
@@ -82,15 +82,21 @@ export class JiraClient {
     return `${this.baseUrl}/rest/api/${this.cloud ? 3 : 2}`;
   }
 
-  private async get<T>(path: string, params: Record<string, string>): Promise<{ status: number; body: T | null }> {
-    const url = `${this.api}${path}?${new URLSearchParams(params)}`;
+  private get<T>(path: string, params: Record<string, string>) {
+    return this.request<T>('GET', `${path}?${new URLSearchParams(params)}`);
+  }
+
+  private async request<T>(method: 'GET' | 'POST', path: string, payload?: unknown): Promise<{ status: number; body: T | null }> {
+    const url = `${this.api}${path}`;
     const authorization = this.cloud
       ? `Basic ${Buffer.from(`${this.config.email}:${this.config.token}`).toString('base64')}`
       : `Bearer ${this.config.token}`;
     let res: Response;
     try {
       res = await this.fetchImpl(url, {
-        headers: { authorization, accept: 'application/json' },
+        method,
+        headers: { authorization, accept: 'application/json', ...(payload === undefined ? {} : { 'content-type': 'application/json' }) },
+        body: payload === undefined ? undefined : JSON.stringify(payload),
         // Sin seguir redirecciones: un login corporativo (p. ej. Microsoft) delante de JIRA responde
         // con una redirección a su página, y así se puede explicar en vez de leer HTML como JSON.
         redirect: 'manual',
@@ -111,10 +117,12 @@ export class JiraClient {
     if (res.status === 403) throw new JiraError('JIRA no da permiso a este token (403).');
     if (res.status === 404) return { status: 404, body: null };
     if (!res.ok) {
-      const data = (await res.json().catch(() => null)) as { errorMessages?: string[] } | null;
-      throw new JiraError(`JIRA respondió ${res.status}${data?.errorMessages?.length ? `: ${data.errorMessages.join('; ')}` : ''}`);
+      const data = (await res.json().catch(() => null)) as { errorMessages?: string[]; errors?: Record<string, string> } | null;
+      const messages = [...(data?.errorMessages ?? []), ...Object.values(data?.errors ?? {})];
+      throw new JiraError(`JIRA respondió ${res.status}${messages.length ? `: ${messages.join('; ')}` : ''}`);
     }
     const text = await res.text();
+    if (!text) return { status: res.status, body: null };
     try {
       return { status: res.status, body: JSON.parse(text) as T };
     } catch {
@@ -188,6 +196,25 @@ export class JiraClient {
         toCategory: category === 'new' || category === 'indeterminate' || category === 'done' ? category : null,
       };
     });
+  }
+
+  /** Añade un comentario (texto plano; en JIRA Cloud se manda como documento ADF, un párrafo por línea). */
+  async addComment(key: string, text: string): Promise<void> {
+    const body = this.cloud
+      ? {
+          type: 'doc',
+          version: 1,
+          content: text.split(/\r?\n/).map((line) => (line ? { type: 'paragraph', content: [{ type: 'text', text: line }] } : { type: 'paragraph', content: [] })),
+        }
+      : text;
+    const { status } = await this.request('POST', `/issue/${encodeURIComponent(key)}/comment`, { body });
+    if (status === 404) throw new JiraError(`JIRA no encuentra ${key} o este token no puede comentar en ella.`);
+  }
+
+  /** Cambia el estado con una de las transiciones que devuelve `transitions`. */
+  async transition(key: string, transitionId: string): Promise<void> {
+    const { status } = await this.request('POST', `/issue/${encodeURIComponent(key)}/transitions`, { transition: { id: transitionId } });
+    if (status === 404) throw new JiraError(`JIRA no encuentra ${key} o este token no puede cambiar su estado.`);
   }
 
   private normalize({ key, fields: f }: RawIssue): JiraIssue {

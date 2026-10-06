@@ -6,7 +6,6 @@ import type { HealthResponse } from '@dev-assistant/shared';
 import { loadConfig } from './config.js';
 import type { Db } from './db/client.js';
 import { JiraError, type JiraClient } from './integrations/jira/client.js';
-import type { JiraWriter } from './integrations/jira/mcp-writer.js';
 import { LlmUnavailableError, type Llm } from './integrations/opencode/llm.js';
 import { aiRoutes } from './modules/ai/routes.js';
 import { journalRoutes } from './modules/journal/routes.js';
@@ -31,8 +30,6 @@ export interface BuildAppOptions {
   jiraSync?: JiraSync;
   /** Cliente REST de JIRA (estados posibles y refresco tras actualizar). */
   jiraClient?: JiraClient | null;
-  /** Escritura en JIRA (MCP de opencode). */
-  jiraWriter?: JiraWriter | null;
   /** Carpeta de trabajo (worktrees y ficheros de cada tarea). Por defecto ~/.dev-assistant. */
   devAssistantHome?: string;
   /** git en los tests de repositorios. */
@@ -84,7 +81,7 @@ export async function buildApp(db: Db, opts: BuildAppOptions = {}) {
   await app.register(tasksRoutes, {
     db,
     jiraSync: opts.jiraSync ?? new JiraSync(db, tasksRepo, null, ''),
-    jiraUpdates: new JiraUpdateService(db, tasksRepo, opts.jiraClient ?? null, opts.jiraWriter ?? null, opts.llm ?? noLlm, devAssistantHome),
+    jiraUpdates: new JiraUpdateService(db, tasksRepo, opts.jiraClient ?? null, opts.llm ?? noLlm, devAssistantHome),
     devAssistantHome,
     sessions: new DevSessionService(db, tasksRepo, devAssistantHome, opts.git, opts.terminalLauncher),
   });

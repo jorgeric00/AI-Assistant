@@ -16,8 +16,6 @@ export interface AppConfig {
   devAssistantHome: string;
   /** Carpeta global de skills de opencode, donde se instala la skill de la app. */
   opencodeSkillsDir: string;
-  /** Nombre del servidor MCP de JIRA en opencode; sin él se busca uno cuyo nombre contenga "jira". */
-  jiraMcpServer: string | undefined;
   /** Lectura de JIRA por API REST; sin URL y token la sección de tareas indica cómo configurarla. */
   jira: { baseUrl: string; token: string; email: string | undefined; jql: string } | undefined;
 }
@@ -36,7 +34,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     teamsWebhookUrl: env.TEAMS_WEBHOOK_URL || undefined,
     devAssistantHome: expandHome(env.DEV_ASSISTANT_HOME ?? '~/.dev-assistant'),
     opencodeSkillsDir: expandHome(env.OPENCODE_SKILLS_DIR ?? '~/.config/opencode/skill'),
-    jiraMcpServer: env.JIRA_MCP_SERVER || undefined,
     jira:
       env.JIRA_URL && env.JIRA_TOKEN
         ? { baseUrl: env.JIRA_URL, token: env.JIRA_TOKEN, email: env.JIRA_EMAIL || undefined, jql: env.JIRA_JQL || DEFAULT_JIRA_JQL }

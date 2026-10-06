@@ -254,9 +254,7 @@ export interface JiraSyncStatus {
   lastCount: number | null;
   /** Error de la última sincronización, si falló. */
   lastError: string | null;
-  /** Servidor MCP de opencode con el que se escribe en JIRA, o null si no se encuentra. */
-  writeServer: string | null;
-  /** Por qué no se puede escribir en JIRA (sin MCP de JIRA en opencode...), o null. */
+  /** Por qué no se puede escribir en JIRA (falta configurarlo en .env), o null. */
   writeProblem: string | null;
 }
 

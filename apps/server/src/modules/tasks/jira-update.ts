@@ -1,12 +1,11 @@
 // "Actualizar JIRA" (R3): comentario y cambio de estado que el usuario revisa y confirma en el diálogo.
-// Los estados posibles se leen por la API REST; el envío va por el MCP de JIRA y queda registrado.
+// Todo va por la API REST de JIRA (es un proceso manual; el MCP queda para lo automático) y queda registrado.
 import { randomUUID } from 'node:crypto';
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import type { JiraDraft, JiraTransitionOption, JiraUpdateEntry } from '@dev-assistant/shared';
 import type { Db } from '../../db/client.js';
 import { changelog, journalEntries, notes, noteTasks, tasks } from '../../db/schema.js';
 import { JiraError, type JiraClient } from '../../integrations/jira/client.js';
-import type { JiraWriter } from '../../integrations/jira/mcp-writer.js';
 import type { Llm } from '../../integrations/opencode/llm.js';
 import { readTaskDevInfo } from './dev-files.js';
 import type { TasksRepository } from './repository.js';
@@ -64,15 +63,12 @@ export class JiraUpdateService {
     private readonly db: Db,
     private readonly repo: TasksRepository,
     private readonly client: JiraClient | null,
-    private readonly writer: JiraWriter | null,
     private readonly llm: Llm,
     private readonly devAssistantHome: string,
   ) {}
 
-  writerStatus(): { writeServer: string | null; writeProblem: string | null } {
-    if (!this.writer) return { writeServer: null, writeProblem: 'La escritura en JIRA no está configurada.' };
-    const { server, problem } = this.writer.status();
-    return { writeServer: server, writeProblem: problem };
+  writerStatus(): { writeProblem: string | null } {
+    return { writeProblem: this.client ? null : 'JIRA no está configurado: añade JIRA_URL y JIRA_TOKEN al fichero .env.' };
   }
 
   private taskRow(key: string) {
@@ -94,13 +90,11 @@ export class JiraUpdateService {
   /** Envía lo confirmado por el usuario: primero el comentario, después el cambio de estado. */
   async send(key: string, input: { comment?: string; transitionId?: string }): Promise<JiraUpdateEntry> {
     const task = this.taskRow(key);
-    if (!this.writer) throw new JiraError('La escritura en JIRA no está configurada.');
-    const problem = this.writer.status().problem;
-    if (problem) throw new JiraError(problem);
+    const client = this.requireClient();
 
     let target: JiraTransitionOption | undefined;
     if (input.transitionId) {
-      target = (await this.requireClient().transitions(key)).find((t) => t.id === input.transitionId);
+      target = (await client.transitions(key)).find((t) => t.id === input.transitionId);
       if (!target) throw new JiraError(`JIRA ya no permite ese cambio de estado desde "${task.status}". Cierra el diálogo y vuelve a abrirlo.`);
     }
 
@@ -108,7 +102,7 @@ export class JiraUpdateService {
     const entry: JiraUpdateEntry = { at: new Date().toISOString(), comment: null, transition: null };
 
     if (input.comment) {
-      await this.writer.addComment(key, input.comment);
+      await client.addComment(key, input.comment);
       this.db
         .insert(changelog)
         .values({ taskId: task.id, kind: 'jira_comment', title: 'Comentario en JIRA', payloadJson: { sendId, comment: input.comment } satisfies CommentPayload })
@@ -118,7 +112,7 @@ export class JiraUpdateService {
 
     if (target) {
       try {
-        await this.writer.transition(key, target.id);
+        await client.transition(key, target.id);
       } catch (err) {
         if (!entry.comment) throw err;
         throw new JiraError(`Se añadió el comentario, pero no se pudo cambiar el estado: ${err instanceof Error ? err.message : String(err)}`);
@@ -137,10 +131,8 @@ export class JiraUpdateService {
     }
 
     // La ficha muestra enseguida el estado nuevo, sin esperar a la próxima sincronización.
-    if (this.client) {
-      const issue = await this.client.getIssue(key).catch(() => null);
-      if (issue) this.repo.upsertFromJira([issue], new Date().toISOString());
-    }
+    const issue = await client.getIssue(key).catch(() => null);
+    if (issue) this.repo.upsertFromJira([issue], new Date().toISOString());
     return entry;
   }
 

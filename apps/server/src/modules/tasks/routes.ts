@@ -45,7 +45,7 @@ export async function tasksRoutes(
     return result;
   });
 
-  // Actualizar JIRA: estados posibles (API REST), borrador con IA y envío confirmado (MCP).
+  // Actualizar JIRA (API REST): estados posibles, borrador con IA y envío confirmado.
   app.get('/api/tasks/:key/transitions', async (req, reply) => jiraUpdates.transitions(KeyParams.parse(req.params).key).catch(badInput(reply)));
 
   app.post('/api/tasks/:key/jira-update/draft', async (req, reply) =>

@@ -32,8 +32,8 @@ export class JiraSync {
     return (this.db.select().from(settings).where(eq(settings.key, LAST_SYNC_KEY)).get()?.valueJson as LastSync | undefined) ?? null;
   }
 
-  /** Estado de la lectura; la escritura (MCP) la añade la ruta. */
-  status(): Omit<JiraSyncStatus, 'writeServer' | 'writeProblem'> {
+  /** Estado de la lectura; si se puede escribir lo añade la ruta. */
+  status(): Omit<JiraSyncStatus, 'writeProblem'> {
     const last = this.lastSync();
     return {
       configured: !!this.client,
