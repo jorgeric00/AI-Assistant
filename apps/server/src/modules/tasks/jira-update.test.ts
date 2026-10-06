@@ -145,5 +145,35 @@ describe('Actualizar JIRA', () => {
     expect(prompt).toContain('Separador ; y decimales con coma');
     expect(prompt).toContain('orders-api@abc1234');
     expect(prompt).toContain('Se va a cambiar el estado a: En revisión');
+    expect(res.body.since).toBeNull();
+  });
+
+  it('tras un envío, el borrador solo usa lo nuevo desde entonces', async () => {
+    ctx = await setup();
+    await ctx.inject('POST', '/api/notes', { title: 'Nota vieja', bodyMd: 'Contado ya', taskKeys: ['ABC-1'] });
+    const folder = join(ctx.home, 'worktrees', 'ABC-1');
+    mkdirSync(folder, { recursive: true });
+    writeFileSync(join(folder, 'HISTORIAL.md'), '- 2020-01-01 10:00 | orders-api | old1234 | https://github.com/x/orders-api/commit/old1234 | Commit viejo\n');
+    await ctx.inject('POST', '/api/tasks/ABC-1/jira-update', { comment: 'Primer avance' });
+
+    const nothing = await ctx.inject<{ error: string }>('POST', '/api/tasks/ABC-1/jira-update/draft', {});
+    expect(nothing.status).toBe(400);
+    expect(nothing.body.error).toContain('desde el último envío');
+
+    await new Promise((r) => setTimeout(r, 5));
+    await ctx.inject('POST', '/api/notes', { title: 'Nota nueva', bodyMd: 'Falta el CSV', taskKeys: ['ABC-1'] });
+    writeFileSync(
+      join(folder, 'HISTORIAL.md'),
+      '- 2020-01-01 10:00 | orders-api | old1234 | https://github.com/x/orders-api/commit/old1234 | Commit viejo\n- 2099-01-01 10:00 | orders-api | new5678 | https://github.com/x/orders-api/commit/new5678 | Commit nuevo\n',
+    );
+    const res = await ctx.inject<JiraDraft>('POST', '/api/tasks/ABC-1/jira-update/draft', {});
+    expect(res.status).toBe(200);
+    expect(res.body.since).toEqual(expect.any(String));
+    const prompt = ctx.prompts.at(-1)!.user;
+    expect(prompt).toContain('Nota nueva');
+    expect(prompt).not.toContain('Nota vieja');
+    expect(prompt).toContain('new5678');
+    expect(prompt).not.toContain('old1234');
+    expect(prompt).toContain('Último comentario enviado');
   });
 });

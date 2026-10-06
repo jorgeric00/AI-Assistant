@@ -303,6 +303,8 @@ export type JiraDraftInput = z.input<typeof JiraDraftInput>;
 
 export interface JiraDraft {
   comment: string;
+  /** Fecha del último envío a JIRA: el borrador solo usa lo nuevo desde entonces. null si es el primero. */
+  since: string | null;
 }
 
 /** Un envío a JIRA desde la app (registro en la ficha de la tarea). */

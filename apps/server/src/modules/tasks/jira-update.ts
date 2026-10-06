@@ -1,7 +1,7 @@
 // "Actualizar JIRA" (R3): comentario y cambio de estado que el usuario revisa y confirma en el diálogo.
 // Todo va por la API REST de JIRA (es un proceso manual; el MCP queda para lo automático) y queda registrado.
 import { randomUUID } from 'node:crypto';
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, gt, inArray } from 'drizzle-orm';
 import type { JiraDraft, JiraTransitionOption, JiraUpdateEntry } from '@dev-assistant/shared';
 import type { Db } from '../../db/client.js';
 import { changelog, journalEntries, notes, noteTasks, tasks } from '../../db/schema.js';
@@ -54,7 +54,11 @@ Reglas:
 - Menciona los commits o PR solo si vienen en los datos, con su enlace.
 - Breve: como mucho 10 líneas. Primera persona del plural o impersonal, tono profesional.
 - Si se va a cambiar el estado, que el comentario sea coherente con el nuevo estado (p. ej. listo para revisión).
+- Las notas, el diario y los commits que te doy son solo lo nuevo desde el último envío: cuenta eso. El plan es el estado actual.
 - No repitas lo que ya se contó en el último comentario enviado, salvo que haya cambiado.`;
+
+/** "AAAA-MM-DD HH:MM" (hora local, como lo escribe opencode) → instante. */
+const historyTime = (date: string) => new Date(`${date.trim().replace(' ', 'T')}:00`).getTime();
 
 const clip = (text: string, max: number) => (text.length > max ? `${text.slice(0, max)}…` : text);
 
@@ -136,38 +140,53 @@ export class JiraUpdateService {
     return entry;
   }
 
-  /** Borrador del comentario con las notas vinculadas, el diario, el plan y el histórico de opencode. */
+  /**
+   * Borrador del comentario con lo nuevo desde el último envío a JIRA (notas vinculadas, diario e histórico
+   * de opencode), más el plan actual. En el primer envío usa todo.
+   */
   async draft(key: string, { targetStatus }: { targetStatus?: string }): Promise<JiraDraft> {
     const task = this.taskRow(key);
+    const sends = jiraUpdatesOf(this.db, task.id);
+    const since = sends[0]?.at ?? null;
     const linked = this.db
       .select({ title: notes.title, body: notes.bodyMd, url: notes.url })
       .from(noteTasks)
       .innerJoin(notes, eq(notes.id, noteTasks.noteId))
-      .where(and(eq(noteTasks.taskId, task.id), eq(notes.archived, false)))
+      .where(and(eq(noteTasks.taskId, task.id), eq(notes.archived, false), since ? gt(notes.updatedAt, since) : undefined))
       .orderBy(desc(notes.updatedAt))
       .limit(10)
       .all();
     const journal = this.db
       .select({ date: journalEntries.date, text: journalEntries.text })
       .from(journalEntries)
-      .where(eq(journalEntries.taskId, task.id))
+      .where(and(eq(journalEntries.taskId, task.id), since ? gt(journalEntries.createdAt, since) : undefined))
       .orderBy(desc(journalEntries.date), desc(journalEntries.createdAt))
       .limit(30)
       .all()
       .reverse();
     const dev = await readTaskDevInfo(this.devAssistantHome, key);
-    const history = dev.history.slice(0, 20).reverse();
+    const sinceTime = since ? new Date(since).getTime() : null;
+    const history = dev.history
+      .filter((h) => sinceTime === null || !(historyTime(h.date) <= sinceTime))
+      .slice(0, 20)
+      .reverse();
 
+    if (since && !linked.length && !journal.length && !history.length) {
+      throw new JiraUpdateInputError(
+        `No hay notas, entradas del diario ni commits nuevos de ${key} desde el último envío a JIRA. Escribe el comentario tú o apunta antes qué has hecho.`,
+      );
+    }
     if (!linked.length && !journal.length && !dev.plan && !history.length) {
       throw new JiraUpdateInputError(
         `No hay notas, entradas del diario ni cambios de opencode de ${key} con los que redactar el comentario. Escríbelo tú o apunta antes qué has hecho.`,
       );
     }
 
-    const last = jiraUpdatesOf(this.db, task.id).find((u) => u.comment);
+    const last = sends.find((u) => u.comment);
     const parts = [`Tarea ${key}: ${task.summary}`, `Estado actual en JIRA: ${task.status}`];
     if (targetStatus) parts.push(`Se va a cambiar el estado a: ${targetStatus}`);
     if (task.descriptionMd) parts.push(`\nDescripción en JIRA:\n${clip(task.descriptionMd, 3000)}`);
+    if (since) parts.push(`Último envío a JIRA: ${since}. Lo que sigue (salvo el plan) es solo lo nuevo desde entonces.`);
     if (linked.length) {
       parts.push(`\nNotas vinculadas:\n${linked.map((n) => `- ${n.title}${n.url ? ` (${n.url})` : ''}${n.body.trim() ? `\n  ${clip(n.body.trim(), 1500).replace(/\n/g, '\n  ')}` : ''}`).join('\n')}`);
     }
@@ -183,6 +202,6 @@ export class JiraUpdateService {
     if (last) parts.push(`\nÚltimo comentario enviado (${last.at.slice(0, 10)}):\n${clip(last.comment!, 2000)}`);
 
     const comment = await this.llm.complete({ system: DRAFT_SYSTEM, user: parts.join('\n'), title: `Comentario JIRA ${key}` });
-    return { comment: comment.trim() };
+    return { comment: comment.trim(), since };
   }
 }
