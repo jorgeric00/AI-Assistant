@@ -14,9 +14,14 @@ describe('parseOpencodeMcpServers', () => {
     }`;
     const servers = parseOpencodeMcpServers(raw, { JIRA_TOKEN: 'abc', GH: 'xyz' });
     expect(servers).toEqual([
-      { name: 'jira', transport: 'http', url: 'https://mcp.example.com/jira', headers: { Authorization: 'Bearer abc' } },
-      { name: 'github', transport: 'stdio', command: 'npx', args: ['-y', 'github-mcp', '--url=http://x//y'], env: { TOKEN: 'xyz' } },
+      { name: 'jira', transport: 'http', url: 'https://mcp.example.com/jira', headers: { Authorization: 'Bearer abc' }, missingEnv: [] },
+      { name: 'github', transport: 'stdio', command: 'npx', args: ['-y', 'github-mcp', '--url=http://x//y'], env: { TOKEN: 'xyz' }, missingEnv: [] },
     ]);
+  });
+
+  it('avisa de las variables {env:} que no existen', () => {
+    const raw = '{ "mcp": { "jira": { "type": "remote", "url": "https://x", "headers": { "Authorization": "Bearer {env:JIRA_MCP_TOKEN}" } } } }';
+    expect(parseOpencodeMcpServers(raw, {})[0]).toMatchObject({ headers: { Authorization: 'Bearer ' }, missingEnv: ['JIRA_MCP_TOKEN'] });
   });
 
   it('devuelve lista vacía sin sección mcp', () => {

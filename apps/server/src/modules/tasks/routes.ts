@@ -1,9 +1,10 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply } from 'fastify';
 import { z } from 'zod';
-import { JiraKey, TaskListQuery } from '@dev-assistant/shared';
+import { JiraDraftInput, JiraKey, JiraUpdateInput, TaskListQuery, type JiraSyncStatus } from '@dev-assistant/shared';
 import { readTaskDevInfo } from './dev-files.js';
 import type { Db } from '../../db/client.js';
 import type { JiraSync } from './jira-sync.js';
+import { JiraUpdateInputError, type JiraUpdateService } from './jira-update.js';
 import { TasksRepository } from './repository.js';
 
 const KeyParams = z.object({ key: JiraKey });
@@ -11,9 +12,14 @@ const KeyParams = z.object({ key: JiraKey });
 /** Tareas de JIRA asignadas (R9): lista, ficha con notas vinculadas y sincronización. */
 export async function tasksRoutes(
   app: FastifyInstance,
-  { db, jiraSync, devAssistantHome }: { db: Db; jiraSync: JiraSync; devAssistantHome: string },
+  { db, jiraSync, jiraUpdates, devAssistantHome }: { db: Db; jiraSync: JiraSync; jiraUpdates: JiraUpdateService; devAssistantHome: string },
 ) {
   const repo = new TasksRepository(db);
+  const status = (): JiraSyncStatus => ({ ...jiraSync.status(), ...jiraUpdates.writerStatus() });
+  const badInput = (reply: FastifyReply) => (err: unknown) => {
+    if (err instanceof JiraUpdateInputError) return reply.code(400).send({ error: err.message });
+    throw err;
+  };
 
   app.get('/api/tasks', async (req) => repo.list(TaskListQuery.parse(req.query)));
 
@@ -22,7 +28,27 @@ export async function tasksRoutes(
   // Plan e histórico que escribe opencode en la carpeta de la tarea (aunque la tarea no esté sincronizada).
   app.get('/api/tasks/:key/dev', async (req) => readTaskDevInfo(devAssistantHome, KeyParams.parse(req.params).key));
 
-  app.get('/api/jira/status', async () => jiraSync.status());
+  // Actualizar JIRA: estados posibles (API REST), borrador con IA y envío confirmado (MCP).
+  app.get('/api/tasks/:key/transitions', async (req, reply) => jiraUpdates.transitions(KeyParams.parse(req.params).key).catch(badInput(reply)));
+
+  app.post('/api/tasks/:key/jira-update/draft', async (req, reply) =>
+    jiraUpdates.draft(KeyParams.parse(req.params).key, JiraDraftInput.parse(req.body ?? {})).catch(badInput(reply)),
+  );
+
+  app.post('/api/tasks/:key/jira-update', async (req, reply) => {
+    const { key } = KeyParams.parse(req.params);
+    const input = JiraUpdateInput.parse(req.body);
+    try {
+      const entry = await jiraUpdates.send(key, input);
+      req.log.info(`JIRA actualizado: ${key}${entry.comment ? ' · comentario' : ''}${entry.transition ? ` · ${entry.transition.from} → ${entry.transition.to}` : ''}`);
+      return reply.code(201).send(entry);
+    } catch (err) {
+      if (!(err instanceof JiraUpdateInputError)) req.log.warn(`No se pudo actualizar JIRA (${key}): ${err instanceof Error ? err.message : String(err)}`);
+      return badInput(reply)(err);
+    }
+  });
+
+  app.get('/api/jira/status', async () => status());
 
   app.post('/api/jira/sync', async (req) => {
     try {
@@ -32,6 +58,6 @@ export async function tasksRoutes(
       req.log.warn(`No se pudo sincronizar JIRA: ${err instanceof Error ? err.message : String(err)}`);
       throw err;
     }
-    return jiraSync.status();
+    return status();
   });
 }

@@ -2,7 +2,9 @@ import { useQuery } from '@tanstack/react-query';
 import type { DevPlan, HistoryEntry, TaskDetail } from '@dev-assistant/shared';
 import { Check, ExternalLink, FileText, Link2 } from 'lucide-react';
 import { api, queryKeys } from '../../api';
+import { primaryButtonClass } from '../../components/fields';
 import { dayAndTime, timeAgo } from '../../dates';
+import { ActualizarJiraButton, JiraUpdatesList } from './ActualizarJira';
 
 const card = 'flex min-w-0 flex-col gap-4 rounded-lg border border-line bg-surface p-4';
 const caption = 'text-small text-ink-muted';
@@ -53,25 +55,28 @@ function Header({ task }: { task: TaskDetail }) {
     ? [task.priority && `Prioridad ${task.priority}`, task.issueType, task.project, task.updatedAt && `Actualizada ${dayAndTime(task.updatedAt)}`].filter(Boolean)
     : ['Aún sin sincronizar con JIRA'];
   return (
-    <header className="flex flex-col gap-2">
-      {task.url ? (
-        <a href={task.url} target="_blank" rel="noreferrer" className="flex items-center gap-1 self-start font-mono text-code text-info">
-          {task.key}
-          <ExternalLink size={12} strokeWidth={1.5} aria-label="(abre JIRA)" />
-        </a>
-      ) : (
-        <span className="font-mono text-code text-ink-muted">{task.key}</span>
-      )}
-      <h1 className="m-0 text-display font-semibold break-words">{task.summary}</h1>
-      <div className={`flex flex-wrap items-center gap-2 ${caption}`}>
-        {task.synced && <span className="rounded-sm border border-line-strong px-1.5 py-0.5 whitespace-nowrap">{task.status}</span>}
-        {meta.map((m, i) => (
-          <span key={i}>
-            {i > 0 && '· '}
-            {m}
-          </span>
-        ))}
+    <header className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex min-w-0 flex-[1_1_480px] flex-col gap-2">
+        {task.url ? (
+          <a href={task.url} target="_blank" rel="noreferrer" className="flex items-center gap-1 self-start font-mono text-code text-info">
+            {task.key}
+            <ExternalLink size={12} strokeWidth={1.5} aria-label="(abre JIRA)" />
+          </a>
+        ) : (
+          <span className="font-mono text-code text-ink-muted">{task.key}</span>
+        )}
+        <h1 className="m-0 text-display font-semibold break-words">{task.summary}</h1>
+        <div className={`flex flex-wrap items-center gap-2 ${caption}`}>
+          {task.synced && <span className="rounded-sm border border-line-strong px-1.5 py-0.5 whitespace-nowrap">{task.status}</span>}
+          {meta.map((m, i) => (
+            <span key={i}>
+              {i > 0 && '· '}
+              {m}
+            </span>
+          ))}
+        </div>
       </div>
+      <ActualizarJiraButton task={task} className={primaryButtonClass} />
     </header>
   );
 }
@@ -225,6 +230,7 @@ function JiraCard({ task }: { task: TaskDetail }) {
           <p className="m-0 text-ink-faint">Ninguna. Escribe {task.key} en una nota para vincularla.</p>
         )}
       </div>
+      <JiraUpdatesList updates={task.jiraUpdates} headingClass={subheading} />
     </aside>
   );
 }
