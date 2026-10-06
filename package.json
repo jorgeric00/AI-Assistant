@@ -7,6 +7,7 @@
   "engines": { "node": ">=22" },
   "scripts": {
     "dev": "pnpm --parallel -r dev",
+    "start": "pnpm --filter @dev-assistant/web build && pnpm --filter @dev-assistant/server start",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",

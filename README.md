@@ -16,10 +16,13 @@ El diseño completo está en `diseno-arquitectura.md`, en la carpeta `arquitectu
 ```bash
 pnpm install
 cp .env.example .env     # en Windows: copy .env.example .env
-pnpm dev                 # backend en 127.0.0.1:4321 y frontend en http://127.0.0.1:5173
+pnpm start               # compila la web y la sirve con el backend en http://127.0.0.1:4321
 ```
 
-Si no tienes pnpm en el PATH, usa `npx pnpm@10.28.0 install` y `npx pnpm@10.28.0 dev`.
+Para desarrollar la app, `pnpm dev` arranca el backend en 127.0.0.1:4321 y Vite en http://127.0.0.1:5173.
+Si no tienes pnpm en el PATH, usa `npx pnpm@10.28.0 install` y `npx pnpm@10.28.0 start`.
+En Windows, Ajustes > Arranque deja la app arrancando sola al iniciar sesión (registro en `~/.dev-assistant/logs/app.log`).
+Ajustes > Copias de seguridad guarda una copia diaria de la base de datos en `~/.dev-assistant/copias` (las 7 más recientes).
 No hace falta Visual Studio ni compilar nada: SQLite (better-sqlite3) trae binarios para Windows, Linux y macOS.
 
 ## Estructura

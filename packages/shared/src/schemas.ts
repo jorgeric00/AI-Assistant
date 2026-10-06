@@ -546,3 +546,24 @@ export interface PrWatchStatus {
   lastCheckedAt: string | null;
   lastError: string | null;
 }
+
+// ── Ajustes: arranque automático y copias de seguridad ─────────────────────
+
+export interface AutostartStatus {
+  /** false fuera de Windows: no hay carpeta Inicio en la que dejar el script. */
+  supported: boolean;
+  enabled: boolean;
+  openBrowser: boolean;
+  /** Fichero donde escribe la app cuando arranca sola. */
+  logFile: string;
+}
+
+export const AutostartUpdate = z.object({ enabled: z.boolean().optional(), openBrowser: z.boolean().optional() });
+export type AutostartUpdate = z.infer<typeof AutostartUpdate>;
+
+export interface BackupStatus {
+  supported: boolean;
+  dir: string;
+  count: number;
+  last: { name: string; at: string; bytes: number } | null;
+}

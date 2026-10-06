@@ -36,6 +36,9 @@ import type {
   TaskDoc,
   TaskDocDetail,
   NoteKind,
+  AutostartStatus,
+  AutostartUpdate,
+  BackupStatus,
 } from '@dev-assistant/shared';
 
 async function request<T>(method: string, url: string, body?: unknown): Promise<T> {
@@ -122,6 +125,11 @@ export const api = {
 
   opencodeSkill: () => request<OpencodeSkillStatus>('GET', '/api/opencode/skill'),
   installOpencodeSkill: () => request<OpencodeSkillStatus>('POST', '/api/opencode/skill/install'),
+
+  getAutostart: () => request<AutostartStatus>('GET', '/api/system/autostart'),
+  updateAutostart: (input: AutostartUpdate) => request<AutostartStatus>('PATCH', '/api/system/autostart', input),
+  getBackups: () => request<BackupStatus>('GET', '/api/system/backups'),
+  runBackup: () => request<BackupStatus>('POST', '/api/system/backups'),
 };
 
 /** Claves de consulta de React Query; invalidar `notes` refresca listas, notas y etiquetas. */
@@ -147,6 +155,8 @@ export const queryKeys = {
   taskSession: (key: string) => ['tasks', 'session', key] as const,
   jiraTransitions: (key: string) => ['tasks', 'transitions', key] as const,
   opencodeSkill: ['opencode-skill'] as const,
+  autostart: ['system', 'autostart'] as const,
+  backups: ['system', 'backups'] as const,
   /** Invalidar `prs` refresca avisos, estado y PR de las tareas. */
   prs: ['prs'] as const,
   prStatus: ['prs', 'status'] as const,
