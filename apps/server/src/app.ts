@@ -11,8 +11,10 @@ import { LlmUnavailableError, type Llm } from './integrations/opencode/llm.js';
 import { aiRoutes } from './modules/ai/routes.js';
 import { journalRoutes } from './modules/journal/routes.js';
 import { notesRoutes, type NotesRoutesOptions } from './modules/notes/routes.js';
+import type { GitRunner } from './modules/repos/git.js';
 import { opencodeSkillRoutes } from './modules/opencode/skill.js';
 import { remindersRoutes } from './modules/reminders/routes.js';
+import { reposRoutes } from './modules/repos/routes.js';
 import { JiraSync } from './modules/tasks/jira-sync.js';
 import { JiraUpdateService } from './modules/tasks/jira-update.js';
 import { TasksRepository } from './modules/tasks/repository.js';
@@ -32,6 +34,8 @@ export interface BuildAppOptions {
   jiraWriter?: JiraWriter | null;
   /** Carpeta de trabajo (worktrees y ficheros de cada tarea). Por defecto ~/.dev-assistant. */
   devAssistantHome?: string;
+  /** git en los tests de repositorios. */
+  git?: GitRunner;
   /** Carpeta global de skills de opencode. Por defecto ~/.config/opencode/skill. */
   opencodeSkillsDir?: string;
 }
@@ -80,6 +84,7 @@ export async function buildApp(db: Db, opts: BuildAppOptions = {}) {
     jiraUpdates: new JiraUpdateService(db, tasksRepo, opts.jiraClient ?? null, opts.jiraWriter ?? null, opts.llm ?? noLlm, devAssistantHome),
     devAssistantHome,
   });
+  await app.register(reposRoutes, { db, llm: opts.llm ?? noLlm, git: opts.git });
   await app.register(opencodeSkillRoutes, { skillsDir: opts.opencodeSkillsDir ?? config.opencodeSkillsDir });
   return app;
 }
