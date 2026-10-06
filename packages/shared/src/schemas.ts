@@ -354,3 +354,72 @@ export interface OpencodeSkillStatus {
   upToDate: boolean;
   path: string;
 }
+
+// ── Repositorios y su ficha (R17) ───────────────────────────────────────────
+
+const ProjectKey = z.string().trim().toUpperCase().regex(/^[A-Z][A-Z0-9_]*$/, 'Clave de proyecto de JIRA no válida (ej.: ABC)');
+
+export const RepoProfileInput = z.object({
+  conventionsMd: z.string(),
+  testCommandsMd: z.string(),
+  architectureMd: z.string(),
+});
+export type RepoProfileInput = z.infer<typeof RepoProfileInput>;
+
+const repoFields = {
+  name: z.string().trim().min(1, 'El nombre es obligatorio').max(100),
+  localPath: z.string().trim().min(1, 'La carpeta es obligatoria'),
+  /** "dueño/repo" de GitHub; vacío si el repo no tiene remoto en GitHub. */
+  github: z
+    .string()
+    .trim()
+    .regex(/^$|^[\w.-]+\/[\w.-]+$/, 'El repo de GitHub debe ser dueño/nombre'),
+  defaultBranch: z.string().trim().min(1, 'La rama base es obligatoria'),
+  jiraProjectKeys: z.array(ProjectKey),
+};
+
+export const RepoInput = z.object({
+  ...repoFields,
+  github: repoFields.github.default(''),
+  defaultBranch: repoFields.defaultBranch.default('main'),
+  jiraProjectKeys: repoFields.jiraProjectKeys.default([]),
+});
+export type RepoInput = z.input<typeof RepoInput>;
+
+export const RepoUpdate = z.object({ ...repoFields, profile: RepoProfileInput }).partial();
+export type RepoUpdate = z.input<typeof RepoUpdate>;
+
+export const REPO_PROFILE_STATUSES = ['completa', 'por_revisar', 'sin_ficha'] as const;
+export type RepoProfileStatus = (typeof REPO_PROFILE_STATUSES)[number];
+
+export interface Repo {
+  id: number;
+  name: string;
+  localPath: string;
+  github: string;
+  defaultBranch: string;
+  jiraProjectKeys: string[];
+  profileStatus: RepoProfileStatus;
+}
+
+export interface RepoProfile extends RepoProfileInput {
+  /** Borrador de la IA aún sin revisar. */
+  aiDraft: boolean;
+  updatedAt: string;
+}
+
+export interface RepoDetail extends Repo {
+  profile: RepoProfile | null;
+  /** false si la carpeta ya no existe o no es un repo git. */
+  pathOk: boolean;
+}
+
+export const RepoInspectInput = z.object({ localPath: z.string().trim().min(1, 'Indica la carpeta') });
+
+/** Lo que la app deduce de una carpeta para rellenar el alta. */
+export interface RepoInspection {
+  isGitRepo: boolean;
+  name: string;
+  github: string;
+  defaultBranch: string | null;
+}

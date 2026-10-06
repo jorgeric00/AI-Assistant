@@ -154,6 +154,8 @@ export const repoProfiles = sqliteTable('repo_profiles', {
   conventionsMd: text('conventions_md').notNull().default(''),
   testCommandsMd: text('test_commands_md').notNull().default(''),
   architectureMd: text('architecture_md').notNull().default(''),
+  /** true mientras la ficha es el borrador de la IA y Jorge no la ha revisado y guardado. */
+  aiDraft: integer('ai_draft', { mode: 'boolean' }).notNull().default(false),
   updatedAt: updatedAt(),
 });
 

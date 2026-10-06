@@ -15,6 +15,11 @@ import type {
   NoteUpdate,
   OpencodeSkillStatus,
   Reminder,
+  Repo,
+  RepoDetail,
+  RepoInput,
+  RepoInspection,
+  RepoUpdate,
   ReminderAlert,
   ReminderInput,
   ReminderUpdate,
@@ -85,6 +90,14 @@ export const api = {
   draftJiraComment: (key: string, input: JiraDraftInput) => request<JiraDraft>('POST', `/api/tasks/${encodeURIComponent(key)}/jira-update/draft`, input),
   updateJira: (key: string, input: JiraUpdateInput) => request<JiraUpdateEntry>('POST', `/api/tasks/${encodeURIComponent(key)}/jira-update`, input),
 
+  listRepos: () => request<Repo[]>('GET', '/api/repos'),
+  getRepo: (id: number) => request<RepoDetail>('GET', `/api/repos/${id}`),
+  inspectRepo: (localPath: string) => request<RepoInspection>('POST', '/api/repos/inspect', { localPath }),
+  createRepo: (input: RepoInput) => request<RepoDetail>('POST', '/api/repos', input),
+  updateRepo: (id: number, input: RepoUpdate) => request<RepoDetail>('PATCH', `/api/repos/${id}`, input),
+  deleteRepo: (id: number) => request<void>('DELETE', `/api/repos/${id}`),
+  draftRepoProfile: (id: number) => request<RepoDetail>('POST', `/api/repos/${id}/profile/draft`),
+
   opencodeSkill: () => request<OpencodeSkillStatus>('GET', '/api/opencode/skill'),
   installOpencodeSkill: () => request<OpencodeSkillStatus>('POST', '/api/opencode/skill/install'),
 };
@@ -109,4 +122,8 @@ export const queryKeys = {
   taskDev: (key: string) => ['tasks', 'dev', key] as const,
   jiraTransitions: (key: string) => ['tasks', 'transitions', key] as const,
   opencodeSkill: ['opencode-skill'] as const,
+  /** Invalidar `repos` refresca la lista y las fichas. */
+  repos: ['repos'] as const,
+  repoList: ['repos', 'list'] as const,
+  repo: (id: number) => ['repos', 'one', id] as const,
 };

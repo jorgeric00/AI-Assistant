@@ -1,0 +1,1 @@
+ALTER TABLE `repo_profiles` ADD `ai_draft` integer DEFAULT false NOT NULL;
