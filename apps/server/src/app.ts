@@ -8,6 +8,7 @@ import type { Db } from './db/client.js';
 import { JiraError, type JiraClient } from './integrations/jira/client.js';
 import { LlmUnavailableError, type Llm } from './integrations/opencode/llm.js';
 import { aiRoutes } from './modules/ai/routes.js';
+import { DiaryFeed } from './modules/journal/feed.js';
 import { journalRoutes } from './modules/journal/routes.js';
 import { notesRoutes, type NotesRoutesOptions } from './modules/notes/routes.js';
 import type { GitRunner } from './modules/repos/git.js';
@@ -73,10 +74,12 @@ export async function buildApp(db: Db, opts: BuildAppOptions = {}) {
   // Módulos (dev-sessions, repos... se añaden en sus hilos).
   await app.register(notesRoutes, { db, fetchTitle: opts.fetchTitle });
   await app.register(remindersRoutes, { db });
-  await app.register(journalRoutes, { db });
-  await app.register(aiRoutes, { db, llm: opts.llm ?? noLlm });
   const config = loadConfig();
   const devAssistantHome = opts.devAssistantHome ?? config.devAssistantHome;
+  // Los commits que anota opencode en HISTORIAL.md entran en el diario antes de leerlo.
+  const diaryFeed = new DiaryFeed(db, devAssistantHome);
+  await app.register(journalRoutes, { db, diaryFeed });
+  await app.register(aiRoutes, { db, llm: opts.llm ?? noLlm, diaryFeed });
   const tasksRepo = new TasksRepository(db);
   await app.register(tasksRoutes, {
     db,

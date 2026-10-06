@@ -115,9 +115,13 @@ export const journalEntries = sqliteTable(
     text: text('text').notNull(),
     refTable: text('ref_table'),
     refId: integer('ref_id'),
+    /** Origen de una entrada automática ("commit:CLAVE:repo@sha", "jira:CLAVE:fecha"): evita apuntarla dos veces. */
+    refKey: text('ref_key'),
+    /** Enlace de la entrada automática (p. ej. el commit en GitHub). */
+    url: text('url'),
     createdAt: createdAt(),
   },
-  (t) => [index('journal_date_idx').on(t.date)],
+  (t) => [index('journal_date_idx').on(t.date), uniqueIndex('journal_ref_key_idx').on(t.refKey)],
 );
 
 export const dailySummaries = sqliteTable('daily_summaries', {

@@ -36,6 +36,13 @@
       "when": 1791318364734,
       "tag": "0004_note_commit_and_docs",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1791319855847,
+      "tag": "0005_journal_auto_entries",
+      "breakpoints": true
     }
   ]
 }

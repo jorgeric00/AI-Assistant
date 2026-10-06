@@ -187,6 +187,10 @@ export interface JournalEntry {
   source: JournalSource;
   text: string;
   taskKey: string | null;
+  /** De dónde sale: escrita a mano, un commit de opencode, un cambio de estado en JIRA u otra automática. */
+  origin: 'manual' | 'commit' | 'jira' | 'auto';
+  /** Enlace de una entrada automática: el commit en GitHub. */
+  url: string | null;
   createdAt: string;
 }
 

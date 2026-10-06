@@ -159,7 +159,8 @@ export class JiraUpdateService {
     const journal = this.db
       .select({ date: journalEntries.date, text: journalEntries.text })
       .from(journalEntries)
-      .where(and(eq(journalEntries.taskId, task.id), since ? gt(journalEntries.createdAt, since) : undefined))
+      // Solo las escritas a mano: los commits ya van desde HISTORIAL.md y los estados desde el registro de envíos.
+      .where(and(eq(journalEntries.taskId, task.id), eq(journalEntries.source, 'manual'), since ? gt(journalEntries.createdAt, since) : undefined))
       .orderBy(desc(journalEntries.date), desc(journalEntries.createdAt))
       .limit(30)
       .all()

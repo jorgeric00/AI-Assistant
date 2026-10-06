@@ -3,6 +3,7 @@ import type { Task, TaskDetail } from '@dev-assistant/shared';
 import type { Db } from '../../db/client.js';
 import { notes, noteTasks, tasks } from '../../db/schema.js';
 import type { JiraIssue } from '../../integrations/jira/client.js';
+import { recordStatusChange } from '../journal/feed.js';
 import { UNSYNCED_TASK_STATUS } from './ensure-task.js';
 import { jiraUpdatesOf } from './jira-update.js';
 
@@ -86,10 +87,15 @@ export class TasksRepository {
           rawJson: { issueType: issue.issueType, project: issue.project, updated: issue.updated } satisfies StoredIssue,
           lastSyncedAt: syncedAt,
         };
+        const before = tx.select({ id: tasks.id, status: tasks.status }).from(tasks).where(eq(tasks.jiraKey, issue.key)).get();
         tx.insert(tasks)
           .values({ jiraKey: issue.key, ...values })
           .onConflictDoUpdate({ target: tasks.jiraKey, set: values })
           .run();
+        // Los cambios de estado (hechos desde la app o en JIRA) quedan en el diario; la primera sincronización no cuenta.
+        if (before && before.status !== UNSYNCED_TASK_STATUS && before.status !== issue.status) {
+          recordStatusChange(tx, before.id, issue.key, before.status, issue.status, syncedAt);
+        }
       }
     });
   }
