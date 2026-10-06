@@ -1,9 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { Reminder, Repeat } from '@dev-assistant/shared';
+import type { CommitRef, Reminder, Repeat } from '@dev-assistant/shared';
 import { Bell, CircleAlert } from 'lucide-react';
 import { useId, useState, type FormEvent } from 'react';
 import { api, queryKeys } from '../../api';
 import { TASK_KEY_RE, inputClass, labelClass, primaryButtonClass, secondaryButtonClass } from '../../components/fields';
+import { CommitSelect, TaskOptions } from '../../components/TaskFields';
 import { localDate, parseLocalDate } from '../../dates';
 import { WEEKDAYS, repeatSummary } from './repeat';
 
@@ -46,6 +47,10 @@ export function ReminderForm({ reminder, onSaved, onCancel, onDeleted }: Props) 
   const [repeatKind, setRepeatKind] = useState<RepeatKind>(reminder?.repeat.kind ?? 'none');
   const [days, setDays] = useState<number[]>(reminder?.repeat.kind === 'weekly' ? reminder.repeat.days : [isoWeekday(start)]);
   const [taskKey, setTaskKey] = useState(reminder?.taskKey ?? '');
+  // El commit se elige para una tarea concreta: si cambia la tarea, deja de valer.
+  const [commitPick, setCommitPick] = useState<{ task: string | null; commit: CommitRef | null }>({ task: reminder?.taskKey ?? null, commit: reminder?.commit ?? null });
+  const task = taskKey.trim() ? taskKey.trim().toUpperCase() : null;
+  const commit = task && commitPick.task === task ? commitPick.commit : null;
   const [error, setError] = useState<string | null>(null);
 
   const repeat: Repeat = repeatKind === 'weekly' ? { kind: 'weekly', days } : { kind: repeatKind };
@@ -60,7 +65,7 @@ export function ReminderForm({ reminder, onSaved, onCancel, onDeleted }: Props) 
   const refresh = () => queryClient.invalidateQueries({ queryKey: queryKeys.reminders });
   const save = useMutation({
     mutationFn: () => {
-      const input = { title: title.trim(), dueAt: startAt.toISOString(), repeat, taskKey: taskKey.trim() ? taskKey.trim().toUpperCase() : null };
+      const input = { title: title.trim(), dueAt: startAt.toISOString(), repeat, taskKey: task, commit };
       return reminder ? api.updateReminder(reminder.id, input) : api.createReminder(input);
     },
     onSuccess: async (saved) => {
@@ -153,17 +158,28 @@ export function ReminderForm({ reminder, onSaved, onCancel, onDeleted }: Props) 
       <div className="flex flex-wrap gap-3">
         <div className="flex flex-[1_1_200px] flex-col gap-1.5">
           <label htmlFor={`${ids}-task`} className={labelClass}>
-            Vincular a tarea (opcional)
+            Tarea (opcional)
           </label>
           <input
             id={`${ids}-task`}
             type="text"
+            list={`${ids}-tasks`}
             value={taskKey}
             placeholder="ABC-123"
             onChange={(e) => setTaskKey(e.target.value)}
             className={`${inputClass} font-mono text-code text-info`}
           />
+          <TaskOptions id={`${ids}-tasks`} />
         </div>
+        <div className="flex min-w-0 flex-[1_1_200px] flex-col gap-1.5">
+          <label htmlFor={`${ids}-commit`} className={labelClass}>
+            Commit (opcional)
+          </label>
+          <CommitSelect id={`${ids}-commit`} taskKey={task} value={commit} onChange={(c) => setCommitPick({ task, commit: c })} />
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-3">
         <div className="flex flex-[1_1_200px] flex-col gap-1.5">
           <span className={labelClass}>Aviso</span>
           <span className="flex h-10 items-center gap-2">

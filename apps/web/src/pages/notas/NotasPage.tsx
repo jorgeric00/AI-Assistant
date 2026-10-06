@@ -1,21 +1,39 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { AskResponse, Note } from '@dev-assistant/shared';
+import type { AskResponse, Note, NoteKind } from '@dev-assistant/shared';
 import { ExternalLink, FileText, Link2, MoreHorizontal, Pin, Plus, Search, Sparkles } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { api, queryKeys } from '../../api';
 import { Markdown } from '../../components/Markdown';
 import { primaryButtonClass } from '../../components/fields';
 import { dayAndTime, shortDay } from '../../dates';
-import { navigate } from '../../sections';
-import { NoteEditor } from './NoteEditor';
+import { CommitLink } from '../../components/TaskFields';
+import { navigate, noteHref } from '../../sections';
+import { KIND_INFO, NoteEditor } from './NoteEditor';
 
-/** Sección "Notas y enlaces": `#/notas`, `#/notas/:id`, `#/notas/:id/editar` y `#/notas/nueva`. */
+/** Sección "Notas": `#/notas`, `#/notas/:id`, `#/notas/:id/editar` y `#/notas/nueva`. */
 export function NotasPage({ params }: { params: string[] }) {
   const [first, second] = params;
-  if (first === 'nueva') return <NoteEditor />;
-  const id = first ? Number(first) : undefined;
+  const id = first && first !== 'nueva' ? Number(first) : undefined;
+  // Los enlaces y documentos antiguos (#/notas/:id) se abren en su sección.
+  const target = useQuery({ queryKey: queryKeys.note(id ?? 0), queryFn: () => api.getNote(id!), enabled: id !== undefined });
+  useEffect(() => {
+    if (target.data && target.data.kind !== 'note') window.location.replace(noteHref(target.data));
+  }, [target.data]);
+
+  if (first === 'nueva') return <NoteEditor kind="note" />;
   if (id && second === 'editar') return <NoteEditor noteId={id} />;
-  return <NotesBrowser selectedId={id} />;
+  return (
+    <div className="flex flex-col gap-6">
+      <header className="flex flex-wrap items-center justify-between gap-4">
+        <h1 className="m-0 text-display font-semibold">Notas</h1>
+        <button type="button" onClick={() => navigate('notas/nueva')} className={primaryButtonClass}>
+          <Plus size={16} strokeWidth={2} aria-hidden />
+          Nueva nota
+        </button>
+      </header>
+      <NotesBrowser kind="note" selectedId={id} />
+    </div>
+  );
 }
 
 function useDebounced<T>(value: T, ms: number): T {
@@ -39,20 +57,24 @@ function excerpt(note: Note): string {
 
 type SearchMode = 'texto' | 'pregunta';
 
-function NotesBrowser({ selectedId }: { selectedId?: number }) {
+/** Lista con búsqueda y la nota elegida al lado. Las notas (kind note) además filtran por tarea y admiten preguntas a la IA. */
+export function NotesBrowser({ kind, selectedId }: { kind: NoteKind; selectedId?: number }) {
+  const isNote = kind === 'note';
+  const noun = KIND_INFO[kind].noun;
   const [mode, setMode] = useState<SearchMode>('texto');
   const [search, setSearch] = useState('');
   const [question, setQuestion] = useState('');
   const [tag, setTag] = useState<string | undefined>();
   const [archived, setArchived] = useState(false);
+  const [withTask, setWithTask] = useState<'con' | 'sin' | undefined>();
   const inputRef = useRef<HTMLInputElement>(null);
   const q = useDebounced(search.trim(), 200);
-  const asking = mode === 'pregunta';
+  const asking = isNote && mode === 'pregunta';
   // En modo pregunta la lista parte de todas las notas activas y luego muestra las relacionadas.
-  const filter = asking ? {} : { q: q || undefined, tag, archived };
+  const filter = asking ? { kind } : { kind, q: q || undefined, tag, archived, task: withTask };
 
   const notes = useQuery({ queryKey: queryKeys.noteList(filter), queryFn: () => api.listNotes(filter), placeholderData: (prev) => prev });
-  const tags = useQuery({ queryKey: queryKeys.tags, queryFn: api.listTags });
+  const tags = useQuery({ queryKey: queryKeys.tags(kind), queryFn: () => api.listTags(kind) });
   const ask = useMutation({ mutationFn: (text: string) => api.ask(text) });
 
   const switchMode = (next: SearchMode) => {
@@ -68,19 +90,10 @@ function NotesBrowser({ selectedId }: { selectedId?: number }) {
     `h-7 rounded-sm border px-2.5 text-small ${active ? 'border-accent bg-surface-raised text-ink' : 'border-line-strong text-ink-muted hover:text-ink'}`;
 
   return (
-    <div className="flex flex-col gap-6">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="m-0 text-display font-semibold">Notas y enlaces</h1>
-        <button type="button" onClick={() => navigate('notas/nueva')} className={primaryButtonClass}>
-          <Plus size={16} strokeWidth={2} aria-hidden />
-          Nueva nota
-        </button>
-      </header>
-
       <div className="flex flex-wrap items-start gap-4">
-        <section aria-label="Lista de notas" className="flex max-w-full min-w-0 flex-[1_1_340px] flex-col gap-3">
+        <section aria-label={isNote ? 'Lista de notas' : 'Documentos propios'} className="flex max-w-full min-w-0 flex-[1_1_340px] flex-col gap-3">
           <div className="flex flex-col gap-2">
-            <div role="group" aria-label="Tipo de búsqueda" className="flex gap-1 self-start rounded-md border border-line bg-surface p-1">
+            {isNote && <div role="group" aria-label="Tipo de búsqueda" className="flex gap-1 self-start rounded-md border border-line bg-surface p-1">
               {(['texto', 'pregunta'] as const).map((m) => (
                 <button
                   key={m}
@@ -92,7 +105,7 @@ function NotesBrowser({ selectedId }: { selectedId?: number }) {
                   {m === 'texto' ? 'Texto' : 'Pregunta'}
                 </button>
               ))}
-            </div>
+            </div>}
             <form
               role="search"
               className="relative"
@@ -102,7 +115,7 @@ function NotesBrowser({ selectedId }: { selectedId?: number }) {
               }}
             >
               <label htmlFor="buscar-notas" className="sr-only">
-                {asking ? 'Pregunta sobre tus notas' : 'Buscar en notas'}
+                {asking ? 'Pregunta sobre tus notas' : isNote ? 'Buscar en notas' : 'Buscar en la documentación'}
               </label>
               {asking ? (
                 <Sparkles size={16} strokeWidth={1.5} className="absolute top-3 left-3 text-accent" aria-hidden />
@@ -115,17 +128,31 @@ function NotesBrowser({ selectedId }: { selectedId?: number }) {
                 type="search"
                 value={asking ? question : search}
                 onChange={(e) => (asking ? setQuestion(e.target.value) : setSearch(e.target.value))}
-                placeholder={asking ? '¿Cómo se despliega en pre?' : 'Buscar en notas y enlaces'}
+                placeholder={asking ? '¿Cómo se despliega en pre?' : isNote ? 'Buscar en notas' : 'Buscar en la documentación'}
                 className="h-10 w-full rounded-md border border-line-strong bg-surface-raised pr-3 pl-9 text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none"
               />
             </form>
             {asking ? (
-              <p className="m-0 text-small text-ink-faint">Pulsa Enter. opencode responde solo con lo que hay en tus notas y enlaces no archivados.</p>
+              <p className="m-0 text-small text-ink-faint">Pulsa Enter. opencode responde solo con lo que hay en tus notas, enlaces y documentos no archivados.</p>
             ) : (
               <div className="flex flex-wrap gap-1.5">
-                <button type="button" aria-pressed={!tag} onClick={() => setTag(undefined)} className={chipClass(!tag)}>
+                <button
+                  type="button"
+                  aria-pressed={!tag && !withTask}
+                  onClick={() => {
+                    setTag(undefined);
+                    setWithTask(undefined);
+                  }}
+                  className={chipClass(!tag && !withTask)}
+                >
                   Todas
                 </button>
+                {isNote &&
+                  (['con', 'sin'] as const).map((t) => (
+                    <button key={t} type="button" aria-pressed={withTask === t} onClick={() => setWithTask(withTask === t ? undefined : t)} className={chipClass(withTask === t)}>
+                      {t === 'con' ? 'Con tarea' : 'Sin tarea'}
+                    </button>
+                  ))}
                 {tags.data?.map((t) => (
                   <button
                     key={t.name}
@@ -138,7 +165,7 @@ function NotesBrowser({ selectedId }: { selectedId?: number }) {
                   </button>
                 ))}
                 <button type="button" aria-pressed={archived} onClick={() => setArchived(!archived)} className={chipClass(archived)}>
-                  Archivadas
+                  {isNote ? 'Archivadas' : 'Archivados'}
                 </button>
               </div>
             )}
@@ -147,12 +174,18 @@ function NotesBrowser({ selectedId }: { selectedId?: number }) {
           {asking && <AskResult pending={ask.isPending} error={ask.error} answer={answer} />}
 
           {notes.isError ? (
-            <p className="m-0 text-danger">No se pudieron cargar las notas.</p>
+            <p className="m-0 text-danger">No se pudo cargar la lista.</p>
           ) : notes.isPending ? (
             <p className="m-0 text-ink-muted">Cargando…</p>
           ) : asking && (ask.isPending || answer?.sources.length === 0) ? null : list.length === 0 ? (
             <p className="m-0 py-2 text-ink-muted">
-              {q || tag ? 'No hay notas que coincidan.' : archived ? 'No hay notas archivadas.' : 'Aún no tienes notas. Crea una con "Nueva nota" o con Alt+N.'}
+              {q || tag || withTask
+                ? `No hay ${noun}s que coincidan.`
+                : archived
+                  ? `No hay ${noun}s archivad${isNote ? 'a' : 'o'}s.`
+                  : isNote
+                    ? 'Aún no tienes notas. Crea una con "Nueva nota" o con Alt+N.'
+                    : 'Aún no tienes documentos propios. Crea uno con "Nuevo documento".'}
             </p>
           ) : (
             <ul aria-label={answer ? 'Notas relacionadas' : undefined} className="flex flex-col gap-1">
@@ -168,10 +201,9 @@ function NotesBrowser({ selectedId }: { selectedId?: number }) {
         {selected ? (
           <NoteDetail note={selected} />
         ) : (
-          list.length > 0 && <p className="flex-[999_1_420px] text-ink-muted">Esa nota no está en esta lista.</p>
+          list.length > 0 && <p className="flex-[999_1_420px] text-ink-muted">{isNote ? 'Esa nota no está en esta lista.' : 'Ese documento no está en esta lista.'}</p>
         )}
       </div>
-    </div>
   );
 }
 
@@ -221,7 +253,7 @@ function NoteListItem({ note, active }: { note: Note; active: boolean }) {
   const meta = [...note.tags];
   return (
     <a
-      href={`#/notas/${note.id}`}
+      href={noteHref(note)}
       aria-current={active ? 'true' : undefined}
       className={`flex flex-col gap-1 rounded-md p-3 text-ink no-underline ${active ? 'bg-surface-raised' : 'hover:bg-surface'}`}
     >
@@ -242,13 +274,21 @@ function NoteListItem({ note, active }: { note: Note; active: boolean }) {
               {t.key}
             </code>
           ))}
+          {note.commit && (
+            <>
+              {' · '}
+              <code className="font-mono text-info">
+                {note.commit.repo}@{note.commit.sha}
+              </code>
+            </>
+          )}
         </span>
       )}
     </a>
   );
 }
 
-function NoteDetail({ note }: { note: Note }) {
+export function NoteDetail({ note }: { note: Note }) {
   const queryClient = useQueryClient();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -272,7 +312,7 @@ function NoteDetail({ note }: { note: Note }) {
     mutationFn: () => api.deleteNote(note.id),
     onSuccess: async () => {
       await refresh();
-      navigate('notas');
+      navigate(KIND_INFO[note.kind].section);
     },
   });
 
@@ -297,7 +337,7 @@ function NoteDetail({ note }: { note: Note }) {
                 Fijada
               </span>
             )}
-            {note.archived && <span>Archivada</span>}
+            {note.archived && <span>{note.kind === 'note' ? 'Archivada' : 'Archivado'}</span>}
             {note.tags.map((t) => (
               <span key={t} className="rounded-sm border border-line-strong px-1.5 py-0.5">
                 {t}
@@ -305,7 +345,7 @@ function NoteDetail({ note }: { note: Note }) {
             ))}
             {note.tasks.length > 0 && (
               <span>
-                Vinculada a{' '}
+                {note.kind === 'note' ? 'Tarea' : 'Vinculado a'}{' '}
                 {note.tasks.map((t, i) => (
                   <span key={t.key}>
                     {i > 0 && ', '}
@@ -316,11 +356,16 @@ function NoteDetail({ note }: { note: Note }) {
                 ))}
               </span>
             )}
-            <span>Editada {dayAndTime(note.updatedAt)}</span>
+            {note.commit && (
+              <span>
+                · Commit <CommitLink commit={note.commit} /> “{note.commit.text}”
+              </span>
+            )}
+            <span>{note.kind === 'note' ? 'Editada' : 'Editado'} {dayAndTime(note.updatedAt)}</span>
           </div>
         </div>
         <div className="flex gap-2">
-          <a href={`#/notas/${note.id}/editar`} className="flex h-9 items-center rounded-md border border-line-strong px-3 text-ink no-underline hover:bg-surface-raised">
+          <a href={`${noteHref(note)}/editar`} className="flex h-9 items-center rounded-md border border-line-strong px-3 text-ink no-underline hover:bg-surface-raised">
             Editar
           </a>
           <div ref={menuRef} className="relative">

@@ -36,6 +36,29 @@ export function parsePlan(markdown: string, updatedAt: string): DevPlan | null {
   };
 }
 
+export interface PlanHeader {
+  branch: string | null;
+  repos: string[];
+  prUrls: string[];
+}
+
+/** Cabecera de PLAN.md (antes de la primera sección): "Rama: ...", "Repos: a, b" y una línea "PR: <url>" por PR. */
+export function parsePlanHeader(markdown: string): PlanHeader {
+  const header: PlanHeader = { branch: null, repos: [], prUrls: [] };
+  for (const line of markdown.split(/\r?\n/)) {
+    if (/^##\s/.test(line)) break;
+    const m = line.match(/^\s*(?:[-*]\s+)?\**(Rama|Repos|PR)\**:\**\s*(.+?)\s*$/i);
+    if (!m) continue;
+    const field = m[1]!.toLowerCase();
+    const value = m[2]!.replace(/`/g, '');
+    if (field === 'rama') header.branch = value.split(/\s/)[0]!;
+    else if (field === 'pr') header.prUrls.push(...(value.match(/https?:\/\/\S+/g) ?? []));
+    // "orders-api (C:\dev\orders-api, base develop), web": se queda solo con los nombres.
+    else header.repos.push(...value.replace(/\([^)]*\)/g, '').split(',').map((r) => r.trim()).filter(Boolean));
+  }
+  return header;
+}
+
 /** Líneas "- fecha | repo | hash | url | explicación"; las que no encajan se ignoran. */
 export function parseHistory(markdown: string): HistoryEntry[] {
   const entries: HistoryEntry[] = [];

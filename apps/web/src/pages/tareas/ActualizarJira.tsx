@@ -5,7 +5,7 @@ import { useState, type FormEvent } from 'react';
 import { api, queryKeys } from '../../api';
 import { Modal } from '../../components/Modal';
 import { inputClass, primaryButtonClass, secondaryButtonClass } from '../../components/fields';
-import { hhmm, shortDay } from '../../dates';
+import { dayAndTime, hhmm, shortDay } from '../../dates';
 
 const hint = 'text-small text-ink-faint';
 const checkbox = 'size-[18px] accent-accent';
@@ -104,7 +104,11 @@ export function ActualizarJiraDialog({ task, onClose }: { task: TaskDetail; onCl
               {draft.error.message}
             </p>
           ) : (
-            <span className={hint}>La IA lo redacta con tus notas vinculadas, el diario, el plan y el histórico de cambios de opencode. Puedes editarlo antes de enviar.</span>
+            <span className={hint}>
+              {draft.data?.since
+                ? `Redactado solo con lo nuevo desde el último envío a JIRA (${dayAndTime(draft.data.since)}). Puedes editarlo antes de enviar.`
+                : 'La IA lo redacta con lo nuevo desde el último envío a JIRA: notas vinculadas, diario y commits de opencode, más el plan. Puedes editarlo antes de enviar.'}
+            </span>
           )}
         </div>
 

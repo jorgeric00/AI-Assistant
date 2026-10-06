@@ -103,6 +103,42 @@ describe('cliente de JIRA', () => {
     await expect(new JiraClient({ baseUrl: 'https://j', token: 't' }, html).search('x')).rejects.toThrow(/página web/);
   });
 
+  it('comenta y cambia de estado por la API: texto en Server y ADF en Cloud', async () => {
+    const sent: { method: string; path: string; body: unknown }[] = [];
+    const impl = (async (input: string | URL, init: RequestInit = {}) => {
+      const url = new URL(String(input));
+      sent.push({ method: init.method ?? 'GET', path: url.pathname, body: JSON.parse(String(init.body)) });
+      if (url.pathname.endsWith('/transitions')) return new Response(null, { status: 204 });
+      if (url.pathname.includes('ZZZ-9')) return new Response(JSON.stringify({ errorMessages: ['Issue Does Not Exist'] }), { status: 404 });
+      return new Response(JSON.stringify({ id: '10' }), { status: 201 });
+    }) as typeof fetch;
+
+    const server = new JiraClient({ baseUrl: 'https://jira.empresa.com/jira', token: 'pat' }, impl);
+    await server.addComment('ABC-1', 'Hecho:\n- Exportación');
+    await server.transition('ABC-1', '31');
+    await new JiraClient({ baseUrl: 'https://x.atlassian.net', token: 't', email: 'j@x' }, impl).addComment('ABC-1', 'Uno\n\nDos');
+    expect(sent).toEqual([
+      { method: 'POST', path: '/jira/rest/api/2/issue/ABC-1/comment', body: { body: 'Hecho:\n- Exportación' } },
+      { method: 'POST', path: '/jira/rest/api/2/issue/ABC-1/transitions', body: { transition: { id: '31' } } },
+      {
+        method: 'POST',
+        path: '/rest/api/3/issue/ABC-1/comment',
+        body: {
+          body: {
+            type: 'doc',
+            version: 1,
+            content: [
+              { type: 'paragraph', content: [{ type: 'text', text: 'Uno' }] },
+              { type: 'paragraph', content: [] },
+              { type: 'paragraph', content: [{ type: 'text', text: 'Dos' }] },
+            ],
+          },
+        },
+      },
+    ]);
+    await expect(server.addComment('ZZZ-9', 'x')).rejects.toThrow('JIRA no encuentra ZZZ-9');
+  });
+
   it('un fallo de red se convierte en un mensaje con la URL', async () => {
     const offline = (async () => {
       throw new TypeError('fetch failed', { cause: new Error('getaddrinfo ENOTFOUND j') });

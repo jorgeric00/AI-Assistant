@@ -1,6 +1,7 @@
 import type {
   AskResponse,
   DailySummary,
+  DevSession,
   JiraDraft,
   JiraDraftInput,
   JiraSyncStatus,
@@ -23,11 +24,15 @@ import type {
   ReminderAlert,
   ReminderInput,
   ReminderUpdate,
+  SessionOpenResult,
   SnoozeInput,
   TagCount,
   Task,
   TaskDetail,
   TaskDevInfo,
+  TaskDoc,
+  TaskDocDetail,
+  NoteKind,
 } from '@dev-assistant/shared';
 
 async function request<T>(method: string, url: string, body?: unknown): Promise<T> {
@@ -44,14 +49,19 @@ async function request<T>(method: string, url: string, body?: unknown): Promise<
 }
 
 export interface NotesFilter {
+  kind?: NoteKind;
   q?: string;
   tag?: string;
   archived?: boolean;
+  /** con: solo las vinculadas a alguna tarea; sin: solo las que no tienen. */
+  task?: 'con' | 'sin';
 }
 
 export const api = {
-  listNotes: ({ q, tag, archived }: NotesFilter) => {
+  listNotes: ({ kind, q, tag, archived, task }: NotesFilter) => {
     const params = new URLSearchParams();
+    if (kind) params.set('kind', kind);
+    if (task) params.set('task', task);
     if (q) params.set('q', q);
     if (tag) params.set('tag', tag);
     if (archived) params.set('archived', 'true');
@@ -61,7 +71,7 @@ export const api = {
   createNote: (input: NoteInput) => request<Note>('POST', '/api/notes', input),
   updateNote: (id: number, input: NoteUpdate) => request<Note>('PATCH', `/api/notes/${id}`, input),
   deleteNote: (id: number) => request<void>('DELETE', `/api/notes/${id}`),
-  listTags: () => request<TagCount[]>('GET', '/api/tags'),
+  listTags: (kind?: NoteKind) => request<TagCount[]>('GET', `/api/tags${kind ? `?kind=${kind}` : ''}`),
   linkTitle: (url: string) => request<LinkTitleResponse>('GET', `/api/link-title?url=${encodeURIComponent(url)}`),
 
   listReminders: () => request<Reminder[]>('GET', '/api/reminders'),
@@ -84,6 +94,10 @@ export const api = {
   listTasks: (done: boolean) => request<Task[]>('GET', `/api/tasks${done ? '?done=true' : ''}`),
   getTask: (key: string) => request<TaskDetail>('GET', `/api/tasks/${encodeURIComponent(key)}`),
   getTaskDev: (key: string) => request<TaskDevInfo>('GET', `/api/tasks/${encodeURIComponent(key)}/dev`),
+  listTaskDocs: (q?: string) => request<TaskDoc[]>('GET', `/api/task-docs${q ? `?q=${encodeURIComponent(q)}` : ''}`),
+  getTaskDoc: (key: string) => request<TaskDocDetail>('GET', `/api/task-docs/${encodeURIComponent(key)}`),
+  getTaskSession: (key: string) => request<DevSession>('GET', `/api/tasks/${encodeURIComponent(key)}/session`),
+  openTaskSession: (key: string) => request<SessionOpenResult>('POST', `/api/tasks/${encodeURIComponent(key)}/session/open`),
   jiraStatus: () => request<JiraSyncStatus>('GET', '/api/jira/status'),
   syncJira: () => request<JiraSyncStatus>('POST', '/api/jira/sync'),
   jiraTransitions: (key: string) => request<JiraTransitionOption[]>('GET', `/api/tasks/${encodeURIComponent(key)}/transitions`),
@@ -107,7 +121,7 @@ export const queryKeys = {
   notes: ['notes'] as const,
   noteList: (filter: NotesFilter) => ['notes', 'list', filter] as const,
   note: (id: number) => ['notes', 'one', id] as const,
-  tags: ['notes', 'tags'] as const,
+  tags: (kind?: NoteKind) => ['notes', 'tags', kind ?? 'todas'] as const,
   /** Invalidar `reminders` refresca recordatorios y avisos. */
   reminders: ['reminders'] as const,
   reminderList: ['reminders', 'list'] as const,
@@ -120,6 +134,9 @@ export const queryKeys = {
   task: (key: string) => ['tasks', 'one', key] as const,
   jiraStatus: ['tasks', 'jira-status'] as const,
   taskDev: (key: string) => ['tasks', 'dev', key] as const,
+  taskDocs: (q: string) => ['tasks', 'docs', q] as const,
+  taskDoc: (key: string) => ['tasks', 'doc', key] as const,
+  taskSession: (key: string) => ['tasks', 'session', key] as const,
   jiraTransitions: (key: string) => ['tasks', 'transitions', key] as const,
   opencodeSkill: ['opencode-skill'] as const,
   /** Invalidar `repos` refresca la lista y las fichas. */

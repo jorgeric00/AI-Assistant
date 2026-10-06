@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { Note, NoteKind } from '@dev-assistant/shared';
+import type { CommitRef, Note, NoteKind } from '@dev-assistant/shared';
 import { CircleAlert } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { api, queryKeys } from '../api';
@@ -8,6 +8,8 @@ import { isHttpUrl, useLinkTitle } from '../pages/notas/useLinkTitle';
 import { ReminderForm } from '../pages/recordatorios/ReminderForm';
 import { Modal } from './Modal';
 import { TagInput } from './TagInput';
+import { CommitSelect, TaskOptions } from './TaskFields';
+import { noteHref } from '../sections';
 import { TASK_KEY_RE, inputClass, labelClass, parseTaskKeys, primaryButtonClass, secondaryButtonClass } from './fields';
 
 export interface Saved {
@@ -53,7 +55,7 @@ export function QuickCapture({ onClose, onSaved }: Props) {
         <NoteCapture
           kind={kind}
           onCancel={onClose}
-          onSaved={(note) => onSaved({ message: note.kind === 'link' ? 'Enlace guardado' : 'Nota guardada', href: `#/notas/${note.id}` })}
+          onSaved={(note) => onSaved({ message: note.kind === 'link' ? 'Enlace guardado' : 'Nota guardada', href: noteHref(note) })}
         />
       )}
     </Modal>
@@ -62,12 +64,16 @@ export function QuickCapture({ onClose, onSaved }: Props) {
 
 function NoteCapture({ kind, onCancel, onSaved }: { kind: NoteKind; onCancel: () => void; onSaved: (note: Note) => void }) {
   const queryClient = useQueryClient();
-  const tagsQuery = useQuery({ queryKey: queryKeys.tags, queryFn: api.listTags });
+  const tagsQuery = useQuery({ queryKey: queryKeys.tags(kind), queryFn: () => api.listTags(kind) });
   const [url, setUrl] = useState('');
   const [title, setTitle] = useState('');
   const [bodyMd, setBodyMd] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [taskText, setTaskText] = useState('');
+  const [commitPick, setCommitPick] = useState<{ task: string | null; commit: CommitRef | null }>({ task: null, commit: null });
+  // El commit es de la primera tarea escrita; si cambia la tarea, deja de valer.
+  const commitTask = parseTaskKeys(taskText)[0] ?? null;
+  const commit = kind === 'note' && commitTask && commitPick.task === commitTask ? commitPick.commit : null;
   const [error, setError] = useState<string | null>(null);
   const linkTitle = useLinkTitle(title, setTitle);
   const save = useMutation({
@@ -80,6 +86,7 @@ function NoteCapture({ kind, onCancel, onSaved }: { kind: NoteKind; onCancel: ()
         urlTitle: kind === 'link' ? linkTitle.urlTitle : null,
         tags,
         taskKeys: parseTaskKeys(taskText),
+        commit,
       }),
     onSuccess: async (note) => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.notes });
@@ -149,17 +156,27 @@ function NoteCapture({ kind, onCancel, onSaved }: { kind: NoteKind; onCancel: ()
         </div>
         <div className="flex flex-[1_1_200px] flex-col gap-1.5">
           <label htmlFor="cap-tarea" className={labelClass}>
-            Vincular a tarea
+            Tarea
           </label>
           <input
             id="cap-tarea"
             type="text"
+            list="cap-tareas"
             value={taskText}
             placeholder="ABC-123"
             onChange={(e) => setTaskText(e.target.value)}
             className={`${inputClass} font-mono text-code text-info`}
           />
+          <TaskOptions id="cap-tareas" />
         </div>
+        {kind === 'note' && (
+          <div className="flex min-w-0 flex-[1_1_200px] flex-col gap-1.5">
+            <label htmlFor="cap-commit" className={labelClass}>
+              Commit
+            </label>
+            <CommitSelect id="cap-commit" taskKey={commitTask} value={commit} onChange={(c) => setCommitPick({ task: commitTask, commit: c })} />
+          </div>
+        )}
       </div>
 
       {error && (

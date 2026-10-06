@@ -30,6 +30,15 @@ export const JiraKey = z
   .toUpperCase()
   .regex(/^[A-Z][A-Z0-9_]*-\d+$/, 'Clave de JIRA no válida (ej.: ABC-123)');
 
+/** Commit de una tarea (de su HISTORIAL.md) al que se asocia una nota o un recordatorio. */
+export const CommitRef = z.object({
+  repo: z.string().trim().min(1),
+  sha: z.string().trim().min(4),
+  url: z.httpUrl().nullable(),
+  text: z.string(),
+});
+export type CommitRef = z.infer<typeof CommitRef>;
+
 const noteFields = {
   kind: z.enum(NOTE_KINDS),
   title: z.string().trim().min(1, 'El título es obligatorio'),
@@ -40,6 +49,7 @@ const noteFields = {
   archived: z.boolean(),
   tags: z.array(z.string().trim().toLowerCase().min(1)),
   taskKeys: z.array(JiraKey),
+  commit: CommitRef.nullable(),
 };
 
 export const NoteInput = z.object({
@@ -50,6 +60,7 @@ export const NoteInput = z.object({
   archived: noteFields.archived.default(false),
   tags: noteFields.tags.default([]),
   taskKeys: noteFields.taskKeys.default([]),
+  commit: noteFields.commit.default(null),
 });
 export type NoteInput = z.input<typeof NoteInput>;
 
@@ -77,9 +88,13 @@ export interface Note {
   updatedAt: string;
   tags: string[];
   tasks: NoteTaskLink[];
+  commit: CommitRef | null;
 }
 
 export const NoteListQuery = z.object({
+  kind: z.enum(NOTE_KINDS).optional(),
+  /** con: solo las vinculadas a alguna tarea; sin: solo las que no tienen tarea. */
+  task: z.enum(['con', 'sin']).optional(),
   q: z.string().trim().optional(),
   tag: z.string().trim().toLowerCase().optional(),
   archived: z.stringbool().default(false),
@@ -115,6 +130,7 @@ const reminderFields = {
   dueAt: z.iso.datetime({ offset: true }),
   repeat: Repeat,
   taskKey: JiraKey.nullish(),
+  commit: CommitRef.nullish(),
 };
 
 export const ReminderInput = z.object({ ...reminderFields, repeat: reminderFields.repeat.default({ kind: 'none' }) });
@@ -139,6 +155,7 @@ export interface Reminder {
   nextFireAt: string | null;
   snoozedUntil: string | null;
   taskKey: string | null;
+  commit: CommitRef | null;
   createdAt: string;
 }
 
@@ -254,9 +271,7 @@ export interface JiraSyncStatus {
   lastCount: number | null;
   /** Error de la última sincronización, si falló. */
   lastError: string | null;
-  /** Servidor MCP de opencode con el que se escribe en JIRA, o null si no se encuentra. */
-  writeServer: string | null;
-  /** Por qué no se puede escribir en JIRA (sin MCP de JIRA en opencode...), o null. */
+  /** Por qué no se puede escribir en JIRA (falta configurarlo en .env), o null. */
   writeProblem: string | null;
 }
 
@@ -288,6 +303,8 @@ export type JiraDraftInput = z.input<typeof JiraDraftInput>;
 
 export interface JiraDraft {
   comment: string;
+  /** Fecha del último envío a JIRA: el borrador solo usa lo nuevo desde entonces. null si es el primero. */
+  since: string | null;
 }
 
 /** Un envío a JIRA desde la app (registro en la ficha de la tarea). */
@@ -346,6 +363,58 @@ export interface TaskDevInfo {
   history: HistoryEntry[];
   /** Carpeta de la tarea donde opencode escribe los ficheros. */
   folder: string;
+}
+
+/** Un repositorio de la tarea, visto en el clon de siempre de Jorge. */
+export interface SessionRepo {
+  name: string;
+  /** null si el repo no está dado de alta en Repositorios. */
+  localPath: string | null;
+  defaultBranch: string | null;
+  /** false si la carpeta no existe o no es un repo git. */
+  pathOk: boolean;
+  /** Rama en la que está el clon ahora mismo. */
+  currentBranch: string | null;
+  /** Cambios sin guardar en el clon (opencode no cambia de rama con ellos). */
+  dirty: boolean;
+  /** Commits de la rama de la tarea sobre la rama base; null si la rama aún no existe. */
+  commits: number | null;
+  prUrl: string | null;
+}
+
+/** Sesión de desarrollo de una tarea: opencode en la terminal y lo que la app ve de los repos. */
+export interface DevSession {
+  /** Carpeta de la tarea (PLAN.md, HISTORIAL.md y TAREA.md). */
+  folder: string;
+  /** Rama de la tarea (línea "Rama:" de PLAN.md). */
+  branch: string | null;
+  /** true si opencode ya ha fijado los repos en PLAN.md; si no, son los dados de alta para el proyecto de JIRA. */
+  reposConfirmed: boolean;
+  repos: SessionRepo[];
+  /** Comando para abrir opencode a mano en la carpeta de la tarea. */
+  command: string;
+  /** true si la app puede abrir la terminal ella misma (Windows). */
+  canOpen: boolean;
+}
+
+export interface SessionOpenResult {
+  opened: boolean;
+  command: string;
+}
+
+/** RESUMEN.md que escribe opencode al cerrar una tarea (Documentación › De tareas). */
+export interface TaskDoc {
+  key: string;
+  /** Título del resumen (su primera cabecera, sin la clave). */
+  title: string;
+  repos: string[];
+  /** Enlaces a PR que aparecen en el resumen. */
+  prCount: number;
+  updatedAt: string;
+}
+
+export interface TaskDocDetail extends TaskDoc {
+  markdown: string;
 }
 
 export interface OpencodeSkillStatus {

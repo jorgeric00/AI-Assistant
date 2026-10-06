@@ -1,6 +1,7 @@
 // Valores cerrados compartidos entre backend, frontend y base de datos.
 
-export const NOTE_KINDS = ['note', 'link'] as const;
+/** note: nota corta; link: enlace de interés; doc: documento propio (Documentación). */
+export const NOTE_KINDS = ['note', 'link', 'doc'] as const;
 export type NoteKind = (typeof NOTE_KINDS)[number];
 
 export const REMINDER_STATUSES = ['pending', 'done', 'snoozed', 'cancelled'] as const;

@@ -6,7 +6,6 @@ import type { JiraDraft, JiraSyncStatus, JiraTransitionOption, JiraUpdateEntry, 
 import { buildApp } from '../../app.js';
 import { openDatabase } from '../../db/client.js';
 import { JiraError, type JiraClient, type JiraIssue } from '../../integrations/jira/client.js';
-import type { JiraWriter } from '../../integrations/jira/mcp-writer.js';
 import type { Llm, LlmRequest } from '../../integrations/opencode/llm.js';
 import { JiraSync } from './jira-sync.js';
 import { TasksRepository } from './repository.js';
@@ -29,28 +28,24 @@ const TRANSITIONS: JiraTransitionOption[] = [
   { id: '31', name: 'Enviar a revisión', to: 'En revisión', toCategory: 'indeterminate' },
 ];
 
-async function setup({ failTransition = false, problem = null as string | null } = {}) {
+async function setup({ failTransition = false, configured = true } = {}) {
   const { db } = openDatabase(':memory:');
   const jira = { status: 'Por hacer' };
+  const sent: string[] = [];
   const client = {
     myself: async () => 'Jorge',
     search: async () => [issue(jira.status)],
     getIssue: async () => issue(jira.status),
     transitions: async () => TRANSITIONS,
-  } as unknown as JiraClient;
-  const sent: string[] = [];
-  const writer: JiraWriter = {
-    status: () => ({ server: problem ? null : 'jira', problem }),
-    addComment: async (key, comment) => {
+    addComment: async (key: string, comment: string) => {
       sent.push(`comment ${key}: ${comment}`);
     },
-    transition: async (key, id) => {
-      if (failTransition) throw new JiraError('JIRA no aceptó el cambio (jira_transition_issue): falta resolución');
+    transition: async (key: string, id: string) => {
+      if (failTransition) throw new JiraError('JIRA respondió 400: falta resolución');
       sent.push(`transition ${key}: ${id}`);
       jira.status = TRANSITIONS.find((t) => t.id === id)!.to;
     },
-    close: async () => {},
-  };
+  } as unknown as JiraClient;
   const prompts: LlmRequest[] = [];
   const llm: Llm = {
     complete: async (req) => {
@@ -61,7 +56,7 @@ async function setup({ failTransition = false, problem = null as string | null }
   const home = mkdtempSync(join(tmpdir(), 'dev-assistant-'));
   const repo = new TasksRepository(db);
   const jiraSync = new JiraSync(db, repo, client, 'x');
-  const app = await buildApp(db, { jiraSync, jiraClient: client, jiraWriter: writer, llm, devAssistantHome: home });
+  const app = await buildApp(db, { jiraSync, jiraClient: configured ? client : null, llm, devAssistantHome: home });
   await jiraSync.sync();
   const inject = async <T>(method: 'GET' | 'POST', url: string, payload?: object) => {
     const res = await app.inject({ method, url, payload });
@@ -77,7 +72,7 @@ describe('Actualizar JIRA', () => {
   it('lista los estados posibles y el estado de la escritura', async () => {
     ctx = await setup();
     expect((await ctx.inject<JiraTransitionOption[]>('GET', '/api/tasks/ABC-1/transitions')).body.map((t) => t.to)).toEqual(['En curso', 'En revisión']);
-    expect((await ctx.inject<JiraSyncStatus>('GET', '/api/jira/status')).body).toMatchObject({ writeServer: 'jira', writeProblem: null });
+    expect((await ctx.inject<JiraSyncStatus>('GET', '/api/jira/status')).body).toMatchObject({ writeProblem: null });
   });
 
   it('envía comentario y estado, lo registra en la ficha y refresca el estado', async () => {
@@ -124,11 +119,12 @@ describe('Actualizar JIRA', () => {
     expect(task.jiraUpdates).toEqual([expect.objectContaining({ comment: 'Hecho', transition: null })]);
   });
 
-  it('sin MCP de JIRA no envía nada y explica por qué', async () => {
-    ctx = await setup({ problem: 'No hay ningún servidor MCP de JIRA en la configuración de opencode.' });
+  it('sin JIRA configurado no envía nada y explica por qué', async () => {
+    ctx = await setup({ configured: false });
+    expect((await ctx.inject<JiraSyncStatus>('GET', '/api/jira/status')).body.writeProblem).toContain('JIRA_TOKEN');
     const res = await ctx.inject<{ error: string }>('POST', '/api/tasks/ABC-1/jira-update', { comment: 'Hola' });
     expect(res.status).toBe(503);
-    expect(res.body.error).toContain('No hay ningún servidor MCP');
+    expect(res.body.error).toContain('JIRA no está configurado');
     expect(ctx.sent).toEqual([]);
   });
 
@@ -149,5 +145,35 @@ describe('Actualizar JIRA', () => {
     expect(prompt).toContain('Separador ; y decimales con coma');
     expect(prompt).toContain('orders-api@abc1234');
     expect(prompt).toContain('Se va a cambiar el estado a: En revisión');
+    expect(res.body.since).toBeNull();
+  });
+
+  it('tras un envío, el borrador solo usa lo nuevo desde entonces', async () => {
+    ctx = await setup();
+    await ctx.inject('POST', '/api/notes', { title: 'Nota vieja', bodyMd: 'Contado ya', taskKeys: ['ABC-1'] });
+    const folder = join(ctx.home, 'worktrees', 'ABC-1');
+    mkdirSync(folder, { recursive: true });
+    writeFileSync(join(folder, 'HISTORIAL.md'), '- 2020-01-01 10:00 | orders-api | old1234 | https://github.com/x/orders-api/commit/old1234 | Commit viejo\n');
+    await ctx.inject('POST', '/api/tasks/ABC-1/jira-update', { comment: 'Primer avance' });
+
+    const nothing = await ctx.inject<{ error: string }>('POST', '/api/tasks/ABC-1/jira-update/draft', {});
+    expect(nothing.status).toBe(400);
+    expect(nothing.body.error).toContain('desde el último envío');
+
+    await new Promise((r) => setTimeout(r, 5));
+    await ctx.inject('POST', '/api/notes', { title: 'Nota nueva', bodyMd: 'Falta el CSV', taskKeys: ['ABC-1'] });
+    writeFileSync(
+      join(folder, 'HISTORIAL.md'),
+      '- 2020-01-01 10:00 | orders-api | old1234 | https://github.com/x/orders-api/commit/old1234 | Commit viejo\n- 2099-01-01 10:00 | orders-api | new5678 | https://github.com/x/orders-api/commit/new5678 | Commit nuevo\n',
+    );
+    const res = await ctx.inject<JiraDraft>('POST', '/api/tasks/ABC-1/jira-update/draft', {});
+    expect(res.status).toBe(200);
+    expect(res.body.since).toEqual(expect.any(String));
+    const prompt = ctx.prompts.at(-1)!.user;
+    expect(prompt).toContain('Nota nueva');
+    expect(prompt).not.toContain('Nota vieja');
+    expect(prompt).toContain('new5678');
+    expect(prompt).not.toContain('old1234');
+    expect(prompt).toContain('Último comentario enviado');
   });
 });
