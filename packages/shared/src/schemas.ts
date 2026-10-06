@@ -348,6 +348,43 @@ export interface TaskDevInfo {
   folder: string;
 }
 
+/** Un repositorio de la tarea, visto en el clon de siempre de Jorge. */
+export interface SessionRepo {
+  name: string;
+  /** null si el repo no está dado de alta en Repositorios. */
+  localPath: string | null;
+  defaultBranch: string | null;
+  /** false si la carpeta no existe o no es un repo git. */
+  pathOk: boolean;
+  /** Rama en la que está el clon ahora mismo. */
+  currentBranch: string | null;
+  /** Cambios sin guardar en el clon (opencode no cambia de rama con ellos). */
+  dirty: boolean;
+  /** Commits de la rama de la tarea sobre la rama base; null si la rama aún no existe. */
+  commits: number | null;
+  prUrl: string | null;
+}
+
+/** Sesión de desarrollo de una tarea: opencode en la terminal y lo que la app ve de los repos. */
+export interface DevSession {
+  /** Carpeta de la tarea (PLAN.md, HISTORIAL.md y TAREA.md). */
+  folder: string;
+  /** Rama de la tarea (línea "Rama:" de PLAN.md). */
+  branch: string | null;
+  /** true si opencode ya ha fijado los repos en PLAN.md; si no, son los dados de alta para el proyecto de JIRA. */
+  reposConfirmed: boolean;
+  repos: SessionRepo[];
+  /** Comando para abrir opencode a mano en la carpeta de la tarea. */
+  command: string;
+  /** true si la app puede abrir la terminal ella misma (Windows). */
+  canOpen: boolean;
+}
+
+export interface SessionOpenResult {
+  opened: boolean;
+  command: string;
+}
+
 export interface OpencodeSkillStatus {
   installed: boolean;
   /** false si la instalada es distinta de la versión de la app. */

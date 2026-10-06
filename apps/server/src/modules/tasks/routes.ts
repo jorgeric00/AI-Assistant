@@ -6,13 +6,20 @@ import type { Db } from '../../db/client.js';
 import type { JiraSync } from './jira-sync.js';
 import { JiraUpdateInputError, type JiraUpdateService } from './jira-update.js';
 import { TasksRepository } from './repository.js';
+import type { DevSessionService } from './session.js';
 
 const KeyParams = z.object({ key: JiraKey });
 
 /** Tareas de JIRA asignadas (R9): lista, ficha con notas vinculadas y sincronización. */
 export async function tasksRoutes(
   app: FastifyInstance,
-  { db, jiraSync, jiraUpdates, devAssistantHome }: { db: Db; jiraSync: JiraSync; jiraUpdates: JiraUpdateService; devAssistantHome: string },
+  {
+    db,
+    jiraSync,
+    jiraUpdates,
+    devAssistantHome,
+    sessions,
+  }: { db: Db; jiraSync: JiraSync; jiraUpdates: JiraUpdateService; devAssistantHome: string; sessions: DevSessionService },
 ) {
   const repo = new TasksRepository(db);
   const status = (): JiraSyncStatus => ({ ...jiraSync.status(), ...jiraUpdates.writerStatus() });
@@ -27,6 +34,16 @@ export async function tasksRoutes(
 
   // Plan e histórico que escribe opencode en la carpeta de la tarea (aunque la tarea no esté sincronizada).
   app.get('/api/tasks/:key/dev', async (req) => readTaskDevInfo(devAssistantHome, KeyParams.parse(req.params).key));
+
+  // Sesión de desarrollo: estado de los repos de la tarea y botón para abrir opencode en la terminal.
+  app.get('/api/tasks/:key/session', async (req) => sessions.get(KeyParams.parse(req.params).key));
+
+  app.post('/api/tasks/:key/session/open', async (req) => {
+    const { key } = KeyParams.parse(req.params);
+    const result = await sessions.open(key);
+    req.log.info(result.opened ? `opencode abierto para ${key}` : `TAREA.md preparado para ${key} (abrir opencode a mano)`);
+    return result;
+  });
 
   // Actualizar JIRA: estados posibles (API REST), borrador con IA y envío confirmado (MCP).
   app.get('/api/tasks/:key/transitions', async (req, reply) => jiraUpdates.transitions(KeyParams.parse(req.params).key).catch(badInput(reply)));

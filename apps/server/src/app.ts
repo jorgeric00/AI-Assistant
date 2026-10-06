@@ -19,6 +19,7 @@ import { JiraSync } from './modules/tasks/jira-sync.js';
 import { JiraUpdateService } from './modules/tasks/jira-update.js';
 import { TasksRepository } from './modules/tasks/repository.js';
 import { tasksRoutes } from './modules/tasks/routes.js';
+import { DevSessionService, type TerminalLauncher } from './modules/tasks/session.js';
 
 export interface BuildAppOptions {
   logger?: boolean;
@@ -38,6 +39,8 @@ export interface BuildAppOptions {
   git?: GitRunner;
   /** Carpeta global de skills de opencode. Por defecto ~/.config/opencode/skill. */
   opencodeSkillsDir?: string;
+  /** Abre opencode en una terminal (sesión de desarrollo); por defecto, una ventana nueva en Windows. */
+  terminalLauncher?: TerminalLauncher;
 }
 
 const noLlm: Llm = {
@@ -83,6 +86,7 @@ export async function buildApp(db: Db, opts: BuildAppOptions = {}) {
     jiraSync: opts.jiraSync ?? new JiraSync(db, tasksRepo, null, ''),
     jiraUpdates: new JiraUpdateService(db, tasksRepo, opts.jiraClient ?? null, opts.jiraWriter ?? null, opts.llm ?? noLlm, devAssistantHome),
     devAssistantHome,
+    sessions: new DevSessionService(db, tasksRepo, devAssistantHome, opts.git, opts.terminalLauncher),
   });
   await app.register(reposRoutes, { db, llm: opts.llm ?? noLlm, git: opts.git });
   await app.register(opencodeSkillRoutes, { skillsDir: opts.opencodeSkillsDir ?? config.opencodeSkillsDir });

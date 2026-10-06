@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import type { DevPlan, HistoryEntry, TaskDetail } from '@dev-assistant/shared';
-import { Check, ExternalLink, FileText, Link2 } from 'lucide-react';
+import { Check, ExternalLink, FileText, Link2, SquareTerminal } from 'lucide-react';
 import { api, queryKeys } from '../../api';
-import { primaryButtonClass } from '../../components/fields';
+import { primaryButtonClass, secondaryButtonClass } from '../../components/fields';
 import { dayAndTime, timeAgo } from '../../dates';
 import { ActualizarJiraButton, JiraUpdatesList } from './ActualizarJira';
 
@@ -76,12 +76,18 @@ function Header({ task }: { task: TaskDetail }) {
           ))}
         </div>
       </div>
-      <ActualizarJiraButton task={task} className={primaryButtonClass} />
+      <div className="flex flex-wrap gap-2">
+        <a href={`#/tareas/${task.key}/sesion`} className={`${secondaryButtonClass} no-underline`}>
+          <SquareTerminal size={16} strokeWidth={1.5} aria-hidden />
+          Sesión de desarrollo
+        </a>
+        <ActualizarJiraButton task={task} className={primaryButtonClass} />
+      </div>
     </header>
   );
 }
 
-function PlanCard({ plan, loading }: { plan: DevPlan | null; loading: boolean }) {
+export function PlanCard({ plan, loading }: { plan: DevPlan | null; loading: boolean }) {
   return (
     <section aria-labelledby="plan-titulo" className={card}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -163,7 +169,7 @@ function PlanProgress({ plan }: { plan: DevPlan }) {
   );
 }
 
-function HistoryCard({ history, loading }: { history: HistoryEntry[]; loading: boolean }) {
+export function HistoryCard({ history, loading }: { history: HistoryEntry[]; loading: boolean }) {
   return (
     <section aria-labelledby="historico-titulo" className={card}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">

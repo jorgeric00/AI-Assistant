@@ -1,6 +1,7 @@
 import type {
   AskResponse,
   DailySummary,
+  DevSession,
   JiraDraft,
   JiraDraftInput,
   JiraSyncStatus,
@@ -23,6 +24,7 @@ import type {
   ReminderAlert,
   ReminderInput,
   ReminderUpdate,
+  SessionOpenResult,
   SnoozeInput,
   TagCount,
   Task,
@@ -84,6 +86,8 @@ export const api = {
   listTasks: (done: boolean) => request<Task[]>('GET', `/api/tasks${done ? '?done=true' : ''}`),
   getTask: (key: string) => request<TaskDetail>('GET', `/api/tasks/${encodeURIComponent(key)}`),
   getTaskDev: (key: string) => request<TaskDevInfo>('GET', `/api/tasks/${encodeURIComponent(key)}/dev`),
+  getTaskSession: (key: string) => request<DevSession>('GET', `/api/tasks/${encodeURIComponent(key)}/session`),
+  openTaskSession: (key: string) => request<SessionOpenResult>('POST', `/api/tasks/${encodeURIComponent(key)}/session/open`),
   jiraStatus: () => request<JiraSyncStatus>('GET', '/api/jira/status'),
   syncJira: () => request<JiraSyncStatus>('POST', '/api/jira/sync'),
   jiraTransitions: (key: string) => request<JiraTransitionOption[]>('GET', `/api/tasks/${encodeURIComponent(key)}/transitions`),
@@ -120,6 +124,7 @@ export const queryKeys = {
   task: (key: string) => ['tasks', 'one', key] as const,
   jiraStatus: ['tasks', 'jira-status'] as const,
   taskDev: (key: string) => ['tasks', 'dev', key] as const,
+  taskSession: (key: string) => ['tasks', 'session', key] as const,
   jiraTransitions: (key: string) => ['tasks', 'transitions', key] as const,
   opencodeSkill: ['opencode-skill'] as const,
   /** Invalidar `repos` refresca la lista y las fichas. */

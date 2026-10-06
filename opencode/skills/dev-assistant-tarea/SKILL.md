@@ -30,16 +30,21 @@ Cada tarea tiene una carpeta fuera de los repositorios de la empresa:
 ~/.dev-assistant/worktrees/<CLAVE>/
   PLAN.md         ← el plan de desarrollo (lo escribes tú)
   HISTORIAL.md    ← una línea por cada cambio subido (la añades tú)
+  TAREA.md        ← contexto que deja AI-Assistant al abrir la sesión (no lo edites)
 ```
 
 `<CLAVE>` es la clave de JIRA en mayúsculas (p. ej. `SGARFIDIN-1024`). En Windows, `~` es la carpeta del usuario
 (`C:\Users\<usuario>`). Crea la carpeta si no existe. El código se trabaja en el **clon de siempre** de cada
 repositorio, en la ruta que indica AI-Assistant (o Jorge); esta carpeta solo guarda el plan y el historial.
 
+`TAREA.md` trae los repositorios dados de alta en AI-Assistant (nombre, ruta local, rama base y repo de GitHub) y
+la ficha de cada uno (convenciones, comandos de tests y arquitectura). Léelo antes de empezar y sigue esas fichas.
+
 ## 1. Arranque
 
 1. Lee el ticket con el MCP de JIRA: resumen, descripción, criterios de aceptación y tipo de incidencia.
-2. Propón qué repositorios toca la tarea, con su ruta local y su rama base. **Pregunta a Jorge** si son esos.
+2. Propón qué repositorios toca la tarea (empieza por los de `TAREA.md`), con su ruta local y su rama base.
+   **Pregunta a Jorge** si son esos.
 3. Analiza el ticket y el código afectado. Si el repo tiene `AGENTS.md`, `CONTRIBUTING.md` o similar, síguelos.
 4. Escribe `PLAN.md` con el formato de abajo. **Pregunta a Jorge** si aprueba el plan. No toques código hasta que lo apruebe.
    Si pide cambios, edita el plan y vuelve a preguntar.
@@ -75,6 +80,7 @@ repositorio, en la ruta que indica AI-Assistant (o Jorge); esta carpeta solo gua
     - Título `[<CLAVE>] <explicación más extensa>`. Ejemplo: `[SGARFIDIN-1024] Revisión de vulnerabilidades`.
     - Descripción: la plantilla de PR del repo si existe (`.github/pull_request_template.md` o similar);
       si no, qué cambia y por qué. Incluye siempre el enlace al ticket de JIRA y un resumen del plan.
+    - Añade su enlace a la cabecera de `PLAN.md` en una línea `PR: <url>`.
     - En los siguientes ciclos no crees otra PR: el push ya la actualiza.
 15. Comprueba los checks de la PR en GitHub (tests, formato, secretos...). Si alguno falla, corrígelo y vuelve al paso 10.
 16. Añade la línea del cambio al final de `HISTORIAL.md` (formato abajo).
@@ -94,7 +100,8 @@ repositorio, en la ruta que indica AI-Assistant (o Jorge); esta carpeta solo gua
 # <CLAVE> · <resumen del ticket>
 
 Rama: feature/<CLAVE>-<explicacion-breve>
-Repos: <repo> (<ruta local>, base <rama base>), <otro repo> (...)
+Repos: <repo>, <otro repo>
+PR: https://github.com/<owner>/<repo>/pull/<número>
 
 ## Análisis
 - [x] Leer el ticket y los criterios de aceptación
@@ -114,6 +121,8 @@ Repos: <repo> (<ruta local>, base <rama base>), <otro repo> (...)
 ```
 
 Reglas del plan:
+- La cabecera la lee AI-Assistant: `Rama:` con el nombre exacto de la rama; `Repos:` con los nombres tal como
+  aparecen en `TAREA.md`, separados por comas; y una línea `PR:` por cada PR, en cuanto la crees.
 - Las fases van en este orden: `Análisis`, `Plan aprobado`, `Implementación`, `Pruebas y PR`.
 - Si la tarea toca varios repositorios, usa una sección `## Implementación · <repo>` por repositorio.
 - Cada paso es una casilla `- [ ]` en una sola línea, corto y verificable. Cada paso de implementación acaba en un commit.

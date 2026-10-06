@@ -6,13 +6,15 @@ import { api, queryKeys } from '../../api';
 import { primaryButtonClass, secondaryButtonClass } from '../../components/fields';
 import { timeAgo } from '../../dates';
 import { ActualizarJiraButton, JiraUpdatesList } from './ActualizarJira';
+import { SesionPage } from './SesionPage';
 import { TareaDetallePage } from './TareaDetallePage';
 import { useJiraSync, useTaskList } from './useTasks';
 
-/** Sección "Tareas de JIRA": `#/tareas`, `#/tareas/:clave` (ficha a la derecha) y `#/tareas/:clave/detalle`. */
+/** Sección "Tareas de JIRA": `#/tareas`, `#/tareas/:clave` (ficha a la derecha), `#/tareas/:clave/detalle` y `#/tareas/:clave/sesion`. */
 export function TareasPage({ params }: { params: string[] }) {
   const selectedKey = params[0]?.toUpperCase();
   if (selectedKey && params[1] === 'detalle') return <TareaDetallePage taskKey={selectedKey} />;
+  if (selectedKey && params[1] === 'sesion') return <SesionPage taskKey={selectedKey} />;
   return <TaskBrowser selectedKey={selectedKey} />;
 }
 
@@ -222,6 +224,9 @@ function TaskDetailView({ task, className }: { task: TaskDetail; className: stri
       <div className="flex flex-wrap gap-2">
         <a href={`#/tareas/${task.key}/detalle`} className={`${secondaryButtonClass} no-underline`}>
           Ver detalle
+        </a>
+        <a href={`#/tareas/${task.key}/sesion`} className={`${secondaryButtonClass} no-underline`}>
+          Sesión de desarrollo
         </a>
         <ActualizarJiraButton task={task} className={primaryButtonClass} />
       </div>
