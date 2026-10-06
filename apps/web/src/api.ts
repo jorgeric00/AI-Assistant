@@ -1,7 +1,12 @@
 import type {
   AskResponse,
   DailySummary,
+  JiraDraft,
+  JiraDraftInput,
   JiraSyncStatus,
+  JiraTransitionOption,
+  JiraUpdateEntry,
+  JiraUpdateInput,
   JournalEntry,
   JournalEntryInput,
   LinkTitleResponse,
@@ -76,6 +81,9 @@ export const api = {
   getTaskDev: (key: string) => request<TaskDevInfo>('GET', `/api/tasks/${encodeURIComponent(key)}/dev`),
   jiraStatus: () => request<JiraSyncStatus>('GET', '/api/jira/status'),
   syncJira: () => request<JiraSyncStatus>('POST', '/api/jira/sync'),
+  jiraTransitions: (key: string) => request<JiraTransitionOption[]>('GET', `/api/tasks/${encodeURIComponent(key)}/transitions`),
+  draftJiraComment: (key: string, input: JiraDraftInput) => request<JiraDraft>('POST', `/api/tasks/${encodeURIComponent(key)}/jira-update/draft`, input),
+  updateJira: (key: string, input: JiraUpdateInput) => request<JiraUpdateEntry>('POST', `/api/tasks/${encodeURIComponent(key)}/jira-update`, input),
 
   opencodeSkill: () => request<OpencodeSkillStatus>('GET', '/api/opencode/skill'),
   installOpencodeSkill: () => request<OpencodeSkillStatus>('POST', '/api/opencode/skill/install'),
@@ -99,5 +107,6 @@ export const queryKeys = {
   task: (key: string) => ['tasks', 'one', key] as const,
   jiraStatus: ['tasks', 'jira-status'] as const,
   taskDev: (key: string) => ['tasks', 'dev', key] as const,
+  jiraTransitions: (key: string) => ['tasks', 'transitions', key] as const,
   opencodeSkill: ['opencode-skill'] as const,
 };

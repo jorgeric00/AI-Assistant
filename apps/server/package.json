@@ -14,6 +14,7 @@
   "dependencies": {
     "@dev-assistant/shared": "workspace:*",
     "@fastify/cors": "^11.3.0",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "@opencode-ai/sdk": "^1.18.34",
     "better-sqlite3": "^13.0.3",
     "drizzle-orm": "^0.45.3",

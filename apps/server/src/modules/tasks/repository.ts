@@ -4,6 +4,7 @@ import type { Db } from '../../db/client.js';
 import { notes, noteTasks, tasks } from '../../db/schema.js';
 import type { JiraIssue } from '../../integrations/jira/client.js';
 import { UNSYNCED_TASK_STATUS } from './ensure-task.js';
+import { jiraUpdatesOf } from './jira-update.js';
 
 /** Datos de JIRA que se guardan en `raw_json` además de las columnas propias. */
 type StoredIssue = Pick<JiraIssue, 'issueType' | 'project' | 'updated'>;
@@ -51,7 +52,7 @@ export class TasksRepository {
       .where(and(eq(noteTasks.taskId, row.id), eq(notes.archived, false)))
       .orderBy(desc(notes.updatedAt))
       .all();
-    return { ...toTask(row), description: row.descriptionMd, notes: linked };
+    return { ...toTask(row), description: row.descriptionMd, notes: linked, jiraUpdates: jiraUpdatesOf(this.db, row.id) };
   }
 
   /** Claves que existen solo porque se escribieron en una nota y aún no se han traído de JIRA. */

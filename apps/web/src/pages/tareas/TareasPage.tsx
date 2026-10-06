@@ -3,8 +3,9 @@ import type { Task, TaskDetail } from '@dev-assistant/shared';
 import { ExternalLink, FileText, Link2, RefreshCw } from 'lucide-react';
 import { useState } from 'react';
 import { api, queryKeys } from '../../api';
-import { secondaryButtonClass } from '../../components/fields';
+import { primaryButtonClass, secondaryButtonClass } from '../../components/fields';
 import { timeAgo } from '../../dates';
+import { ActualizarJiraButton, JiraUpdatesList } from './ActualizarJira';
 import { TareaDetallePage } from './TareaDetallePage';
 import { useJiraSync, useTaskList } from './useTasks';
 
@@ -216,9 +217,14 @@ function TaskDetailView({ task, className }: { task: TaskDetail; className: stri
         )}
       </div>
 
-      <a href={`#/tareas/${task.key}/detalle`} className={`${secondaryButtonClass} self-start no-underline`}>
-        Ver detalle
-      </a>
+      <JiraUpdatesList updates={task.jiraUpdates} headingClass={heading} />
+
+      <div className="flex flex-wrap gap-2">
+        <a href={`#/tareas/${task.key}/detalle`} className={`${secondaryButtonClass} no-underline`}>
+          Ver detalle
+        </a>
+        <ActualizarJiraButton task={task} className={primaryButtonClass} />
+      </div>
     </aside>
   );
 }

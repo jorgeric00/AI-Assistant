@@ -239,6 +239,8 @@ export interface TaskNoteLink {
 export interface TaskDetail extends Task {
   description: string | null;
   notes: TaskNoteLink[];
+  /** Lo que se ha enviado a JIRA desde la app, del más reciente al más antiguo. */
+  jiraUpdates: JiraUpdateEntry[];
 }
 
 export interface JiraSyncStatus {
@@ -252,6 +254,47 @@ export interface JiraSyncStatus {
   lastCount: number | null;
   /** Error de la última sincronización, si falló. */
   lastError: string | null;
+  /** Servidor MCP de opencode con el que se escribe en JIRA, o null si no se encuentra. */
+  writeServer: string | null;
+  /** Por qué no se puede escribir en JIRA (sin MCP de JIRA en opencode...), o null. */
+  writeProblem: string | null;
+}
+
+// ── Actualizar JIRA (comentario y cambio de estado por el MCP de JIRA) ──────
+
+/** Estado al que JIRA deja pasar la tarea desde el actual. */
+export interface JiraTransitionOption {
+  id: string;
+  /** Nombre de la transición en JIRA. */
+  name: string;
+  /** Estado al que lleva. */
+  to: string;
+  toCategory: 'new' | 'indeterminate' | 'done' | null;
+}
+
+export const JiraUpdateInput = z
+  .object({
+    comment: z.string().trim().min(1, 'El comentario está vacío').max(32_000).optional(),
+    transitionId: z.string().trim().min(1).optional(),
+  })
+  .refine((v) => v.comment !== undefined || v.transitionId !== undefined, 'No hay nada que enviar a JIRA');
+export type JiraUpdateInput = z.input<typeof JiraUpdateInput>;
+
+export const JiraDraftInput = z.object({
+  /** Estado al que se va a pasar, si se cambia a la vez: la IA lo tiene en cuenta. */
+  targetStatus: z.string().trim().min(1).optional(),
+});
+export type JiraDraftInput = z.input<typeof JiraDraftInput>;
+
+export interface JiraDraft {
+  comment: string;
+}
+
+/** Un envío a JIRA desde la app (registro en la ficha de la tarea). */
+export interface JiraUpdateEntry {
+  at: string;
+  comment: string | null;
+  transition: { from: string; to: string } | null;
 }
 
 // ── Desarrollo de una tarea: PLAN.md e HISTORIAL.md que mantiene opencode ───

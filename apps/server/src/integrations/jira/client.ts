@@ -28,6 +28,22 @@ export interface JiraIssue {
   url: string;
 }
 
+/** Paso de estado que JIRA permite desde el estado actual. */
+export interface JiraTransition {
+  id: string;
+  /** Nombre de la transición (p. ej. "Enviar a revisión"). */
+  name: string;
+  /** Estado al que lleva (p. ej. "En revisión"). */
+  to: string;
+  toCategory: JiraStatusCategory | null;
+}
+
+interface RawTransition {
+  id: string | number;
+  name?: string;
+  to?: { name?: string; statusCategory?: { key?: string } };
+}
+
 /** Error que se muestra tal cual al usuario. */
 export class JiraError extends Error {}
 
@@ -157,6 +173,21 @@ export class JiraClient {
   async getIssue(key: string): Promise<JiraIssue | null> {
     const { body } = await this.get<RawIssue>(`/issue/${encodeURIComponent(key)}`, { fields: FIELDS.join(',') });
     return body ? this.normalize(body) : null;
+  }
+
+  /** Estados a los que JIRA deja pasar la incidencia desde el actual. */
+  async transitions(key: string): Promise<JiraTransition[]> {
+    const { body } = await this.get<{ transitions?: RawTransition[] }>(`/issue/${encodeURIComponent(key)}/transitions`, {});
+    if (!body) throw new JiraError(`JIRA no encuentra ${key} o este token no puede verla.`);
+    return (body.transitions ?? []).map((t) => {
+      const category = t.to?.statusCategory?.key;
+      return {
+        id: String(t.id),
+        name: t.name ?? t.to?.name ?? String(t.id),
+        to: t.to?.name ?? t.name ?? String(t.id),
+        toCategory: category === 'new' || category === 'indeterminate' || category === 'done' ? category : null,
+      };
+    });
   }
 
   private normalize({ key, fields: f }: RawIssue): JiraIssue {
