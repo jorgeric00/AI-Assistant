@@ -1,8 +1,10 @@
 // Comprueba que el inglés tiene exactamente las mismas claves que el castellano en cada namespace.
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const dir = new URL('../src/i18n/locales/', import.meta.url).pathname;
+// fileURLToPath y no .pathname: en Windows .pathname da "/C:/...".
+const dir = fileURLToPath(new URL('../src/i18n/locales/', import.meta.url));
 const keys = (obj, prefix = '') =>
   Object.entries(obj).flatMap(([k, v]) => (v && typeof v === 'object' ? keys(v, `${prefix}${k}.`) : [`${prefix}${k}`]));
 let problems = 0;
