@@ -34,7 +34,13 @@ export function ConnectionsCard() {
         <>
           <Group title="JIRA" target="jira" ready={!!s.jiraUrl && s.jiraToken.set}>
             <UrlField value={s.jiraUrl} onSave={(jiraUrl) => save.mutateAsync({ jiraUrl })} />
-            <Secret field="jiraToken" label="Token" state={s.jiraToken} onSave={save.mutateAsync} />
+            <Secret
+              field="jiraToken"
+              label="Token de JIRA"
+              help="Lo usa la app para leer tus tareas y para Actualizar JIRA. En JIRA: tu perfil > Personal Access Tokens."
+              state={s.jiraToken}
+              onSave={save.mutateAsync}
+            />
             <Secret
               field="jiraMcpToken"
               label="Token del MCP de JIRA"
@@ -50,7 +56,7 @@ export function ConnectionsCard() {
           <Group title="GitHub" target="github" ready={s.githubToken.set}>
             <Secret
               field="githubToken"
-              label="Token"
+              label="Token de GitHub"
               help="Basta con permisos de lectura. Si tu organización usa SSO, autoriza el token en GitHub."
               state={s.githubToken}
               onSave={save.mutateAsync}
