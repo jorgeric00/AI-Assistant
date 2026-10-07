@@ -1,16 +1,19 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { z } from 'zod';
-import { JiraDraftInput, JiraKey, JiraUpdateInput, TaskListQuery, type JiraSyncStatus } from '@dev-assistant/shared';
+import { JiraCreateDraftInput, JiraDraftInput, JiraKey, JiraUpdateInput, ProjectKey, TaskListQuery, type JiraSyncStatus } from '@dev-assistant/shared';
 import { t } from '../../i18n/index.js';
 import { readTaskDevInfo } from './dev-files.js';
 import { getTaskDoc, listTaskDocs } from './task-docs.js';
 import type { Db } from '../../db/client.js';
 import type { JiraSync } from './jira-sync.js';
+import { JiraCreateInputError, type JiraCreateService } from './jira-create.js';
 import { JiraUpdateInputError, type JiraUpdateService } from './jira-update.js';
 import { TasksRepository } from './repository.js';
 import type { DevSessionService } from './session.js';
 
 const KeyParams = z.object({ key: JiraKey });
+const ProjectParams = z.object({ project: ProjectKey });
+const TypeParams = ProjectParams.extend({ type: z.string().trim().min(1) });
 
 /** Tareas de JIRA asignadas (R9): lista, ficha con notas vinculadas y sincronización. */
 export async function tasksRoutes(
@@ -19,14 +22,15 @@ export async function tasksRoutes(
     db,
     jiraSync,
     jiraUpdates,
+    jiraCreate,
     devAssistantHome,
     sessions,
-  }: { db: Db; jiraSync: JiraSync; jiraUpdates: JiraUpdateService; devAssistantHome: string; sessions: DevSessionService },
+  }: { db: Db; jiraSync: JiraSync; jiraUpdates: JiraUpdateService; jiraCreate: JiraCreateService; devAssistantHome: string; sessions: DevSessionService },
 ) {
   const repo = new TasksRepository(db);
   const status = (): JiraSyncStatus => ({ ...jiraSync.status(), ...jiraUpdates.writerStatus() });
   const badInput = (reply: FastifyReply) => (err: unknown) => {
-    if (err instanceof JiraUpdateInputError) return reply.code(400).send({ error: err.message });
+    if (err instanceof JiraUpdateInputError || err instanceof JiraCreateInputError) return reply.code(400).send({ error: err.message });
     throw err;
   };
 
@@ -71,6 +75,29 @@ export async function tasksRoutes(
       return reply.code(201).send(entry);
     } catch (err) {
       if (!(err instanceof JiraUpdateInputError)) req.log.warn(`No se pudo actualizar JIRA (${key}): ${err instanceof Error ? err.message : String(err)}`);
+      return badInput(reply)(err);
+    }
+  });
+
+  // Nueva tarea en JIRA (API REST): proyectos, tipos, campos, épicas, sprints, borrador con IA y creación confirmada.
+  app.get('/api/jira/create/projects', async () => jiraCreate.projects());
+  app.get('/api/jira/create/projects/:project/types', async (req) => jiraCreate.issueTypes(ProjectParams.parse(req.params).project));
+  app.get('/api/jira/create/projects/:project/types/:type', async (req) => {
+    const { project, type } = TypeParams.parse(req.params);
+    return jiraCreate.form(project, type);
+  });
+  app.get('/api/jira/create/projects/:project/epics', async (req) =>
+    jiraCreate.epics(ProjectParams.parse(req.params).project, z.object({ q: z.string().trim().optional() }).parse(req.query).q),
+  );
+  app.get('/api/jira/create/projects/:project/sprints', async (req) => jiraCreate.sprints(ProjectParams.parse(req.params).project));
+  app.post('/api/jira/create/draft', async (req, reply) => jiraCreate.draft(JiraCreateDraftInput.parse(req.body)).catch(badInput(reply)));
+  app.post('/api/jira/create', async (req, reply) => {
+    try {
+      const result = await jiraCreate.create(req.body as never);
+      req.log.info(`Tarea creada en JIRA: ${result.key}${result.warnings.length ? ` (avisos: ${result.warnings.join(' | ')})` : ''}`);
+      return reply.code(201).send(result);
+    } catch (err) {
+      if (!(err instanceof JiraCreateInputError)) req.log.warn(`No se pudo crear la tarea en JIRA: ${err instanceof Error ? err.message : String(err)}`);
       return badInput(reply)(err);
     }
   });

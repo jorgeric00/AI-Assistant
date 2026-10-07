@@ -53,6 +53,15 @@ export const es = {
   'jira.draft.nothing': 'No hay notas, entradas del diario ni cambios de opencode de {{key}} con los que redactar el comentario. Escríbelo tú o apunta antes qué has hecho.',
   'jira.changelog.comment': 'Comentario en JIRA',
   'jira.changelog.transition': 'Estado {{from}} → {{to}}',
+  'jira.create.noUser': 'JIRA no dice qué usuario es el del token: no se puede asignar la tarea.',
+  'jira.create.projectNotVisible': 'JIRA no encuentra el proyecto {{project}} o este token no puede crear tareas en él.',
+  'jira.create.noKey': 'JIRA no devolvió la clave de la tarea creada.',
+  'jira.create.sprintNotFound': 'JIRA no encuentra ese sprint.',
+  'jira.create.epicNotFound': 'JIRA no encuentra la épica {{epic}}.',
+  'jira.create.notANumber': '"{{field}}" debe ser un número.',
+  'jira.create.missingFields': 'Faltan campos obligatorios: {{fields}}.',
+  'jira.create.epicFailed': 'No se pudo añadir a la épica {{epic}}: {{message}}',
+  'jira.create.sprintFailed': 'No se pudo añadir al sprint: {{message}}',
 
   // GitHub (API GraphQL)
   'github.notConfigured': 'GitHub no está configurado: añade GITHUB_TOKEN al fichero .env.',

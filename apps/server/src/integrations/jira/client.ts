@@ -48,6 +48,32 @@ interface RawTransition {
 /** Error que se muestra tal cual al usuario. */
 export class JiraError extends Error {}
 
+/** Metadatos de un campo al crear una incidencia (createmeta). */
+export interface JiraFieldMeta {
+  id: string;
+  name: string;
+  required: boolean;
+  hasDefaultValue: boolean;
+  schema: { type?: string; items?: string; system?: string; custom?: string };
+  allowedValues: { id: string; name: string }[];
+}
+
+interface RawFieldMeta {
+  fieldId?: string;
+  key?: string;
+  name?: string;
+  required?: boolean;
+  hasDefaultValue?: boolean;
+  schema?: JiraFieldMeta['schema'];
+  allowedValues?: { id?: string | number; name?: string; value?: string; key?: string }[];
+}
+
+interface RawIssueType {
+  id: string | number;
+  name?: string;
+  subtask?: boolean;
+}
+
 const FIELDS = ['summary', 'description', 'status', 'priority', 'issuetype', 'project', 'updated'];
 const PAGE_SIZE = 100;
 /** Tope de seguridad: con más incidencias asignadas la sincronización se corta aquí. */
@@ -83,12 +109,17 @@ export class JiraClient {
     return `${this.baseUrl}/rest/api/${this.cloud ? 3 : 2}`;
   }
 
-  private get<T>(path: string, params: Record<string, string>) {
-    return this.request<T>('GET', `${path}?${new URLSearchParams(params)}`);
+  /** API de JIRA Software (tableros, sprints y épicas). */
+  private get agile() {
+    return `${this.baseUrl}/rest/agile/1.0`;
   }
 
-  private async request<T>(method: 'GET' | 'POST', path: string, payload?: unknown): Promise<{ status: number; body: T | null }> {
-    const url = `${this.api}${path}`;
+  private get<T>(path: string, params: Record<string, string>, base = this.api) {
+    return this.request<T>('GET', `${path}?${new URLSearchParams(params)}`, undefined, base);
+  }
+
+  private async request<T>(method: 'GET' | 'POST', path: string, payload?: unknown, base = this.api): Promise<{ status: number; body: T | null }> {
+    const url = `${base}${path}`;
     const authorization = this.cloud
       ? `Basic ${Buffer.from(`${this.config.email}:${this.config.token}`).toString('base64')}`
       : `Bearer ${this.config.token}`;
@@ -135,19 +166,20 @@ export class JiraClient {
     return me.displayName ?? me.name ?? me.emailAddress ?? t('common.unknown');
   }
 
-  /** Todas las incidencias de una JQL (hasta 1000). */
-  async search(jql: string): Promise<JiraIssue[]> {
+  /** Todas las incidencias de una JQL (hasta 1000, o `limit`). */
+  async search(jql: string, limit = MAX_ISSUES): Promise<JiraIssue[]> {
     const issues: RawIssue[] = [];
     const fields = FIELDS.join(',');
+    const max = Math.min(limit, MAX_ISSUES);
     if (this.cloud) {
       let nextPageToken: string | undefined;
       do {
-        const params: Record<string, string> = { jql, fields, maxResults: String(PAGE_SIZE) };
+        const params: Record<string, string> = { jql, fields, maxResults: String(Math.min(PAGE_SIZE, max)) };
         if (nextPageToken) params.nextPageToken = nextPageToken;
         const body = this.required(await this.get<{ issues: RawIssue[]; nextPageToken?: string; isLast?: boolean }>('/search/jql', params));
         issues.push(...(body.issues ?? []));
         nextPageToken = body.isLast ? undefined : body.nextPageToken;
-      } while (nextPageToken && issues.length < MAX_ISSUES);
+      } while (nextPageToken && issues.length < max);
     } else {
       let startAt = 0;
       for (;;) {
@@ -155,15 +187,15 @@ export class JiraClient {
           jql,
           fields,
           startAt: String(startAt),
-          maxResults: String(PAGE_SIZE),
+          maxResults: String(Math.min(PAGE_SIZE, max)),
         }));
         const page = body.issues ?? [];
         issues.push(...page);
         startAt += page.length;
-        if (!page.length || startAt >= (body.total ?? 0) || issues.length >= MAX_ISSUES) break;
+        if (!page.length || startAt >= (body.total ?? 0) || issues.length >= max) break;
       }
     }
-    return issues.slice(0, MAX_ISSUES).map((i) => this.normalize(i));
+    return issues.slice(0, max).map((i) => this.normalize(i));
   }
 
   /** Un 404 en la API general significa que JIRA_URL no apunta a JIRA (p. ej. falta /jira al final). */
@@ -197,14 +229,7 @@ export class JiraClient {
 
   /** Añade un comentario (texto plano; en JIRA Cloud se manda como documento ADF, un párrafo por línea). */
   async addComment(key: string, text: string): Promise<void> {
-    const body = this.cloud
-      ? {
-          type: 'doc',
-          version: 1,
-          content: text.split(/\r?\n/).map((line) => (line ? { type: 'paragraph', content: [{ type: 'text', text: line }] } : { type: 'paragraph', content: [] })),
-        }
-      : text;
-    const { status } = await this.request('POST', `/issue/${encodeURIComponent(key)}/comment`, { body });
+    const { status } = await this.request('POST', `/issue/${encodeURIComponent(key)}/comment`, { body: this.richText(text) });
     if (status === 404) throw new JiraError(t('jira.cannotComment', { key }));
   }
 
@@ -212,6 +237,111 @@ export class JiraClient {
   async transition(key: string, transitionId: string): Promise<void> {
     const { status } = await this.request('POST', `/issue/${encodeURIComponent(key)}/transitions`, { transition: { id: transitionId } });
     if (status === 404) throw new JiraError(t('jira.cannotTransition', { key }));
+  }
+
+  browseUrl(key: string): string {
+    return `${this.baseUrl}/browse/${key}`;
+  }
+
+  /** Texto plano tal cual (Server) o como documento ADF, un párrafo por línea (Cloud). */
+  richText(text: string): unknown {
+    if (!this.cloud) return text;
+    return {
+      type: 'doc',
+      version: 1,
+      content: text.split(/\r?\n/).map((line) => (line ? { type: 'paragraph', content: [{ type: 'text', text: line }] } : { type: 'paragraph', content: [] })),
+    };
+  }
+
+  // ── Crear incidencias ──────────────────────────────────────────────────────
+
+  /** Usuario del token, como lo pide el campo "assignee" (name en Server, accountId en Cloud). */
+  async assigneeRef(): Promise<{ name: string } | { accountId: string }> {
+    const me = this.required(await this.get<{ name?: string; accountId?: string }>('/myself', {}));
+    if (this.cloud && me.accountId) return { accountId: me.accountId };
+    if (me.name) return { name: me.name };
+    throw new JiraError(t('jira.create.noUser'));
+  }
+
+  /** Proyectos que ve el token. */
+  async projects(): Promise<{ key: string; name: string }[]> {
+    const body = this.required(await this.get<{ key: string; name?: string }[]>('/project', {}));
+    return body.map((p) => ({ key: p.key, name: p.name ?? p.key }));
+  }
+
+  /** Tipos de incidencia que se pueden crear en el proyecto (sin subtareas). */
+  async issueTypes(project: string): Promise<{ id: string; name: string }[]> {
+    const p = encodeURIComponent(project);
+    let raw: RawIssueType[];
+    const { body } = await this.get<{ values?: RawIssueType[]; issueTypes?: RawIssueType[] }>(`/issue/createmeta/${p}/issuetypes`, { maxResults: '100' });
+    if (body) raw = body.values ?? body.issueTypes ?? [];
+    else {
+      // JIRA anterior a 8.4: solo el createmeta antiguo.
+      const old = await this.get<{ projects?: { issuetypes?: RawIssueType[] }[] }>('/issue/createmeta', { projectKeys: project });
+      const proj = old.body?.projects?.[0];
+      if (!proj) throw new JiraError(t('jira.create.projectNotVisible', { project }));
+      raw = proj.issuetypes ?? [];
+    }
+    return raw.filter((i) => !i.subtask).map((i) => ({ id: String(i.id), name: i.name ?? String(i.id) }));
+  }
+
+  /** Campos de la pantalla de creación de un proyecto y tipo. */
+  async createFields(project: string, issueTypeId: string): Promise<JiraFieldMeta[]> {
+    const p = encodeURIComponent(project);
+    let raw: RawFieldMeta[];
+    const { body } = await this.get<{ values?: RawFieldMeta[]; fields?: RawFieldMeta[] }>(`/issue/createmeta/${p}/issuetypes/${encodeURIComponent(issueTypeId)}`, { maxResults: '200' });
+    if (body) raw = body.values ?? body.fields ?? [];
+    else {
+      const old = await this.get<{ projects?: { issuetypes?: { fields?: Record<string, RawFieldMeta> }[] }[] }>('/issue/createmeta', {
+        projectKeys: project,
+        issuetypeIds: issueTypeId,
+        expand: 'projects.issuetypes.fields',
+      });
+      const fields = old.body?.projects?.[0]?.issuetypes?.[0]?.fields;
+      if (!fields) throw new JiraError(t('jira.create.projectNotVisible', { project }));
+      raw = Object.entries(fields).map(([id, f]) => ({ ...f, fieldId: f.fieldId ?? f.key ?? id }));
+    }
+    return raw.map((f) => ({
+      id: f.fieldId ?? f.key ?? '',
+      name: f.name ?? f.fieldId ?? f.key ?? '',
+      required: !!f.required,
+      hasDefaultValue: !!f.hasDefaultValue,
+      schema: f.schema ?? {},
+      allowedValues: (f.allowedValues ?? [])
+        .filter((v) => v.id !== undefined)
+        .map((v) => ({ id: String(v.id), name: v.name ?? v.value ?? v.key ?? String(v.id) })),
+    }));
+  }
+
+  /** Crea la incidencia y devuelve su clave. */
+  async createIssue(fields: Record<string, unknown>): Promise<string> {
+    const { body } = await this.request<{ key?: string }>('POST', '/issue', { fields });
+    if (!body?.key) throw new JiraError(t('jira.create.noKey'));
+    return body.key;
+  }
+
+  /** Sprints activos y futuros de los tableros scrum del proyecto. */
+  async sprints(project: string): Promise<{ id: number; name: string; state: 'active' | 'future' }[]> {
+    const { body } = await this.get<{ values?: { id: number; type?: string }[] }>('/board', { projectKeyOrId: project, maxResults: '50' }, this.agile);
+    const boards = (body?.values ?? []).filter((b) => b.type !== 'kanban');
+    const byId = new Map<number, { id: number; name: string; state: 'active' | 'future' }>();
+    for (const board of boards) {
+      const res = await this.get<{ values?: { id: number; name?: string; state?: string }[] }>(`/board/${board.id}/sprint`, { state: 'active,future', maxResults: '50' }, this.agile).catch(() => null);
+      for (const s of res?.body?.values ?? []) {
+        if (s.state === 'active' || s.state === 'future') byId.set(s.id, { id: s.id, name: s.name ?? String(s.id), state: s.state });
+      }
+    }
+    return [...byId.values()].sort((a, b) => (a.state === b.state ? a.id - b.id : a.state === 'active' ? -1 : 1));
+  }
+
+  async addToSprint(sprintId: number, key: string): Promise<void> {
+    const { status } = await this.request('POST', `/sprint/${sprintId}/issue`, { issues: [key] }, this.agile);
+    if (status === 404) throw new JiraError(t('jira.create.sprintNotFound'));
+  }
+
+  async addToEpic(epicKey: string, key: string): Promise<void> {
+    const { status } = await this.request('POST', `/epic/${encodeURIComponent(epicKey)}/issue`, { issues: [key] }, this.agile);
+    if (status === 404) throw new JiraError(t('jira.create.epicNotFound', { epic: epicKey }));
   }
 
   private normalize({ key, fields: f }: RawIssue): JiraIssue {
@@ -227,7 +357,7 @@ export class JiraClient {
       issueType: f.issuetype?.name ?? null,
       project: f.project?.name ?? f.project?.key ?? null,
       updated: f.updated ?? null,
-      url: `${this.baseUrl}/browse/${key}`,
+      url: this.browseUrl(key),
     };
   }
 }

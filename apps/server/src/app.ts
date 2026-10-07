@@ -17,6 +17,7 @@ import { opencodeSkillRoutes } from './modules/opencode/skill.js';
 import { remindersRoutes } from './modules/reminders/routes.js';
 import { reposRoutes } from './modules/repos/routes.js';
 import { JiraSync } from './modules/tasks/jira-sync.js';
+import { JiraCreateService } from './modules/tasks/jira-create.js';
 import { JiraUpdateService } from './modules/tasks/jira-update.js';
 import { TasksRepository } from './modules/tasks/repository.js';
 import { tasksRoutes } from './modules/tasks/routes.js';
@@ -118,6 +119,7 @@ export async function buildApp(db: Db, opts: BuildAppOptions = {}) {
     db,
     jiraSync: opts.jiraSync ?? new JiraSync(db, tasksRepo, null, ''),
     jiraUpdates: new JiraUpdateService(db, tasksRepo, opts.jiraClient ?? null, opts.llm ?? noLlm, devAssistantHome),
+    jiraCreate: new JiraCreateService(db, tasksRepo, opts.jiraClient ?? null, opts.llm ?? noLlm),
     devAssistantHome,
     sessions: new DevSessionService(db, tasksRepo, devAssistantHome, opts.git, opts.terminalLauncher),
   });

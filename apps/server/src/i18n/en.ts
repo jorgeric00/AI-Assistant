@@ -54,6 +54,15 @@ export const en: Messages = {
   'jira.draft.nothing': 'There are no notes, journal entries or opencode changes for {{key}} to write the comment from. Write it yourself or note down what you have done first.',
   'jira.changelog.comment': 'Comment in JIRA',
   'jira.changelog.transition': 'Status {{from}} → {{to}}',
+  'jira.create.noUser': 'JIRA does not say which user the token belongs to, so the task cannot be assigned.',
+  'jira.create.projectNotVisible': 'JIRA cannot find project {{project}}, or this token cannot create tasks in it.',
+  'jira.create.noKey': 'JIRA did not return the key of the created task.',
+  'jira.create.sprintNotFound': 'JIRA cannot find that sprint.',
+  'jira.create.epicNotFound': 'JIRA cannot find epic {{epic}}.',
+  'jira.create.notANumber': '"{{field}}" must be a number.',
+  'jira.create.missingFields': 'Required fields are missing: {{fields}}.',
+  'jira.create.epicFailed': 'Could not add it to epic {{epic}}: {{message}}',
+  'jira.create.sprintFailed': 'Could not add it to the sprint: {{message}}',
 
   // GitHub (GraphQL API)
   'github.notConfigured': 'GitHub is not configured: add GITHUB_TOKEN to the .env file.',
