@@ -36,6 +36,9 @@ export async function tasksRoutes(
 
   app.get('/api/tasks', async (req) => repo.list(TaskListQuery.parse(req.query)));
 
+  // Proyectos de las tareas cargadas, para elegirlos en la ficha de un repositorio.
+  app.get('/api/tasks/projects', async () => repo.projects());
+
   app.get('/api/tasks/:key', async (req, reply) => repo.get(KeyParams.parse(req.params).key) ?? reply.code(404).send({ error: t('tasks.notFound') }));
 
   // Plan e histórico que escribe opencode en la carpeta de la tarea (aunque la tarea no esté sincronizada).

@@ -7,6 +7,7 @@ import type {
   JiraCreateResult,
   JiraEpicOption,
   JiraIssueTypeOption,
+  JiraProjectOption,
   JiraSprintOption,
   AskResponse,
   DailySummary,
@@ -109,6 +110,7 @@ export const api = {
   ask: (question: string) => request<AskResponse>('POST', '/api/search/ask', { question }),
 
   listTasks: (done: boolean) => request<Task[]>('GET', `/api/tasks${done ? '?done=true' : ''}`),
+  taskProjects: () => request<JiraProjectOption[]>('GET', '/api/tasks/projects'),
   getTask: (key: string) => request<TaskDetail>('GET', `/api/tasks/${encodeURIComponent(key)}`),
   getTaskDev: (key: string) => request<TaskDevInfo>('GET', `/api/tasks/${encodeURIComponent(key)}/dev`),
   listTaskDocs: (q?: string) => request<TaskDoc[]>('GET', `/api/task-docs${q ? `?q=${encodeURIComponent(q)}` : ''}`),
@@ -171,6 +173,7 @@ export const queryKeys = {
   tasks: ['tasks'] as const,
   taskList: (done: boolean) => ['tasks', 'list', done] as const,
   task: (key: string) => ['tasks', 'one', key] as const,
+  taskProjects: ['tasks', 'projects'] as const,
   jiraStatus: ['tasks', 'jira-status'] as const,
   taskDev: (key: string) => ['tasks', 'dev', key] as const,
   taskDocs: (q: string) => ['tasks', 'docs', q] as const,

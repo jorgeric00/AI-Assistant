@@ -31,7 +31,11 @@
     "branch": "Base branch",
     "branchHint": "feature/<KEY>-… branches start from here, and PRs target it.",
     "jira": "JIRA projects",
-    "jiraHint": "Comma-separated. The AI suggests this repo for tasks in those projects."
+    "jiraHint": "The projects of your JIRA tasks. The AI suggests this repo for tasks in those projects.",
+    "jiraAdd": "Add project…",
+    "jiraAllAdded": "All of them are already added",
+    "jiraNone": "Sync your JIRA tasks to see their projects",
+    "jiraRemove": "Remove {{key}}"
   },
   "newRepo": {
     "title": "New repository",
