@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { CommitRef, Note, NoteKind } from '@dev-assistant/shared';
 import { CircleCheck, CircleAlert, LoaderCircle } from 'lucide-react';
 import { useEffect, useId, useState, type FormEvent } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { api, queryKeys } from '../../api';
 import { Markdown } from '../../components/Markdown';
 import { TagInput } from '../../components/TagInput';
@@ -17,11 +18,11 @@ import { CommitSelect, TaskOptions } from '../../components/TaskFields';
 import { navigate, noteHref } from '../../sections';
 import { isHttpUrl, useLinkTitle } from './useLinkTitle';
 
-/** Dónde vive cada tipo: sección de vuelta y cómo se llama. */
-export const KIND_INFO: Record<NoteKind, { section: string; label: string; noun: string }> = {
-  note: { section: 'notas', label: 'Notas', noun: 'nota' },
-  link: { section: 'enlaces', label: 'Enlaces', noun: 'enlace' },
-  doc: { section: 'documentacion/propia', label: 'Documentación', noun: 'documento' },
+/** Dónde vive cada tipo: sección de vuelta. Sus textos están en notes:kinds.<kind>. */
+export const KIND_INFO: Record<NoteKind, { section: string }> = {
+  note: { section: 'notas' },
+  link: { section: 'enlaces' },
+  doc: { section: 'documentacion/propia' },
 };
 
 /** Pantalla de edición de una nota, un enlace o un documento propio (diseño: NotaEditor). Sin `noteId` crea uno nuevo de tipo `kind`. */
@@ -31,14 +32,16 @@ export function NoteEditor({ noteId, kind = 'note' }: { noteId?: number; kind?: 
     queryFn: () => api.getNote(noteId!),
     enabled: noteId !== undefined,
   });
+  const { t } = useTranslation(['notes', 'common']);
 
   if (noteId !== undefined && !existing.data) {
-    return <p className="text-ink-muted">{existing.isError ? 'No se encontró la nota.' : 'Cargando…'}</p>;
+    return <p className="text-ink-muted">{existing.isError ? t('editor.notFound') : t('common:status.loading')}</p>;
   }
   return <EditorForm key={noteId ?? 'nueva'} note={existing.data} newKind={kind} />;
 }
 
 function EditorForm({ note, newKind }: { note?: Note; newKind: NoteKind }) {
+  const { t } = useTranslation(['notes', 'common']);
   const queryClient = useQueryClient();
   const ids = useId();
   const kind = note?.kind ?? newKind;
@@ -90,10 +93,10 @@ function EditorForm({ note, newKind }: { note?: Note; newKind: NoteKind }) {
 
   const submit = (e?: FormEvent) => {
     e?.preventDefault();
-    if (!title.trim()) return setError('Escribe un título.');
-    if (kind === 'link' && !isHttpUrl(url.trim())) return setError('Escribe una URL que empiece por http:// o https://.');
+    if (!title.trim()) return setError(t('editor.titleRequired'));
+    if (kind === 'link' && !isHttpUrl(url.trim())) return setError(t('editor.urlRequired'));
     const badKey = taskKeys.find((k) => !TASK_KEY_RE.test(k));
-    if (badKey) return setError(`"${badKey}" no es una clave de JIRA (ej.: ABC-123).`);
+    if (badKey) return setError(t('editor.badTaskKey', { key: badKey }));
     setError(null);
     save.mutate();
   };
@@ -120,17 +123,17 @@ function EditorForm({ note, newKind }: { note?: Note; newKind: NoteKind }) {
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <a href={`#/${info.section}`} className="text-ink-muted no-underline hover:text-ink">
-            {info.label}
+            {t(`kinds.${kind}.label`)}
           </a>
           <span className="text-line-strong">/</span>
-          <h1 className="m-0 text-display font-semibold">{note ? `Editar ${info.noun}` : kind === 'note' ? 'Nueva nota' : `Nuevo ${info.noun}`}</h1>
+          <h1 className="m-0 text-display font-semibold">{note ? t(`kinds.${kind}.edit`) : t(`kinds.${kind}.new`)}</h1>
         </div>
         <div className="flex gap-2">
           <button type="button" onClick={cancel} className={secondaryButtonClass}>
-            Cancelar
+            {t('common:actions.cancel')}
           </button>
           <button type="submit" form={`${ids}-form`} disabled={save.isPending} className={primaryButtonClass}>
-            {save.isPending ? 'Guardando…' : 'Guardar'}
+            {save.isPending ? t('common:actions.saving') : t('common:actions.save')}
           </button>
         </div>
       </header>
@@ -139,7 +142,7 @@ function EditorForm({ note, newKind }: { note?: Note; newKind: NoteKind }) {
         {kind === 'link' && (
           <div className="flex flex-col gap-1.5">
             <label htmlFor={`${ids}-url`} className={labelClass}>
-              URL
+              {t('editor.url')}
             </label>
             <input
               id={`${ids}-url`}
@@ -158,7 +161,7 @@ function EditorForm({ note, newKind }: { note?: Note; newKind: NoteKind }) {
 
         <div className="flex flex-col gap-1.5">
           <label htmlFor={`${ids}-title`} className={labelClass}>
-            Título
+            {t('editor.title')}
           </label>
           <input
             id={`${ids}-title`}
@@ -173,14 +176,14 @@ function EditorForm({ note, newKind }: { note?: Note; newKind: NoteKind }) {
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center justify-between gap-2">
             <span id={`${ids}-body-label`} className={labelClass}>
-              Texto (Markdown)
+              {t('editor.body')}
             </span>
-            <div role="tablist" aria-label="Modo del editor" className="flex gap-1">
+            <div role="tablist" aria-label={t('editor.editorMode')} className="flex gap-1">
               <button type="button" role="tab" aria-selected={mode === 'write'} onClick={() => setMode('write')} className={tabClass(mode === 'write')}>
-                Escribir
+                {t('editor.write')}
               </button>
               <button type="button" role="tab" aria-selected={mode === 'preview'} onClick={() => setMode('preview')} className={tabClass(mode === 'preview')}>
-                Vista previa
+                {t('editor.preview')}
               </button>
             </div>
           </div>
@@ -193,7 +196,7 @@ function EditorForm({ note, newKind }: { note?: Note; newKind: NoteKind }) {
             />
           ) : (
             <div className="min-h-[260px] rounded-md border border-line bg-bg p-3">
-              {bodyMd.trim() ? <Markdown>{bodyMd}</Markdown> : <p className="m-0 text-ink-muted">Nada que mostrar todavía.</p>}
+              {bodyMd.trim() ? <Markdown>{bodyMd}</Markdown> : <p className="m-0 text-ink-muted">{t('editor.nothingToShow')}</p>}
             </div>
           )}
         </div>
@@ -201,34 +204,34 @@ function EditorForm({ note, newKind }: { note?: Note; newKind: NoteKind }) {
         <div className="flex flex-wrap gap-4">
           <div className="flex flex-[1_1_280px] flex-col gap-1.5">
             <label htmlFor={`${ids}-tags`} className={labelClass}>
-              Etiquetas
+              {t('editor.tags')}
             </label>
             <TagInput id={`${ids}-tags`} value={tags} onChange={setTags} suggestions={tagsQuery.data?.map((t) => t.name)} />
           </div>
           {kind !== 'doc' && (
             <div className="flex flex-[1_1_280px] flex-col gap-1.5">
               <label htmlFor={`${ids}-task`} className={labelClass}>
-                Vincular a tarea de JIRA
+                {t('editor.linkTask')}
               </label>
               <input
                 id={`${ids}-task`}
                 type="text"
                 list={`${ids}-tasks`}
                 value={taskText}
-                placeholder="Clave, p. ej. ABC-123"
+                placeholder={t('editor.taskPlaceholder')}
                 onChange={(e) => setTaskText(e.target.value)}
                 className={`${inputClass} font-mono text-code text-info`}
               />
               <TaskOptions id={`${ids}-tasks`} />
               {unsyncedKeys.length > 0 && (
-                <span className="text-small text-ink-muted">Aún sin sincronizar con JIRA. Se enlazará sola cuando llegue la tarea.</span>
+                <span className="text-small text-ink-muted">{t('editor.notSyncedHint')}</span>
               )}
             </div>
           )}
           {kind === 'note' && (
             <div className="flex flex-[1_1_280px] flex-col gap-1.5">
               <label htmlFor={`${ids}-commit`} className={labelClass}>
-                Commit de la tarea (opcional)
+                {t('editor.commit')}
               </label>
               <CommitSelect id={`${ids}-commit`} taskKey={commitTask} value={commitToSave} onChange={(c) => setCommitPick({ task: commitTask, commit: c })} />
             </div>
@@ -245,10 +248,10 @@ function EditorForm({ note, newKind }: { note?: Note; newKind: NoteKind }) {
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-2">
           <label className="flex items-center gap-2 text-ink-muted">
             <input type="checkbox" checked={pinned} onChange={(e) => setPinned(e.target.checked)} className="size-[18px] accent-accent" />
-            Fijar arriba en la lista
+            {t('editor.pinTop')}
           </label>
           <span className="text-small text-ink-faint">
-            <kbd className="font-mono">Ctrl+Enter</kbd> guardar · <kbd className="font-mono">Esc</kbd> cancelar
+            <Trans t={t} i18nKey="editor.shortcuts" components={{ kbd: <kbd className="font-mono" /> }} />
           </span>
         </div>
       </form>
@@ -257,14 +260,15 @@ function EditorForm({ note, newKind }: { note?: Note; newKind: NoteKind }) {
 }
 
 export function LinkTitleHint({ status }: { status: ReturnType<typeof useLinkTitle>['status'] }) {
+  const { t } = useTranslation(['notes', 'common']);
   if (status === 'idle') return null;
   return (
     <span className="flex items-center gap-1.5 text-small text-ink-muted">
       {status === 'loading' && <LoaderCircle size={12} className="animate-spin" aria-hidden />}
       {status === 'found' && <CircleCheck size={12} className="text-success" aria-hidden />}
-      {status === 'loading' && 'Buscando el título de la página…'}
-      {status === 'found' && 'Título obtenido de la página. Puedes cambiarlo.'}
-      {status === 'not-found' && 'No se pudo obtener el título; escríbelo tú.'}
+      {status === 'loading' && t('linkTitle.loading')}
+      {status === 'found' && t('linkTitle.found')}
+      {status === 'not-found' && t('linkTitle.notFound')}
     </span>
   );
 }

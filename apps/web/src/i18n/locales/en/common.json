@@ -1,0 +1,112 @@
+{
+  "actions": {
+    "save": "Save",
+    "saving": "Saving…",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "create": "Create",
+    "add": "Add",
+    "retry": "Retry",
+    "back": "Back",
+    "open": "Open",
+    "copy": "Copy",
+    "search": "Search"
+  },
+  "status": {
+    "loading": "Loading…",
+    "error": "Something went wrong: {{message}}"
+  },
+  "dates": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "todayLower": "today",
+    "yesterdayLower": "yesterday",
+    "onDay": "on {{day}}",
+    "dayAtTime": "{{day}} at {{time}}",
+    "justNow": "just now",
+    "minutesAgo": "{{count}} min ago",
+    "hoursAgo": "{{count}} h ago"
+  },
+  "language": {
+    "es": "Español",
+    "en": "English"
+  },
+  "sections": {
+    "hoy": "Today",
+    "documentacion": "Documentation",
+    "notas": "Notes",
+    "enlaces": "Links",
+    "recordatorios": "Reminders",
+    "diario": "Journal",
+    "tareas": "JIRA tasks",
+    "repositorios": "Repositories",
+    "ajustes": "Settings"
+  },
+  "app": {
+    "view": "View"
+  },
+  "pendingPage": {
+    "notBuilt": "This section hasn't been built yet."
+  },
+  "sidebar": {
+    "ariaLabel": "Sections",
+    "quickCapture": "Quick capture",
+    "serverOffline": "Server offline",
+    "serverOnline": "Server connected",
+    "connecting": "Connecting…"
+  },
+  "snooze": {
+    "button": "Snooze",
+    "10m": "10 minutes",
+    "1h": "1 hour",
+    "tomorrow": "Tomorrow at 9:00"
+  },
+  "tagInput": {
+    "remove": "Remove {{tag}}",
+    "placeholder": "Add tag"
+  },
+  "reminderAlerts": {
+    "late": "Late: was due at {{time}}",
+    "dismiss": "Dismiss alert",
+    "done": "Done"
+  },
+  "quickCapture": {
+    "title": "Quick capture",
+    "typeGroup": "Type",
+    "kinds": {
+      "note": "Note",
+      "link": "Link",
+      "reminder": "Reminder"
+    },
+    "saved": {
+      "reminder": "Reminder saved",
+      "link": "Link saved",
+      "note": "Note saved"
+    },
+    "errors": {
+      "url": "Enter a URL starting with http:// or https://.",
+      "title": "Enter a title.",
+      "badKey": "\"{{key}}\" isn't a JIRA key (e.g. ABC-123)."
+    },
+    "fields": {
+      "url": "URL",
+      "title": "Title",
+      "text": "Text (Markdown)",
+      "tags": "Tags",
+      "task": "Task",
+      "commit": "Commit"
+    },
+    "placeholders": {
+      "linkBody": "Why it interests you (optional)",
+      "noteBody": "Write the note"
+    },
+    "shortcuts": "<kbd>Esc</kbd> close · <kbd>Ctrl+Enter</kbd> save"
+  },
+  "taskFields": {
+    "pickTaskFirst": "Pick a task first",
+    "noCommit": "No commit",
+    "noCommitsYet": "The task has no commits yet"
+  }
+}

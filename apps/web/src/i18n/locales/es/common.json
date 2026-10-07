@@ -1,0 +1,112 @@
+{
+  "actions": {
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "cancel": "Cancelar",
+    "delete": "Borrar",
+    "edit": "Editar",
+    "close": "Cerrar",
+    "create": "Crear",
+    "add": "Añadir",
+    "retry": "Reintentar",
+    "back": "Volver",
+    "open": "Abrir",
+    "copy": "Copiar",
+    "search": "Buscar"
+  },
+  "status": {
+    "loading": "Cargando…",
+    "error": "Algo ha fallado: {{message}}"
+  },
+  "dates": {
+    "today": "Hoy",
+    "yesterday": "Ayer",
+    "todayLower": "hoy",
+    "yesterdayLower": "ayer",
+    "onDay": "el {{day}}",
+    "dayAtTime": "{{day}} a las {{time}}",
+    "justNow": "hace un momento",
+    "minutesAgo": "hace {{count}} min",
+    "hoursAgo": "hace {{count}} h"
+  },
+  "language": {
+    "es": "Español",
+    "en": "English"
+  },
+  "sections": {
+    "hoy": "Hoy",
+    "documentacion": "Documentación",
+    "notas": "Notas",
+    "enlaces": "Enlaces",
+    "recordatorios": "Recordatorios",
+    "diario": "Diario",
+    "tareas": "Tareas de JIRA",
+    "repositorios": "Repositorios",
+    "ajustes": "Ajustes"
+  },
+  "app": {
+    "view": "Ver"
+  },
+  "pendingPage": {
+    "notBuilt": "Esta sección todavía no está construida."
+  },
+  "sidebar": {
+    "ariaLabel": "Secciones",
+    "quickCapture": "Captura rápida",
+    "serverOffline": "Servidor sin conexión",
+    "serverOnline": "Servidor conectado",
+    "connecting": "Conectando…"
+  },
+  "snooze": {
+    "button": "Posponer",
+    "10m": "10 minutos",
+    "1h": "1 hora",
+    "tomorrow": "Mañana a las 9:00"
+  },
+  "tagInput": {
+    "remove": "Quitar {{tag}}",
+    "placeholder": "Añadir etiqueta"
+  },
+  "reminderAlerts": {
+    "late": "Atrasado: tocaba a las {{time}}",
+    "dismiss": "Cerrar aviso",
+    "done": "Hecho"
+  },
+  "quickCapture": {
+    "title": "Captura rápida",
+    "typeGroup": "Tipo",
+    "kinds": {
+      "note": "Nota",
+      "link": "Enlace",
+      "reminder": "Recordatorio"
+    },
+    "saved": {
+      "reminder": "Recordatorio guardado",
+      "link": "Enlace guardado",
+      "note": "Nota guardada"
+    },
+    "errors": {
+      "url": "Escribe una URL que empiece por http:// o https://.",
+      "title": "Escribe un título.",
+      "badKey": "\"{{key}}\" no es una clave de JIRA (ej.: ABC-123)."
+    },
+    "fields": {
+      "url": "URL",
+      "title": "Título",
+      "text": "Texto (Markdown)",
+      "tags": "Etiquetas",
+      "task": "Tarea",
+      "commit": "Commit"
+    },
+    "placeholders": {
+      "linkBody": "Por qué te interesa (opcional)",
+      "noteBody": "Escribe la nota"
+    },
+    "shortcuts": "<kbd>Esc</kbd> cerrar · <kbd>Ctrl+Enter</kbd> guardar"
+  },
+  "taskFields": {
+    "pickTaskFirst": "Elige antes una tarea",
+    "noCommit": "Sin commit",
+    "noCommitsYet": "La tarea aún no tiene commits"
+  }
+}

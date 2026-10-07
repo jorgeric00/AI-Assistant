@@ -1,0 +1,28 @@
+{
+  "title": "Hoy",
+  "dailySummary": "Resumen para la daily",
+  "cards": {
+    "reminders": "Recordatorios de hoy",
+    "seeAll": "Ver todos",
+    "tasks": "Tareas en curso",
+    "seeTasks": "Ver tareas",
+    "prAlerts": "Avisos de tus PR",
+    "journal": "Diario de hoy",
+    "seeJournal": "Ver diario"
+  },
+  "reminders": {
+    "empty": "No tienes recordatorios para hoy.",
+    "overdue": "Atrasado",
+    "now": "Ahora"
+  },
+  "tasks": {
+    "connectJira": "Conecta JIRA para ver tus tareas.",
+    "empty": "No tienes tareas en curso."
+  },
+  "journal": {
+    "auto": "Auto",
+    "manual": "Manual",
+    "empty": "Aún no hay entradas hoy.",
+    "addPlaceholder": "Añadir una entrada al diario"
+  }
+}

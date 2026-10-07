@@ -1,0 +1,34 @@
+{
+  "page": {
+    "title": "Journal",
+    "prevDay": "Previous day",
+    "nextDay": "Next day",
+    "today": "Today",
+    "dailySummary": "Daily stand-up summary",
+    "entries": "Day's entries",
+    "addPlaceholder": "What have you done? E.g. meeting with QA about ABC-123",
+    "loadError": "Couldn't load the journal.",
+    "emptyToday": "No entries yet today.",
+    "emptyDay": "No entries on this day."
+  },
+  "entry": {
+    "commit": "opencode commit",
+    "jira": "JIRA",
+    "auto": "Automatic",
+    "manual": "Manual",
+    "delete": "Delete entry: {{text}}",
+    "confirmDelete": "Delete this journal entry?"
+  },
+  "summary": {
+    "title": "Daily stand-up summary",
+    "copied": "Copied",
+    "preparing": "Preparing the summary with opencode…",
+    "footer": "From notes since {{since}}. Generated {{generated}} ·",
+    "regenerate": "Regenerate",
+    "intro": "With the \"Daily stand-up summary\" button, opencode prepares yesterday, today and blockers from the entries since the last working day and the day's reminders. It isn't sent anywhere: you copy it yourself.",
+    "loadError": "Couldn't load the saved summary."
+  },
+  "addForm": {
+    "label": "New journal entry"
+  }
+}

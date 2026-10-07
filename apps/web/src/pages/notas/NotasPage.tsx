@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { AskResponse, Note, NoteKind } from '@dev-assistant/shared';
 import { ExternalLink, FileText, Link2, MoreHorizontal, Pin, Plus, Search, Sparkles } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api, queryKeys } from '../../api';
 import { Markdown } from '../../components/Markdown';
 import { primaryButtonClass } from '../../components/fields';
@@ -12,6 +13,7 @@ import { KIND_INFO, NoteEditor } from './NoteEditor';
 
 /** Sección "Notas": `#/notas`, `#/notas/:id`, `#/notas/:id/editar` y `#/notas/nueva`. */
 export function NotasPage({ params }: { params: string[] }) {
+  const { t } = useTranslation(['notes', 'common']);
   const [first, second] = params;
   const id = first && first !== 'nueva' ? Number(first) : undefined;
   // Los enlaces y documentos antiguos (#/notas/:id) se abren en su sección.
@@ -25,10 +27,10 @@ export function NotasPage({ params }: { params: string[] }) {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="m-0 text-display font-semibold">Notas</h1>
+        <h1 className="m-0 text-display font-semibold">{t('notesPage.title')}</h1>
         <button type="button" onClick={() => navigate('notas/nueva')} className={primaryButtonClass}>
           <Plus size={16} strokeWidth={2} aria-hidden />
-          Nueva nota
+          {t('notesPage.newNote')}
         </button>
       </header>
       <NotesBrowser kind="note" selectedId={id} />
@@ -59,8 +61,8 @@ type SearchMode = 'texto' | 'pregunta';
 
 /** Lista con búsqueda y la nota elegida al lado. Las notas (kind note) además filtran por tarea y admiten preguntas a la IA. */
 export function NotesBrowser({ kind, selectedId }: { kind: NoteKind; selectedId?: number }) {
+  const { t } = useTranslation(['notes', 'common']);
   const isNote = kind === 'note';
-  const noun = KIND_INFO[kind].noun;
   const [mode, setMode] = useState<SearchMode>('texto');
   const [search, setSearch] = useState('');
   const [question, setQuestion] = useState('');
@@ -91,9 +93,9 @@ export function NotesBrowser({ kind, selectedId }: { kind: NoteKind; selectedId?
 
   return (
       <div className="flex flex-wrap items-start gap-4">
-        <section aria-label={isNote ? 'Lista de notas' : 'Documentos propios'} className="flex max-w-full min-w-0 flex-[1_1_340px] flex-col gap-3">
+        <section aria-label={isNote ? t('browser.notesList') : t('browser.ownDocs')} className="flex max-w-full min-w-0 flex-[1_1_340px] flex-col gap-3">
           <div className="flex flex-col gap-2">
-            {isNote && <div role="group" aria-label="Tipo de búsqueda" className="flex gap-1 self-start rounded-md border border-line bg-surface p-1">
+            {isNote && <div role="group" aria-label={t('browser.searchType')} className="flex gap-1 self-start rounded-md border border-line bg-surface p-1">
               {(['texto', 'pregunta'] as const).map((m) => (
                 <button
                   key={m}
@@ -102,7 +104,7 @@ export function NotesBrowser({ kind, selectedId }: { kind: NoteKind; selectedId?
                   onClick={() => switchMode(m)}
                   className={`h-8 rounded-sm px-3 text-[13px] ${mode === m ? 'bg-surface-raised font-medium text-ink' : 'text-ink-muted hover:text-ink'}`}
                 >
-                  {m === 'texto' ? 'Texto' : 'Pregunta'}
+                  {m === 'texto' ? t('browser.modeText') : t('browser.modeQuestion')}
                 </button>
               ))}
             </div>}
@@ -115,7 +117,7 @@ export function NotesBrowser({ kind, selectedId }: { kind: NoteKind; selectedId?
               }}
             >
               <label htmlFor="buscar-notas" className="sr-only">
-                {asking ? 'Pregunta sobre tus notas' : isNote ? 'Buscar en notas' : 'Buscar en la documentación'}
+                {asking ? t('browser.askLabel') : isNote ? t('browser.searchNotes') : t('browser.searchDocs')}
               </label>
               {asking ? (
                 <Sparkles size={16} strokeWidth={1.5} className="absolute top-3 left-3 text-accent" aria-hidden />
@@ -128,12 +130,12 @@ export function NotesBrowser({ kind, selectedId }: { kind: NoteKind; selectedId?
                 type="search"
                 value={asking ? question : search}
                 onChange={(e) => (asking ? setQuestion(e.target.value) : setSearch(e.target.value))}
-                placeholder={asking ? '¿Cómo se despliega en pre?' : isNote ? 'Buscar en notas' : 'Buscar en la documentación'}
+                placeholder={asking ? t('browser.askPlaceholder') : isNote ? t('browser.searchNotes') : t('browser.searchDocs')}
                 className="h-10 w-full rounded-md border border-line-strong bg-surface-raised pr-3 pl-9 text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none"
               />
             </form>
             {asking ? (
-              <p className="m-0 text-small text-ink-faint">Pulsa Enter. opencode responde solo con lo que hay en tus notas, enlaces y documentos no archivados.</p>
+              <p className="m-0 text-small text-ink-faint">{t('browser.askHint')}</p>
             ) : (
               <div className="flex flex-wrap gap-1.5">
                 <button
@@ -145,27 +147,27 @@ export function NotesBrowser({ kind, selectedId }: { kind: NoteKind; selectedId?
                   }}
                   className={chipClass(!tag && !withTask)}
                 >
-                  Todas
+                  {t('browser.all')}
                 </button>
                 {isNote &&
-                  (['con', 'sin'] as const).map((t) => (
-                    <button key={t} type="button" aria-pressed={withTask === t} onClick={() => setWithTask(withTask === t ? undefined : t)} className={chipClass(withTask === t)}>
-                      {t === 'con' ? 'Con tarea' : 'Sin tarea'}
+                  (['con', 'sin'] as const).map((w) => (
+                    <button key={w} type="button" aria-pressed={withTask === w} onClick={() => setWithTask(withTask === w ? undefined : w)} className={chipClass(withTask === w)}>
+                      {w === 'con' ? t('browser.withTask') : t('browser.withoutTask')}
                     </button>
                   ))}
-                {tags.data?.map((t) => (
+                {tags.data?.map((tg) => (
                   <button
-                    key={t.name}
+                    key={tg.name}
                     type="button"
-                    aria-pressed={tag === t.name}
-                    onClick={() => setTag(tag === t.name ? undefined : t.name)}
-                    className={chipClass(tag === t.name)}
+                    aria-pressed={tag === tg.name}
+                    onClick={() => setTag(tag === tg.name ? undefined : tg.name)}
+                    className={chipClass(tag === tg.name)}
                   >
-                    {t.name}
+                    {tg.name}
                   </button>
                 ))}
                 <button type="button" aria-pressed={archived} onClick={() => setArchived(!archived)} className={chipClass(archived)}>
-                  {isNote ? 'Archivadas' : 'Archivados'}
+                  {isNote ? t('browser.archivedNotes') : t('browser.archivedDocs')}
                 </button>
               </div>
             )}
@@ -174,21 +176,21 @@ export function NotesBrowser({ kind, selectedId }: { kind: NoteKind; selectedId?
           {asking && <AskResult pending={ask.isPending} error={ask.error} answer={answer} />}
 
           {notes.isError ? (
-            <p className="m-0 text-danger">No se pudo cargar la lista.</p>
+            <p className="m-0 text-danger">{t('browser.loadError')}</p>
           ) : notes.isPending ? (
-            <p className="m-0 text-ink-muted">Cargando…</p>
+            <p className="m-0 text-ink-muted">{t('common:status.loading')}</p>
           ) : asking && (ask.isPending || answer?.sources.length === 0) ? null : list.length === 0 ? (
             <p className="m-0 py-2 text-ink-muted">
               {q || tag || withTask
-                ? `No hay ${noun}s que coincidan.`
+                ? t(`kinds.${kind}.noMatches`)
                 : archived
-                  ? `No hay ${noun}s archivad${isNote ? 'a' : 'o'}s.`
+                  ? t(`kinds.${kind}.noArchived`)
                   : isNote
-                    ? 'Aún no tienes notas. Crea una con "Nueva nota" o con Alt+N.'
-                    : 'Aún no tienes documentos propios. Crea uno con "Nuevo documento".'}
+                    ? t('browser.emptyNotes')
+                    : t('browser.emptyDocs')}
             </p>
           ) : (
-            <ul aria-label={answer ? 'Notas relacionadas' : undefined} className="flex flex-col gap-1">
+            <ul aria-label={answer ? t('browser.relatedNotes') : undefined} className="flex flex-col gap-1">
               {list.map((note) => (
                 <li key={note.id}>
                   <NoteListItem note={note} active={note.id === selected?.id} />
@@ -201,18 +203,19 @@ export function NotesBrowser({ kind, selectedId }: { kind: NoteKind; selectedId?
         {selected ? (
           <NoteDetail note={selected} />
         ) : (
-          list.length > 0 && <p className="flex-[999_1_420px] text-ink-muted">{isNote ? 'Esa nota no está en esta lista.' : 'Ese documento no está en esta lista.'}</p>
+          list.length > 0 && <p className="flex-[999_1_420px] text-ink-muted">{isNote ? t('browser.noteNotInList') : t('browser.docNotInList')}</p>
         )}
       </div>
   );
 }
 
 function AskResult({ pending, error, answer }: { pending: boolean; error: Error | null; answer?: AskResponse }) {
+  const { t } = useTranslation(['notes', 'common']);
   if (pending) {
     return (
       <p role="status" className="m-0 flex items-center gap-2 rounded-lg border border-line bg-surface p-4 text-ink-muted">
         <Sparkles size={16} strokeWidth={1.5} className="text-accent" aria-hidden />
-        Pensando…
+        {t('ask.thinking')}
       </p>
     );
   }
@@ -226,10 +229,10 @@ function AskResult({ pending, error, answer }: { pending: boolean; error: Error 
   if (!answer) return null;
   const cited = answer.sources.filter((s) => s.cited);
   return (
-    <section aria-label="Respuesta" className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-4">
+    <section aria-label={t('ask.answer')} className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-4">
       <span className="flex items-center gap-2 text-small font-medium tracking-[.04em] text-ink-muted uppercase">
         <Sparkles size={14} strokeWidth={1.5} className="text-accent" aria-hidden />
-        Respuesta
+        {t('ask.answer')}
       </span>
       <Markdown>{answer.answer}</Markdown>
       {cited.length > 0 && (
@@ -249,6 +252,7 @@ function AskResult({ pending, error, answer }: { pending: boolean; error: Error 
 }
 
 function NoteListItem({ note, active }: { note: Note; active: boolean }) {
+  const { t } = useTranslation(['notes', 'common']);
   const Icon = note.kind === 'link' ? Link2 : FileText;
   const meta = [...note.tags];
   return (
@@ -260,7 +264,7 @@ function NoteListItem({ note, active }: { note: Note; active: boolean }) {
       <span className="flex items-center gap-2">
         <Icon size={16} strokeWidth={1.5} className="shrink-0 text-ink-muted" aria-hidden />
         <span className="min-w-0 grow truncate font-medium">{note.title}</span>
-        {note.pinned && <Pin size={12} className="shrink-0 text-accent" aria-label="Fijada" />}
+        {note.pinned && <Pin size={12} className="shrink-0 text-accent" aria-label={t('detail.pinnedNote')} />}
         <span className="shrink-0 text-small text-ink-faint">{shortDay(note.updatedAt)}</span>
       </span>
       {excerpt(note) && <span className="truncate text-[13px] text-ink-muted">{excerpt(note)}</span>}
@@ -268,10 +272,10 @@ function NoteListItem({ note, active }: { note: Note; active: boolean }) {
         <span className="text-small text-ink-muted">
           {meta.join(' · ')}
           {meta.length > 0 && note.tasks.length > 0 && ' · '}
-          {note.tasks.map((t, i) => (
-            <code key={t.key} className="font-mono text-info">
+          {note.tasks.map((task, i) => (
+            <code key={task.key} className="font-mono text-info">
               {i > 0 && ', '}
-              {t.key}
+              {task.key}
             </code>
           ))}
           {note.commit && (
@@ -289,6 +293,7 @@ function NoteListItem({ note, active }: { note: Note; active: boolean }) {
 }
 
 export function NoteDetail({ note }: { note: Note }) {
+  const { t } = useTranslation(['notes', 'common']);
   const queryClient = useQueryClient();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -334,23 +339,23 @@ export function NoteDetail({ note }: { note: Note }) {
             {note.pinned && (
               <span className="flex items-center gap-1 text-accent">
                 <Pin size={12} aria-hidden />
-                Fijada
+                {t('detail.pinnedNote')}
               </span>
             )}
-            {note.archived && <span>{note.kind === 'note' ? 'Archivada' : 'Archivado'}</span>}
-            {note.tags.map((t) => (
-              <span key={t} className="rounded-sm border border-line-strong px-1.5 py-0.5">
-                {t}
+            {note.archived && <span>{note.kind === 'note' ? t('detail.archivedNote') : t('detail.archivedOther')}</span>}
+            {note.tags.map((tg) => (
+              <span key={tg} className="rounded-sm border border-line-strong px-1.5 py-0.5">
+                {tg}
               </span>
             ))}
             {note.tasks.length > 0 && (
               <span>
-                {note.kind === 'note' ? 'Tarea' : 'Vinculado a'}{' '}
-                {note.tasks.map((t, i) => (
-                  <span key={t.key}>
+                {note.kind === 'note' ? t('detail.task') : t('detail.linkedTo')}{' '}
+                {note.tasks.map((task, i) => (
+                  <span key={task.key}>
                     {i > 0 && ', '}
-                    <a href={`#/tareas/${t.key}`} className="font-mono text-info" title={t.synced ? t.summary : 'Aún sin sincronizar con JIRA'}>
-                      {t.key}
+                    <a href={`#/tareas/${task.key}`} className="font-mono text-info" title={task.synced ? task.summary : t('detail.notSynced')}>
+                      {task.key}
                     </a>
                   </span>
                 ))}
@@ -358,20 +363,20 @@ export function NoteDetail({ note }: { note: Note }) {
             )}
             {note.commit && (
               <span>
-                · Commit <CommitLink commit={note.commit} /> “{note.commit.text}”
+                · {t('detail.commit')} <CommitLink commit={note.commit} /> “{note.commit.text}”
               </span>
             )}
-            <span>{note.kind === 'note' ? 'Editada' : 'Editado'} {dayAndTime(note.updatedAt)}</span>
+            <span>{t(note.kind === 'note' ? 'detail.editedNote' : 'detail.editedOther', { when: dayAndTime(note.updatedAt) })}</span>
           </div>
         </div>
         <div className="flex gap-2">
           <a href={`${noteHref(note)}/editar`} className="flex h-9 items-center rounded-md border border-line-strong px-3 text-ink no-underline hover:bg-surface-raised">
-            Editar
+            {t('common:actions.edit')}
           </a>
           <div ref={menuRef} className="relative">
             <button
               type="button"
-              aria-label="Más opciones"
+              aria-label={t('detail.moreOptions')}
               aria-haspopup="menu"
               aria-expanded={menuOpen}
               onClick={() => setMenuOpen(!menuOpen)}
@@ -382,18 +387,18 @@ export function NoteDetail({ note }: { note: Note }) {
             {menuOpen && (
               <div role="menu" className="absolute top-10 right-0 z-10 flex w-48 flex-col rounded-md border border-line-strong bg-surface-raised p-1">
                 <button type="button" role="menuitem" className={menuItem} onClick={act(() => update.mutate({ pinned: !note.pinned }))}>
-                  {note.pinned ? 'Quitar de fijadas' : 'Fijar arriba'}
+                  {note.pinned ? t('detail.unpinNote') : t('detail.pinTop')}
                 </button>
                 <button type="button" role="menuitem" className={menuItem} onClick={act(() => update.mutate({ archived: !note.archived }))}>
-                  {note.archived ? 'Sacar del archivo' : 'Archivar'}
+                  {note.archived ? t('detail.unarchive') : t('detail.archive')}
                 </button>
                 <button
                   type="button"
                   role="menuitem"
                   className={`${menuItem} text-danger`}
-                  onClick={act(() => window.confirm(`¿Eliminar "${note.title}"? No se puede deshacer.`) && remove.mutate())}
+                  onClick={act(() => window.confirm(t('detail.confirmDelete', { title: note.title })) && remove.mutate())}
                 >
-                  Eliminar
+                  {t('detail.delete')}
                 </button>
               </div>
             )}
@@ -407,7 +412,7 @@ export function NoteDetail({ note }: { note: Note }) {
           {note.url}
         </a>
       )}
-      {note.bodyMd.trim() ? <Markdown>{note.bodyMd}</Markdown> : note.kind === 'note' && <p className="m-0 text-ink-muted">Sin texto.</p>}
+      {note.bodyMd.trim() ? <Markdown>{note.bodyMd}</Markdown> : note.kind === 'note' && <p className="m-0 text-ink-muted">{t('detail.noText')}</p>}
     </article>
   );
 }

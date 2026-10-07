@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Note } from '@dev-assistant/shared';
 import { MoreHorizontal, Pin, Plus, Search } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api, queryKeys } from '../../api';
 import { primaryButtonClass } from '../../components/fields';
 import { navigate } from '../../sections';
@@ -34,6 +35,7 @@ function domain(url: string | null) {
 }
 
 function LinksTable({ selectedId }: { selectedId?: number }) {
+  const { t } = useTranslation(['notes', 'common']);
   const [search, setSearch] = useState('');
   const [tag, setTag] = useState<string | undefined>();
   const [archived, setArchived] = useState(false);
@@ -49,17 +51,17 @@ function LinksTable({ selectedId }: { selectedId?: number }) {
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="m-0 text-display font-semibold">Enlaces de interés</h1>
+        <h1 className="m-0 text-display font-semibold">{t('links.title')}</h1>
         <button type="button" onClick={() => navigate('enlaces/nuevo')} className={primaryButtonClass}>
           <Plus size={16} strokeWidth={2} aria-hidden />
-          Nuevo enlace
+          {t('links.newLink')}
         </button>
       </header>
 
       <div className="flex flex-wrap items-center gap-3">
         <div role="search" className="relative flex-[0_1_420px]">
           <label htmlFor="buscar-enlaces" className="sr-only">
-            Buscar en enlaces
+            {t('links.search')}
           </label>
           <Search size={16} strokeWidth={1.5} className="absolute top-3 left-3 text-ink-faint" aria-hidden />
           <input
@@ -67,32 +69,32 @@ function LinksTable({ selectedId }: { selectedId?: number }) {
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar en enlaces"
+            placeholder={t('links.search')}
             className="h-10 w-full rounded-md border border-line-strong bg-surface-raised pr-3 pl-9 text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none"
           />
         </div>
         <div className="flex flex-wrap gap-1.5">
           <button type="button" aria-pressed={!tag} onClick={() => setTag(undefined)} className={chipClass(!tag)}>
-            Todos
+            {t('links.all')}
           </button>
-          {tags.data?.map((t) => (
-            <button key={t.name} type="button" aria-pressed={tag === t.name} onClick={() => setTag(tag === t.name ? undefined : t.name)} className={chipClass(tag === t.name)}>
-              {t.name}
+          {tags.data?.map((tg) => (
+            <button key={tg.name} type="button" aria-pressed={tag === tg.name} onClick={() => setTag(tag === tg.name ? undefined : tg.name)} className={chipClass(tag === tg.name)}>
+              {tg.name}
             </button>
           ))}
           <button type="button" aria-pressed={archived} onClick={() => setArchived(!archived)} className={chipClass(archived)}>
-            Archivados
+            {t('links.archived')}
           </button>
         </div>
       </div>
 
       {links.isError ? (
-        <p className="m-0 text-danger">No se pudieron cargar los enlaces.</p>
+        <p className="m-0 text-danger">{t('links.loadError')}</p>
       ) : links.isPending ? (
-        <p className="m-0 text-ink-muted">Cargando…</p>
+        <p className="m-0 text-ink-muted">{t('common:status.loading')}</p>
       ) : !links.data.length ? (
         <p className="m-0 text-ink-muted">
-          {q || tag ? 'No hay enlaces que coincidan.' : archived ? 'No hay enlaces archivados.' : 'Aún no tienes enlaces. Guarda uno con "Nuevo enlace" o con Alt+N.'}
+          {q || tag ? t('links.noMatches') : archived ? t('links.noArchived') : t('links.empty')}
         </p>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-line bg-surface">
@@ -100,16 +102,16 @@ function LinksTable({ selectedId }: { selectedId?: number }) {
             <thead>
               <tr>
                 <th scope="col" className={th}>
-                  Enlace
+                  {t('links.colLink')}
                 </th>
                 <th scope="col" className={th}>
-                  Etiquetas
+                  {t('links.colTags')}
                 </th>
                 <th scope="col" className={th}>
-                  Tarea
+                  {t('links.colTask')}
                 </th>
                 <th scope="col" className={`${th} w-14`}>
-                  <span className="sr-only">Acciones</span>
+                  <span className="sr-only">{t('links.colActions')}</span>
                 </th>
               </tr>
             </thead>
@@ -121,12 +123,13 @@ function LinksTable({ selectedId }: { selectedId?: number }) {
           </table>
         </div>
       )}
-      <p className="m-0 text-small text-ink-faint">Al pegar una URL, la app rellena el título de la página. Se abren en una pestaña nueva.</p>
+      <p className="m-0 text-small text-ink-faint">{t('links.hint')}</p>
     </div>
   );
 }
 
 function LinkRow({ link, active }: { link: Note; active: boolean }) {
+  const { t } = useTranslation(['notes', 'common']);
   const rowRef = useRef<HTMLTableRowElement>(null);
   useEffect(() => {
     if (active) rowRef.current?.scrollIntoView({ block: 'center' });
@@ -136,7 +139,7 @@ function LinkRow({ link, active }: { link: Note; active: boolean }) {
     <tr ref={rowRef} aria-current={active ? 'true' : undefined} className={`border-t border-line align-top ${active ? 'bg-surface-raised' : ''}`}>
       <td className="px-4 py-3">
         <span className="flex items-center gap-1.5">
-          {link.pinned && <Pin size={12} className="shrink-0 text-accent" aria-label="Fijado" />}
+          {link.pinned && <Pin size={12} className="shrink-0 text-accent" aria-label={t('links.pinned')} />}
           <a href={link.url ?? '#/enlaces'} target="_blank" rel="noreferrer" className="font-medium break-words text-info">
             {link.title}
           </a>
@@ -147,11 +150,11 @@ function LinkRow({ link, active }: { link: Note; active: boolean }) {
       <td className="px-4 py-3 text-small text-ink-muted">{link.tags.join(' · ') || <span className="text-ink-faint">—</span>}</td>
       <td className="px-4 py-3">
         {link.tasks.length ? (
-          link.tasks.map((t, i) => (
-            <span key={t.key}>
+          link.tasks.map((task, i) => (
+            <span key={task.key}>
               {i > 0 && ', '}
-              <a href={`#/tareas/${t.key}/detalle`} className="font-mono text-code text-info" title={t.synced ? t.summary : 'Aún sin sincronizar con JIRA'}>
-                {t.key}
+              <a href={`#/tareas/${task.key}/detalle`} className="font-mono text-code text-info" title={task.synced ? task.summary : t('links.notSynced')}>
+                {task.key}
               </a>
             </span>
           ))
@@ -167,6 +170,7 @@ function LinkRow({ link, active }: { link: Note; active: boolean }) {
 }
 
 function RowMenu({ link }: { link: Note }) {
+  const { t } = useTranslation(['notes', 'common']);
   const queryClient = useQueryClient();
   // Posición fija junto al botón: la tabla tiene scroll y recortaría un menú absoluto en las últimas filas.
   const [open, setOpen] = useState<{ top: number; right: number } | null>(null);
@@ -209,7 +213,7 @@ function RowMenu({ link }: { link: Note }) {
     <div ref={ref} className="relative flex justify-end">
       <button
         type="button"
-        aria-label={`Más opciones de ${link.title}`}
+        aria-label={t('links.moreOptions', { title: link.title })}
         aria-haspopup="menu"
         aria-expanded={!!open}
         onClick={(e) => toggle(e.currentTarget)}
@@ -220,21 +224,21 @@ function RowMenu({ link }: { link: Note }) {
       {open && (
         <div role="menu" style={{ top: open.top, right: open.right }} className="fixed z-10 flex w-48 flex-col rounded-md border border-line-strong bg-surface-raised p-1">
           <button type="button" role="menuitem" className={item} onClick={act(() => navigate(`enlaces/${link.id}/editar`))}>
-            Editar
+            {t('common:actions.edit')}
           </button>
           <button type="button" role="menuitem" className={item} onClick={act(() => update.mutate({ pinned: !link.pinned }))}>
-            {link.pinned ? 'Quitar de fijados' : 'Fijar arriba'}
+            {link.pinned ? t('links.unpin') : t('links.pinTop')}
           </button>
           <button type="button" role="menuitem" className={item} onClick={act(() => update.mutate({ archived: !link.archived }))}>
-            {link.archived ? 'Sacar del archivo' : 'Archivar'}
+            {link.archived ? t('links.unarchive') : t('links.archive')}
           </button>
           <button
             type="button"
             role="menuitem"
             className={`${item} text-danger`}
-            onClick={act(() => window.confirm(`¿Eliminar "${link.title}"? No se puede deshacer.`) && remove.mutate())}
+            onClick={act(() => window.confirm(t('links.confirmDelete', { title: link.title })) && remove.mutate())}
           >
-            Eliminar
+            {t('links.delete')}
           </button>
         </div>
       )}

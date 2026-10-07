@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { CommitRef, Note, NoteKind } from '@dev-assistant/shared';
 import { CircleAlert } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { api, queryKeys } from '../api';
 import { LinkTitleHint } from '../pages/notas/NoteEditor';
 import { isHttpUrl, useLinkTitle } from '../pages/notas/useLinkTitle';
@@ -26,36 +27,37 @@ type CaptureKind = NoteKind | 'reminder';
 
 /** Captura rápida (Alt+N): nota, enlace o recordatorio sin salir de la pantalla actual. */
 export function QuickCapture({ onClose, onSaved }: Props) {
+  const { t } = useTranslation('common');
   const [kind, setKind] = useState<CaptureKind>('note');
   const kindClass = (active: boolean) =>
     `h-8 rounded-sm px-3 text-[13px] ${active ? 'bg-surface-raised font-medium text-ink' : 'text-ink-muted hover:text-ink'}`;
   const tabs: { kind: CaptureKind; label: string }[] = [
-    { kind: 'note', label: 'Nota' },
-    { kind: 'link', label: 'Enlace' },
-    { kind: 'reminder', label: 'Recordatorio' },
+    { kind: 'note', label: t('quickCapture.kinds.note') },
+    { kind: 'link', label: t('quickCapture.kinds.link') },
+    { kind: 'reminder', label: t('quickCapture.kinds.reminder') },
   ];
 
   return (
     <Modal labelledBy="captura-titulo" onClose={onClose}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 id="captura-titulo" className="m-0 text-title font-semibold">
-          Captura rápida
+          {t('quickCapture.title')}
         </h1>
-        <div role="group" aria-label="Tipo" className="flex gap-1 rounded-md border border-line bg-bg p-1">
-          {tabs.map((t) => (
-            <button key={t.kind} type="button" aria-pressed={kind === t.kind} onClick={() => setKind(t.kind)} className={kindClass(kind === t.kind)}>
-              {t.label}
+        <div role="group" aria-label={t('quickCapture.typeGroup')} className="flex gap-1 rounded-md border border-line bg-bg p-1">
+          {tabs.map((tab) => (
+            <button key={tab.kind} type="button" aria-pressed={kind === tab.kind} onClick={() => setKind(tab.kind)} className={kindClass(kind === tab.kind)}>
+              {tab.label}
             </button>
           ))}
         </div>
       </div>
       {kind === 'reminder' ? (
-        <ReminderForm onCancel={onClose} onSaved={() => onSaved({ message: 'Recordatorio guardado', href: '#/recordatorios' })} />
+        <ReminderForm onCancel={onClose} onSaved={() => onSaved({ message: t('quickCapture.saved.reminder'), href: '#/recordatorios' })} />
       ) : (
         <NoteCapture
           kind={kind}
           onCancel={onClose}
-          onSaved={(note) => onSaved({ message: note.kind === 'link' ? 'Enlace guardado' : 'Nota guardada', href: noteHref(note) })}
+          onSaved={(note) => onSaved({ message: note.kind === 'link' ? t('quickCapture.saved.link') : t('quickCapture.saved.note'), href: noteHref(note) })}
         />
       )}
     </Modal>
@@ -63,6 +65,7 @@ export function QuickCapture({ onClose, onSaved }: Props) {
 }
 
 function NoteCapture({ kind, onCancel, onSaved }: { kind: NoteKind; onCancel: () => void; onSaved: (note: Note) => void }) {
+  const { t } = useTranslation('common');
   const queryClient = useQueryClient();
   const tagsQuery = useQuery({ queryKey: queryKeys.tags(kind), queryFn: () => api.listTags(kind) });
   const [url, setUrl] = useState('');
@@ -97,10 +100,10 @@ function NoteCapture({ kind, onCancel, onSaved }: { kind: NoteKind; onCancel: ()
 
   const submit = (e?: FormEvent) => {
     e?.preventDefault();
-    if (kind === 'link' && !isHttpUrl(url.trim())) return setError('Escribe una URL que empiece por http:// o https://.');
-    if (!title.trim()) return setError('Escribe un título.');
+    if (kind === 'link' && !isHttpUrl(url.trim())) return setError(t('quickCapture.errors.url'));
+    if (!title.trim()) return setError(t('quickCapture.errors.title'));
     const badKey = parseTaskKeys(taskText).find((k) => !TASK_KEY_RE.test(k));
-    if (badKey) return setError(`"${badKey}" no es una clave de JIRA (ej.: ABC-123).`);
+    if (badKey) return setError(t('quickCapture.errors.badKey', { key: badKey }));
     setError(null);
     save.mutate();
   };
@@ -110,7 +113,7 @@ function NoteCapture({ kind, onCancel, onSaved }: { kind: NoteKind; onCancel: ()
       {kind === 'link' && (
         <div className="flex flex-col gap-1.5">
           <label htmlFor="cap-url" className={labelClass}>
-            URL
+            {t('quickCapture.fields.url')}
           </label>
           <input
             id="cap-url"
@@ -129,19 +132,19 @@ function NoteCapture({ kind, onCancel, onSaved }: { kind: NoteKind; onCancel: ()
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor="cap-titulo" className={labelClass}>
-          Título
+          {t('quickCapture.fields.title')}
         </label>
         <input id="cap-titulo" type="text" value={title} autoFocus={kind === 'note'} onChange={(e) => setTitle(e.target.value)} className={inputClass} />
       </div>
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor="cap-texto" className={labelClass}>
-          Texto (Markdown)
+          {t('quickCapture.fields.text')}
         </label>
         <textarea
           id="cap-texto"
           value={bodyMd}
-          placeholder={kind === 'link' ? 'Por qué te interesa (opcional)' : 'Escribe la nota'}
+          placeholder={kind === 'link' ? t('quickCapture.placeholders.linkBody') : t('quickCapture.placeholders.noteBody')}
           onChange={(e) => setBodyMd(e.target.value)}
           className="min-h-[120px] resize-y rounded-md border border-line-strong bg-surface-raised px-3 py-2.5 text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none"
         />
@@ -150,13 +153,13 @@ function NoteCapture({ kind, onCancel, onSaved }: { kind: NoteKind; onCancel: ()
       <div className="flex flex-wrap gap-3">
         <div className="flex flex-[1_1_200px] flex-col gap-1.5">
           <label htmlFor="cap-tags" className={labelClass}>
-            Etiquetas
+            {t('quickCapture.fields.tags')}
           </label>
-          <TagInput id="cap-tags" value={tags} onChange={setTags} suggestions={tagsQuery.data?.map((t) => t.name)} />
+          <TagInput id="cap-tags" value={tags} onChange={setTags} suggestions={tagsQuery.data?.map((tag) => tag.name)} />
         </div>
         <div className="flex flex-[1_1_200px] flex-col gap-1.5">
           <label htmlFor="cap-tarea" className={labelClass}>
-            Tarea
+            {t('quickCapture.fields.task')}
           </label>
           <input
             id="cap-tarea"
@@ -172,7 +175,7 @@ function NoteCapture({ kind, onCancel, onSaved }: { kind: NoteKind; onCancel: ()
         {kind === 'note' && (
           <div className="flex min-w-0 flex-[1_1_200px] flex-col gap-1.5">
             <label htmlFor="cap-commit" className={labelClass}>
-              Commit
+              {t('quickCapture.fields.commit')}
             </label>
             <CommitSelect id="cap-commit" taskKey={commitTask} value={commit} onChange={(c) => setCommitPick({ task: commitTask, commit: c })} />
           </div>
@@ -188,14 +191,14 @@ function NoteCapture({ kind, onCancel, onSaved }: { kind: NoteKind; onCancel: ()
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="text-small text-ink-faint">
-          <kbd className="font-mono">Esc</kbd> cerrar · <kbd className="font-mono">Ctrl+Enter</kbd> guardar
+          <Trans t={t} i18nKey="quickCapture.shortcuts" components={{ kbd: <kbd className="font-mono" /> }} />
         </span>
         <div className="flex gap-2">
           <button type="button" onClick={onCancel} className={secondaryButtonClass}>
-            Cancelar
+            {t('actions.cancel')}
           </button>
           <button type="submit" disabled={save.isPending} className={primaryButtonClass}>
-            {save.isPending ? 'Guardando…' : 'Guardar'}
+            {save.isPending ? t('actions.saving') : t('actions.save')}
           </button>
         </div>
       </div>

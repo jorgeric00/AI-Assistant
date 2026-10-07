@@ -1,0 +1,68 @@
+{
+  "page": {
+    "title": "Reminders",
+    "new": "New reminder",
+    "loadError": "Couldn't load the reminders.",
+    "empty": "You have no reminders. Create one with \"New reminder\" or Alt+N."
+  },
+  "groups": {
+    "today": "Today",
+    "week": "This week",
+    "later": "Later",
+    "recurring": "Recurring"
+  },
+  "row": {
+    "markDone": "Mark as done: {{title}}",
+    "next": "Next: {{when}}",
+    "app": "App"
+  },
+  "due": {
+    "snoozedUntil": "Snoozed until {{when}}",
+    "overdue": "Overdue · {{when}}",
+    "now": "{{time}} · Now"
+  },
+  "dialog": {
+    "edit": "Edit reminder",
+    "new": "New reminder"
+  },
+  "form": {
+    "what": "What",
+    "date": "Date",
+    "startsOn": "Starts on",
+    "time": "Time",
+    "repeat": "Repeat",
+    "weekdays": "Days of the week",
+    "task": "Task (optional)",
+    "commit": "Commit (optional)",
+    "notice": "Notification",
+    "noticeValue": "App and Windows notification",
+    "shortcuts": "<kbd>Esc</kbd> close · <kbd>Ctrl+Enter</kbd> save",
+    "delete": "Delete",
+    "confirmDelete": "Delete \"{{title}}\"?",
+    "errors": {
+      "title": "Write what you want to be reminded of.",
+      "start": "Choose a date and time.",
+      "days": "Choose at least one day of the week.",
+      "taskKey": "\"{{key}}\" is not a JIRA key (e.g. ABC-123)."
+    }
+  },
+  "repeatOptions": {
+    "none": "Doesn't repeat",
+    "daily": "Every day",
+    "weekdays": "Monday to Friday",
+    "weekly": "Weekly"
+  },
+  "weekdayLetters": "MTWTFSS",
+  "repeatLabel": {
+    "daily": "Every day · {{at}}",
+    "weekdays": "Monday to Friday · {{at}}",
+    "weekly": "Every {{days}} · {{at}}"
+  },
+  "repeatSummary": {
+    "none": "Once, on {{from}} at {{at}}.",
+    "daily": "Every day at {{at}}, starting {{from}}.",
+    "weekdays": "Monday to Friday at {{at}}, starting {{from}}.",
+    "weekly": "Every {{days}} at {{at}}.",
+    "noDays": "Choose at least one day."
+  }
+}

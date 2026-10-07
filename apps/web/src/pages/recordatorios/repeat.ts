@@ -1,24 +1,31 @@
 import type { Repeat } from '@dev-assistant/shared';
 import { hhmm } from '../../dates';
+import i18n, { locale } from '../../i18n';
 
-export const WEEKDAYS = [
-  { day: 1, short: 'L', name: 'lunes' },
-  { day: 2, short: 'M', name: 'martes' },
-  { day: 3, short: 'X', name: 'miércoles' },
-  { day: 4, short: 'J', name: 'jueves' },
-  { day: 5, short: 'V', name: 'viernes' },
-  { day: 6, short: 'S', name: 'sábado' },
-  { day: 7, short: 'D', name: 'domingo' },
-] as const;
+export interface Weekday {
+  /** Día ISO: 1 = lunes … 7 = domingo. */
+  day: number;
+  /** Letra del botón (L M X J V S D). */
+  short: string;
+  /** Nombre completo en el idioma actual ("lunes", "Monday"). */
+  name: string;
+}
 
-const dayMonth = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long' });
+/** Días de la semana en el idioma actual (se calcula al llamar, no al cargar el módulo). */
+export function weekdays(): Weekday[] {
+  const letters = i18n.t('reminders:weekdayLetters');
+  const fmt = new Intl.DateTimeFormat(locale(), { weekday: 'long' });
+  // El 1 de enero de 2024 fue lunes.
+  return [1, 2, 3, 4, 5, 6, 7].map((day) => ({ day, short: letters[day - 1] ?? '', name: fmt.format(new Date(2024, 0, day)) }));
+}
 
-function joinSpanish(items: string[]): string {
-  return items.length <= 1 ? (items[0] ?? '') : `${items.slice(0, -1).join(', ')} y ${items[items.length - 1]}`;
+function joinList(items: string[]): string {
+  return new Intl.ListFormat(locale(), { style: 'long', type: 'conjunction' }).format(items);
 }
 
 function dayNames(days: number[]): string {
-  return joinSpanish([...days].sort().map((d) => WEEKDAYS[d - 1]!.name));
+  const names = weekdays();
+  return joinList([...days].sort().map((d) => names[d - 1]!.name));
 }
 
 /** Texto corto para la lista: "De lunes a viernes · 09:30". */
@@ -28,26 +35,26 @@ export function repeatLabel(repeat: Repeat, dueAt: string): string {
     case 'none':
       return at;
     case 'daily':
-      return `Cada día · ${at}`;
+      return i18n.t('reminders:repeatLabel.daily', { at });
     case 'weekdays':
-      return `De lunes a viernes · ${at}`;
+      return i18n.t('reminders:repeatLabel.weekdays', { at });
     case 'weekly':
-      return `Cada ${dayNames(repeat.days)} · ${at}`;
+      return i18n.t('reminders:repeatLabel.weekly', { days: dayNames(repeat.days), at });
   }
 }
 
 /** Frase de resumen bajo "Repetir": "De lunes a viernes a las 09:30, empezando el 6 de octubre." */
 export function repeatSummary(repeat: Repeat, start: Date): string {
   const at = hhmm(start);
-  const from = dayMonth.format(start);
+  const from = new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'long' }).format(start);
   switch (repeat.kind) {
     case 'none':
-      return `Una sola vez, el ${from} a las ${at}.`;
+      return i18n.t('reminders:repeatSummary.none', { from, at });
     case 'daily':
-      return `Cada día a las ${at}, empezando el ${from}.`;
+      return i18n.t('reminders:repeatSummary.daily', { from, at });
     case 'weekdays':
-      return `De lunes a viernes a las ${at}, empezando el ${from}.`;
+      return i18n.t('reminders:repeatSummary.weekdays', { from, at });
     case 'weekly':
-      return repeat.days.length ? `Cada ${dayNames(repeat.days)} a las ${at}.` : 'Elige al menos un día.';
+      return repeat.days.length ? i18n.t('reminders:repeatSummary.weekly', { days: dayNames(repeat.days), at }) : i18n.t('reminders:repeatSummary.noDays');
   }
 }

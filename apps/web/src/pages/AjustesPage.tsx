@@ -1,16 +1,21 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import type { Language } from '@dev-assistant/shared';
 import { CircleCheck, DatabaseBackup, Download } from 'lucide-react';
+import { Trans, useTranslation } from 'react-i18next';
 import { api, queryKeys } from '../api';
 import { Card } from '../components/Card';
-import { primaryButtonClass, secondaryButtonClass } from '../components/fields';
+import { inputClass, primaryButtonClass, secondaryButtonClass } from '../components/fields';
 import { dayAndTime } from '../dates';
+import { useLanguage } from '../i18n/useLanguage';
 
-/** Sección "Ajustes": skill de opencode, arranque automático y copias de seguridad. */
+/** Sección "Ajustes": idioma, skill de opencode, arranque automático y copias de seguridad. */
 export function AjustesPage() {
+  const { t } = useTranslation(['settings', 'common']);
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="m-0 text-display font-semibold">Ajustes</h1>
+      <h1 className="m-0 text-display font-semibold">{t('page.title')}</h1>
       <div className="flex max-w-[640px] flex-col gap-4">
+        <LanguageCard />
         <OpencodeSkillCard />
         <AutostartCard />
         <BackupsCard />
@@ -19,7 +24,35 @@ export function AjustesPage() {
   );
 }
 
+const LANGUAGE_OPTIONS: Language[] = ['es', 'en'];
+
+function LanguageCard() {
+  const { t } = useTranslation(['settings', 'common']);
+  const { language, setLanguage, isChanging } = useLanguage();
+  return (
+    <Card title={t('language.title')}>
+      <label htmlFor="ajustes-idioma" className="m-0 text-ink-muted">
+        {t('language.description')}
+      </label>
+      <select
+        id="ajustes-idioma"
+        value={language}
+        disabled={isChanging}
+        onChange={(e) => setLanguage(e.target.value as Language)}
+        className={`${inputClass} max-w-[240px]`}
+      >
+        {LANGUAGE_OPTIONS.map((lang) => (
+          <option key={lang} value={lang}>
+            {t(`common:language.${lang}`)}
+          </option>
+        ))}
+      </select>
+    </Card>
+  );
+}
+
 function OpencodeSkillCard() {
+  const { t } = useTranslation(['settings', 'common']);
   const queryClient = useQueryClient();
   const status = useQuery({ queryKey: queryKeys.opencodeSkill, queryFn: api.opencodeSkill });
   const install = useMutation({
@@ -28,11 +61,9 @@ function OpencodeSkillCard() {
   });
   const s = status.data;
   return (
-    <Card title="Skill de opencode">
+    <Card title={t('skill.title')}>
       <p className="m-0 text-ink-muted">
-        Enseña a opencode a trabajar las tareas siempre igual: escribe el plan en <code className="font-mono text-code">PLAN.md</code>, anota
-        cada commit en <code className="font-mono text-code">HISTORIAL.md</code> y no hace push, PR ni cambios en JIRA sin tu confirmación. Así la
-        página de detalle de cada tarea muestra la fase y los cambios.
+        <Trans t={t} i18nKey="skill.description" components={{ code: <code className="font-mono text-code" /> }} />
       </p>
       {status.isError ? (
         <p className="m-0 text-danger">{status.error.message}</p>
@@ -41,23 +72,23 @@ function OpencodeSkillCard() {
           {s.installed && s.upToDate ? (
             <span className="flex items-center gap-2 text-success">
               <CircleCheck size={16} aria-hidden />
-              Instalada y al día
+              {t('skill.upToDate')}
             </span>
           ) : (
-            <span className="text-ink-muted">{s.installed ? 'Hay una versión nueva.' : 'No está instalada.'}</span>
+            <span className="text-ink-muted">{s.installed ? t('skill.newVersion') : t('skill.notInstalled')}</span>
           )}
           {!(s.installed && s.upToDate) && (
             <button type="button" onClick={() => install.mutate()} disabled={install.isPending} className={primaryButtonClass}>
               <Download size={16} strokeWidth={2} aria-hidden />
-              {install.isPending ? 'Instalando…' : s.installed ? 'Actualizar' : 'Instalar'}
+              {install.isPending ? t('skill.installing') : s.installed ? t('skill.update') : t('skill.install')}
             </button>
           )}
         </div>
       ) : (
-        <p className="m-0 text-ink-muted">Cargando…</p>
+        <p className="m-0 text-ink-muted">{t('common:status.loading')}</p>
       )}
       {install.isError && <p className="m-0 text-danger">{install.error.message}</p>}
-      {s && <p className="m-0 text-small text-ink-faint break-all">Se instala en {s.path}</p>}
+      {s && <p className="m-0 text-small text-ink-faint break-all">{t('skill.installedAt', { path: s.path })}</p>}
     </Card>
   );
 }
@@ -65,6 +96,7 @@ function OpencodeSkillCard() {
 const checkbox = 'mt-0.5 size-[18px] shrink-0 accent-accent';
 
 function AutostartCard() {
+  const { t } = useTranslation(['settings', 'common']);
   const queryClient = useQueryClient();
   const status = useQuery({ queryKey: queryKeys.autostart, queryFn: api.getAutostart });
   const update = useMutation({
@@ -73,18 +105,17 @@ function AutostartCard() {
   });
   const s = status.data;
   return (
-    <Card title="Arranque">
+    <Card title={t('autostart.title')}>
       <p className="m-0 text-ink-muted">
-        La app se abre en <code className="font-mono text-code">http://127.0.0.1:4321</code>. Para arrancarla a mano, ejecuta{' '}
-        <code className="font-mono text-code">npx pnpm@10.28.0 start</code> en la carpeta de la app.
+        <Trans t={t} i18nKey="autostart.description" components={{ code: <code className="font-mono text-code" /> }} />
       </p>
       {status.isError ? (
         <p className="m-0 text-danger">{status.error.message}</p>
       ) : !s ? (
-        <p className="m-0 text-ink-muted">Cargando…</p>
+        <p className="m-0 text-ink-muted">{t('common:status.loading')}</p>
       ) : (
         <>
-          {!s.supported && <p className="m-0 text-ink-muted">El arranque automático solo está disponible en Windows.</p>}
+          {!s.supported && <p className="m-0 text-ink-muted">{t('autostart.windowsOnly')}</p>}
           <label className="flex items-start gap-2">
             <input
               type="checkbox"
@@ -94,8 +125,8 @@ function AutostartCard() {
               className={checkbox}
             />
             <span className="flex flex-col">
-              <span>Arrancar AI-Assistant al iniciar sesión en Windows</span>
-              <span className="text-small text-ink-muted">Sin ventana: se queda funcionando en segundo plano.</span>
+              <span>{t('autostart.enabled')}</span>
+              <span className="text-small text-ink-muted">{t('autostart.enabledHint')}</span>
             </span>
           </label>
           <label className="flex items-start gap-2">
@@ -107,12 +138,12 @@ function AutostartCard() {
               className={checkbox}
             />
             <span className="flex flex-col">
-              <span>Abrir la app en el navegador al arrancar</span>
-              <span className="text-small text-ink-muted">Solo cuando arranca sola al iniciar sesión.</span>
+              <span>{t('autostart.openBrowser')}</span>
+              <span className="text-small text-ink-muted">{t('autostart.openBrowserHint')}</span>
             </span>
           </label>
           {update.isError && <p className="m-0 text-danger">{update.error.message}</p>}
-          {s.supported && <p className="m-0 text-small text-ink-faint break-all">Si no arranca, mira el registro en {s.logFile}</p>}
+          {s.supported && <p className="m-0 text-small text-ink-faint break-all">{t('autostart.logFile', { file: s.logFile })}</p>}
         </>
       )}
     </Card>
@@ -122,6 +153,7 @@ function AutostartCard() {
 const size = (bytes: number) => (bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`);
 
 function BackupsCard() {
+  const { t } = useTranslation(['settings', 'common']);
   const queryClient = useQueryClient();
   const status = useQuery({ queryKey: queryKeys.backups, queryFn: api.getBackups });
   const run = useMutation({
@@ -130,31 +162,31 @@ function BackupsCard() {
   });
   const s = status.data;
   return (
-    <Card title="Copias de seguridad">
-      <p className="m-0 text-ink-muted">Cada día se guarda una copia de la base de datos. Se conservan las 7 más recientes.</p>
+    <Card title={t('backups.title')}>
+      <p className="m-0 text-ink-muted">{t('backups.description')}</p>
       {status.isError ? (
         <p className="m-0 text-danger">{status.error.message}</p>
       ) : !s ? (
-        <p className="m-0 text-ink-muted">Cargando…</p>
+        <p className="m-0 text-ink-muted">{t('common:status.loading')}</p>
       ) : (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <span className="text-ink-muted">
             {s.last ? (
               <>
-                Última copia: <span className="text-ink">{dayAndTime(s.last.at)}</span> · {size(s.last.bytes)} · {s.count} {s.count === 1 ? 'copia' : 'copias'}
+                {t('backups.lastLabel')} <span className="text-ink">{dayAndTime(s.last.at)}</span> · {size(s.last.bytes)} · {t('backups.copies', { count: s.count })}
               </>
             ) : (
-              'Aún no hay copias.'
+              t('backups.none')
             )}
           </span>
           <button type="button" onClick={() => run.mutate()} disabled={!s.supported || run.isPending} className={secondaryButtonClass}>
             <DatabaseBackup size={16} strokeWidth={2} aria-hidden />
-            {run.isPending ? 'Copiando…' : 'Hacer copia ahora'}
+            {run.isPending ? t('backups.copying') : t('backups.runNow')}
           </button>
         </div>
       )}
       {run.isError && <p className="m-0 text-danger">{run.error.message}</p>}
-      {s && <p className="m-0 text-small text-ink-faint break-all">Se guardan en {s.dir}</p>}
+      {s && <p className="m-0 text-small text-ink-faint break-all">{t('backups.savedIn', { dir: s.dir })}</p>}
     </Card>
   );
 }

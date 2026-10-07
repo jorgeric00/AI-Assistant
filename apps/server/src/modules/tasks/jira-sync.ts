@@ -4,6 +4,7 @@ import type { JiraSyncStatus } from '@dev-assistant/shared';
 import type { Db } from '../../db/client.js';
 import { settings } from '../../db/schema.js';
 import { JiraError, type JiraClient } from '../../integrations/jira/client.js';
+import { t } from '../../i18n/index.js';
 import type { TasksRepository } from './repository.js';
 
 const INTERVAL_MS = 15 * 60_000;
@@ -47,7 +48,7 @@ export class JiraSync {
 
   /** Trae las tareas de la JQL y completa las claves escritas en notas. Devuelve cuántas se actualizaron. */
   sync(): Promise<LastSync> {
-    if (!this.client) return Promise.reject(new JiraError('JIRA no está configurado: añade JIRA_URL y JIRA_TOKEN al fichero .env.'));
+    if (!this.client) return Promise.reject(new JiraError(t('jira.notConfigured')));
     this.running ??= this.run(this.client).finally(() => {
       this.running = null;
     });

@@ -1,0 +1,67 @@
+{
+  "status": {
+    "completa": "Profile complete",
+    "por_revisar": "Profile to review",
+    "sin_ficha": "No profile"
+  },
+  "page": {
+    "title": "Repositories",
+    "subtitle": "Where opencode works and what it should know about each repo",
+    "add": "Add repository",
+    "loadError": "Couldn't load the repositories.",
+    "empty": "No repositories yet. Click \"Add repository\" and enter the folder of a repo on your PC."
+  },
+  "list": {
+    "label": "Repositories",
+    "noGithub": "No GitHub repo",
+    "branch": "branch {{branch}}",
+    "noJira": "No JIRA projects"
+  },
+  "data": {
+    "legend": "Details",
+    "path": "Folder on your PC",
+    "pathPlaceholder": "C:\\repos\\my-repo",
+    "gitFound": "Git repo found",
+    "notGit": "Not a git repo",
+    "checking": "Checking…",
+    "name": "Name",
+    "github": "GitHub repo",
+    "githubPlaceholder": "owner/name",
+    "githubHint": "Filled in automatically from the git remote.",
+    "branch": "Base branch",
+    "branchHint": "feature/<KEY>-… branches start from here, and PRs target it.",
+    "jira": "JIRA projects",
+    "jiraHint": "Comma-separated. The AI suggests this repo for tasks in those projects."
+  },
+  "newRepo": {
+    "title": "New repository",
+    "intro": "Enter the folder: the name, GitHub repo and base branch are filled in automatically.",
+    "afterAdd": "Once it's added, you can fill in its profile with AI.",
+    "adding": "Adding…",
+    "submit": "Add repository"
+  },
+  "tabs": {
+    "conventions": "Conventions",
+    "conventionsTitle": "Conventions",
+    "tests": "Tests",
+    "testsTitle": "How to run the tests",
+    "architecture": "Architecture",
+    "architectureTitle": "Architecture"
+  },
+  "editor": {
+    "aiDrafted": "drafted by AI",
+    "reviewed": "reviewed",
+    "confirmRedraft": "The AI will replace the current profile with a new draft. Continue?",
+    "confirmRemove": "Remove {{name}} from the app? The repo on your PC is not touched.",
+    "remove": "Remove repository",
+    "profileHeading": "Repository profile",
+    "readingRepo": "Reading the repo…",
+    "fillWithAi": "Fill in with AI",
+    "profileHint": "opencode uses it as context when planning and coding. The AI drafts it by reading the repo (README, build and test config) and you review it.",
+    "tabsLabel": "Profile sections",
+    "aiReadingPlaceholder": "The AI is reading the repo…",
+    "placeholder": "Write it yourself or click \"Fill in with AI\".",
+    "savedInApp": "Saved in the app, not in the repo.",
+    "discard": "Discard changes"
+  }
+}

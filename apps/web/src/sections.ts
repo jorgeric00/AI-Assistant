@@ -3,16 +3,17 @@ import type { NoteKind } from '@dev-assistant/shared';
 
 // Secciones del menú lateral (diseño "AI-Assistant · Pantallas").
 export const SECTIONS = [
-  { id: 'hoy', label: 'Hoy', icon: Sun },
-  { id: 'documentacion', label: 'Documentación', icon: BookOpen },
-  { id: 'notas', label: 'Notas', icon: FileText },
-  { id: 'enlaces', label: 'Enlaces', icon: Link2 },
-  { id: 'recordatorios', label: 'Recordatorios', icon: Bell },
-  { id: 'diario', label: 'Diario', icon: Book },
-  { id: 'tareas', label: 'Tareas de JIRA', icon: SquareCheck },
-  { id: 'repositorios', label: 'Repositorios', icon: GitBranch },
-  { id: 'ajustes', label: 'Ajustes', icon: SlidersHorizontal },
-] as const satisfies readonly { id: string; label: string; icon: LucideIcon }[];
+// El nombre visible de cada una se traduce al pintarla: t('common:sections.<id>').
+  { id: 'hoy', icon: Sun },
+  { id: 'documentacion', icon: BookOpen },
+  { id: 'notas', icon: FileText },
+  { id: 'enlaces', icon: Link2 },
+  { id: 'recordatorios', icon: Bell },
+  { id: 'diario', icon: Book },
+  { id: 'tareas', icon: SquareCheck },
+  { id: 'repositorios', icon: GitBranch },
+  { id: 'ajustes', icon: SlidersHorizontal },
+] as const satisfies readonly { id: string; icon: LucideIcon }[];
 
 export type SectionId = (typeof SECTIONS)[number]['id'];
 

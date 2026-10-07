@@ -1,0 +1,68 @@
+{
+  "page": {
+    "title": "Recordatorios",
+    "new": "Nuevo recordatorio",
+    "loadError": "No se pudieron cargar los recordatorios.",
+    "empty": "No tienes recordatorios. Crea uno con \"Nuevo recordatorio\" o con Alt+N."
+  },
+  "groups": {
+    "today": "Hoy",
+    "week": "Esta semana",
+    "later": "Más adelante",
+    "recurring": "Recurrentes"
+  },
+  "row": {
+    "markDone": "Marcar como hecho: {{title}}",
+    "next": "Próximo: {{when}}",
+    "app": "App"
+  },
+  "due": {
+    "snoozedUntil": "Pospuesto hasta {{when}}",
+    "overdue": "Atrasado · {{when}}",
+    "now": "{{time}} · Ahora"
+  },
+  "dialog": {
+    "edit": "Editar recordatorio",
+    "new": "Nuevo recordatorio"
+  },
+  "form": {
+    "what": "Qué",
+    "date": "Fecha",
+    "startsOn": "Empieza el",
+    "time": "Hora",
+    "repeat": "Repetir",
+    "weekdays": "Días de la semana",
+    "task": "Tarea (opcional)",
+    "commit": "Commit (opcional)",
+    "notice": "Aviso",
+    "noticeValue": "App y notificación de Windows",
+    "shortcuts": "<kbd>Esc</kbd> cerrar · <kbd>Ctrl+Enter</kbd> guardar",
+    "delete": "Eliminar",
+    "confirmDelete": "¿Eliminar \"{{title}}\"?",
+    "errors": {
+      "title": "Escribe qué quieres recordar.",
+      "start": "Elige fecha y hora.",
+      "days": "Elige al menos un día de la semana.",
+      "taskKey": "\"{{key}}\" no es una clave de JIRA (ej.: ABC-123)."
+    }
+  },
+  "repeatOptions": {
+    "none": "No se repite",
+    "daily": "Cada día",
+    "weekdays": "De lunes a viernes",
+    "weekly": "Semanal"
+  },
+  "weekdayLetters": "LMXJVSD",
+  "repeatLabel": {
+    "daily": "Cada día · {{at}}",
+    "weekdays": "De lunes a viernes · {{at}}",
+    "weekly": "Cada {{days}} · {{at}}"
+  },
+  "repeatSummary": {
+    "none": "Una sola vez, el {{from}} a las {{at}}.",
+    "daily": "Cada día a las {{at}}, empezando el {{from}}.",
+    "weekdays": "De lunes a viernes a las {{at}}, empezando el {{from}}.",
+    "weekly": "Cada {{days}} a las {{at}}.",
+    "noDays": "Elige al menos un día."
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "title": "Today",
+  "dailySummary": "Daily stand-up summary",
+  "cards": {
+    "reminders": "Today's reminders",
+    "seeAll": "See all",
+    "tasks": "Tasks in progress",
+    "seeTasks": "See tasks",
+    "prAlerts": "Your PR alerts",
+    "journal": "Today's journal",
+    "seeJournal": "See journal"
+  },
+  "reminders": {
+    "empty": "You have no reminders for today.",
+    "overdue": "Overdue",
+    "now": "Now"
+  },
+  "tasks": {
+    "connectJira": "Connect JIRA to see your tasks.",
+    "empty": "You have no tasks in progress."
+  },
+  "journal": {
+    "auto": "Auto",
+    "manual": "Manual",
+    "empty": "No entries yet today.",
+    "addPlaceholder": "Add a journal entry"
+  }
+}

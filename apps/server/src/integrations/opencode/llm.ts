@@ -1,6 +1,7 @@
 // Acceso al modelo de IA a través de opencode (diseño, sección 6.2): toda la IA pasa por
 // opencode con los modelos de Copilot que el usuario ya tiene configurados.
 import { createOpencodeClient, createOpencodeServer, type OpencodeClient } from '@opencode-ai/sdk';
+import { t } from '../../i18n/index.js';
 
 export interface LlmRequest {
   /** Instrucciones de sistema (rol, formato, reglas). */
@@ -54,11 +55,9 @@ export function createOpencodeLlm({ url, port = 0 }: OpencodeLlmOptions = {}): L
       return { client: createOpencodeClient({ baseUrl: server.url }), close: () => server.close() };
     })().catch((err: unknown) => {
       connection = undefined; // el siguiente intento vuelve a probar
-      const detail = err instanceof Error ? err.message.split('\n')[0] : String(err);
+      const detail = err instanceof Error ? (err.message.split('\n')[0] ?? '') : String(err);
       throw new LlmUnavailableError(
-        url
-          ? `No se puede conectar con opencode en ${url} (${detail}).`
-          : `No se pudo arrancar opencode (${detail}). Comprueba que el comando "opencode" funciona en una terminal.`,
+        url ? t('ai.connectFailed', { url, detail }) : t('ai.startFailed', { detail }),
       );
     });
     return connection;
@@ -79,18 +78,18 @@ export function createOpencodeLlm({ url, port = 0 }: OpencodeLlmOptions = {}): L
         const { info, parts } = result.data;
         if (info.error) {
           const data = info.error.data as { message?: unknown } | undefined;
-          throw new LlmUnavailableError(`El modelo devolvió un error: ${typeof data?.message === 'string' ? data.message : info.error.name}`);
+          throw new LlmUnavailableError(t('ai.modelError', { message: typeof data?.message === 'string' ? data.message : info.error.name }));
         }
         const text = parts
           .flatMap((p) => (p.type === 'text' && !p.synthetic ? [p.text] : []))
           .join('')
           .trim();
-        if (!text) throw new LlmUnavailableError('El modelo no devolvió ninguna respuesta.');
+        if (!text) throw new LlmUnavailableError(t('ai.emptyAnswer'));
         return text;
       } catch (err) {
         if (err instanceof LlmUnavailableError) throw err;
         connection = undefined;
-        throw new LlmUnavailableError(`Fallo al hablar con opencode: ${err instanceof Error ? err.message : String(err)}`);
+        throw new LlmUnavailableError(t('ai.opencodeFailed', { message: err instanceof Error ? err.message : String(err) }));
       } finally {
         if (sessionId) void client.session.delete({ path: { id: sessionId } }).catch(() => {});
       }

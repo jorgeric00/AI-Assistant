@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { JiraDraftInput, JiraKey, JiraUpdateInput, TaskListQuery, type JiraSyncStatus } from '@dev-assistant/shared';
+import { t } from '../../i18n/index.js';
 import { readTaskDevInfo } from './dev-files.js';
 import { getTaskDoc, listTaskDocs } from './task-docs.js';
 import type { Db } from '../../db/client.js';
@@ -31,7 +32,7 @@ export async function tasksRoutes(
 
   app.get('/api/tasks', async (req) => repo.list(TaskListQuery.parse(req.query)));
 
-  app.get('/api/tasks/:key', async (req, reply) => repo.get(KeyParams.parse(req.params).key) ?? reply.code(404).send({ error: 'Tarea no encontrada' }));
+  app.get('/api/tasks/:key', async (req, reply) => repo.get(KeyParams.parse(req.params).key) ?? reply.code(404).send({ error: t('tasks.notFound') }));
 
   // Plan e histórico que escribe opencode en la carpeta de la tarea (aunque la tarea no esté sincronizada).
   app.get('/api/tasks/:key/dev', async (req) => readTaskDevInfo(devAssistantHome, KeyParams.parse(req.params).key));
@@ -41,7 +42,7 @@ export async function tasksRoutes(
 
   app.get('/api/task-docs/:key', async (req, reply) => {
     const { key } = KeyParams.parse(req.params);
-    return (await getTaskDoc(devAssistantHome, key)) ?? reply.code(404).send({ error: `${key} aún no tiene resumen` });
+    return (await getTaskDoc(devAssistantHome, key)) ?? reply.code(404).send({ error: t('tasks.noSummary', { key }) });
   });
 
   // Sesión de desarrollo: estado de los repos de la tarea y botón para abrir opencode en la terminal.

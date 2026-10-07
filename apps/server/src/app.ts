@@ -26,7 +26,9 @@ import { webRoutes } from './modules/system/web.js';
 import { Autostart, REPO_ROOT } from './modules/system/autostart.js';
 import { Backups } from './modules/system/backup.js';
 import { systemRoutes } from './modules/system/routes.js';
+import { languageRoutes } from './modules/system/language.js';
 import { DevSessionService, type TerminalLauncher } from './modules/tasks/session.js';
+import { t, type MessageKey } from './i18n/index.js';
 
 export interface BuildAppOptions {
   logger?: boolean;
@@ -55,9 +57,24 @@ export interface BuildAppOptions {
   terminalLauncher?: TerminalLauncher;
 }
 
+/** Mensajes propios de los esquemas de @dev-assistant/shared (en castellano) → su clave, para responder en el idioma de la app. */
+const SHARED_MESSAGES = new Map<string, MessageKey>(Object.entries({
+  'Clave de JIRA no válida (ej.: ABC-123)': 'validation.jiraKey',
+  'El título es obligatorio': 'validation.titleRequired',
+  'Elige al menos un día': 'validation.pickADay',
+  'Escribe qué quieres recordar': 'validation.reminderTitleRequired',
+  'El comentario está vacío': 'validation.commentEmpty',
+  'Clave de proyecto de JIRA no válida (ej.: ABC)': 'validation.projectKey',
+  'El repo de GitHub debe ser dueño/nombre': 'validation.githubRepo',
+} satisfies Record<string, MessageKey>) as [string, MessageKey][]);
+const sharedMessage = (message: string) => {
+  const key = SHARED_MESSAGES.get(message);
+  return key ? t(key) : message;
+};
+
 const noLlm: Llm = {
   complete: async () => {
-    throw new LlmUnavailableError('La IA no está configurada.');
+    throw new LlmUnavailableError(t('ai.notConfigured'));
   },
 };
 
@@ -77,7 +94,7 @@ export async function buildApp(db: Db, opts: BuildAppOptions = {}) {
 
   app.setErrorHandler((err, _req, reply) => {
     if (err instanceof ZodError) {
-      return reply.code(400).send({ error: err.issues.map((i) => i.message).join('; ') });
+      return reply.code(400).send({ error: err.issues.map((i) => sharedMessage(i.message)).join('; ') });
     }
     if (err instanceof LlmUnavailableError || err instanceof JiraError) {
       return reply.code(503).send({ error: err.message });
@@ -86,6 +103,8 @@ export async function buildApp(db: Db, opts: BuildAppOptions = {}) {
   });
 
   // Módulos (dev-sessions, repos... se añaden en sus hilos).
+  // Primero el idioma: los demás módulos ya responden en el elegido.
+  await app.register(languageRoutes, { db });
   await app.register(notesRoutes, { db, fetchTitle: opts.fetchTitle });
   await app.register(remindersRoutes, { db });
   const config = loadConfig();

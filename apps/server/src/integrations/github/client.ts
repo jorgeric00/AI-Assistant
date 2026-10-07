@@ -1,6 +1,7 @@
 // GitHub por su API GraphQL (lectura): tus PR abiertas con sus checks, revisiones y comentarios.
 // Una sola consulta trae todo lo que necesitan los avisos de "Avisos de tus PR".
 import type { PrChecksState, PrState } from '@dev-assistant/shared';
+import { t } from '../../i18n/index.js';
 
 export interface GithubConfig {
   token: string;
@@ -142,18 +143,18 @@ export class GithubClient {
       });
     } catch (err) {
       const cause = err instanceof Error ? (err.cause instanceof Error ? err.cause.message : err.message) : String(err);
-      throw new GithubError(`No se pudo conectar con GitHub: ${cause}`);
+      throw new GithubError(t('github.connectFailed', { cause }));
     }
-    if (res.status === 401) throw new GithubError('GitHub rechazó el token (401). Revisa GITHUB_TOKEN.');
+    if (res.status === 401) throw new GithubError(t('github.unauthorized'));
     const data = (await res.json().catch(() => null)) as { data?: T; errors?: { message: string; type?: string }[]; message?: string } | null;
-    if (!res.ok) throw new GithubError(`GitHub respondió ${res.status}${data?.message ? `: ${data.message}` : ''}`);
+    if (!res.ok) throw new GithubError(`${t('github.httpError', { status: res.status })}${data?.message ? `: ${data.message}` : ''}`);
     const errors = data?.errors ?? [];
     // Con SSO de la organización, GitHub responde los datos que puede y un error por cada repo sin autorizar.
     const sso = errors.find((e) => /SAML|SSO/i.test(e.message));
-    if (sso && !data?.data) throw new GithubError(`El token no está autorizado para el SSO de la organización. En GitHub: Settings > Developer settings > tokens > Configure SSO > Authorize.`);
-    if (!data?.data) throw new GithubError(`GitHub devolvió un error: ${errors.map((e) => e.message).join('; ') || 'respuesta vacía'}`);
+    if (sso && !data?.data) throw new GithubError(t('github.ssoNotAuthorized'));
+    if (!data?.data) throw new GithubError(t('github.graphqlError', { message: errors.map((e) => e.message).join('; ') || t('github.emptyResponse') }));
     this.warnings = sso
-      ? ['Hay PR de una organización con SSO que el token no puede ver. En GitHub: Settings > Developer settings > tokens > Configure SSO > Authorize.']
+      ? [t('github.ssoWarning')]
       : errors.map((e) => e.message);
     return data.data;
   }

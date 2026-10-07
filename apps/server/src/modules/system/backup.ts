@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import type { FastifyBaseLogger } from 'fastify';
 import type Database from 'better-sqlite3';
 import type { BackupStatus } from '@dev-assistant/shared';
+import { t } from '../../i18n/index.js';
 import { localDay } from '../journal/feed.js';
 
 const KEEP = 7;
@@ -45,7 +46,7 @@ export class Backups {
 
   /** Hace una copia ahora (con `daily`, solo si hoy aún no hay ninguna) y borra las que sobran. */
   async run({ daily = false }: { daily?: boolean } = {}): Promise<BackupStatus> {
-    if (!this.sqlite) throw new Error('No hay base de datos que copiar.');
+    if (!this.sqlite) throw new Error(t('backups.noDatabase'));
     const now = new Date();
     const day = localDay(now);
     if (daily && (await this.files()).some((f) => FILE_RE.exec(f.name)?.[1] === day)) return this.status();

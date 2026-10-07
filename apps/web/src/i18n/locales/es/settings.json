@@ -1,0 +1,41 @@
+{
+  "page": {
+    "title": "Ajustes"
+  },
+  "language": {
+    "title": "Idioma",
+    "description": "Idioma de la interfaz, de los mensajes y de lo que redacta la IA."
+  },
+  "skill": {
+    "title": "Skill de opencode",
+    "description": "Enseña a opencode a trabajar las tareas siempre igual: escribe el plan en <code>PLAN.md</code>, anota cada commit en <code>HISTORIAL.md</code> y no hace push, PR ni cambios en JIRA sin tu confirmación. Así la página de detalle de cada tarea muestra la fase y los cambios.",
+    "upToDate": "Instalada y al día",
+    "newVersion": "Hay una versión nueva.",
+    "notInstalled": "No está instalada.",
+    "installing": "Instalando…",
+    "update": "Actualizar",
+    "install": "Instalar",
+    "installedAt": "Se instala en {{path}}"
+  },
+  "autostart": {
+    "title": "Arranque",
+    "description": "La app se abre en <code>http://127.0.0.1:4321</code>. Para arrancarla a mano, ejecuta <code>npx pnpm@10.28.0 start</code> en la carpeta de la app.",
+    "windowsOnly": "El arranque automático solo está disponible en Windows.",
+    "enabled": "Arrancar AI-Assistant al iniciar sesión en Windows",
+    "enabledHint": "Sin ventana: se queda funcionando en segundo plano.",
+    "openBrowser": "Abrir la app en el navegador al arrancar",
+    "openBrowserHint": "Solo cuando arranca sola al iniciar sesión.",
+    "logFile": "Si no arranca, mira el registro en {{file}}"
+  },
+  "backups": {
+    "title": "Copias de seguridad",
+    "description": "Cada día se guarda una copia de la base de datos. Se conservan las 7 más recientes.",
+    "lastLabel": "Última copia:",
+    "copies_one": "{{count}} copia",
+    "copies_other": "{{count}} copias",
+    "none": "Aún no hay copias.",
+    "copying": "Copiando…",
+    "runNow": "Hacer copia ahora",
+    "savedIn": "Se guardan en {{dir}}"
+  }
+}

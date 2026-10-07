@@ -1,0 +1,34 @@
+{
+  "page": {
+    "title": "Diario",
+    "prevDay": "Día anterior",
+    "nextDay": "Día siguiente",
+    "today": "Hoy",
+    "dailySummary": "Resumen para la daily",
+    "entries": "Entradas del día",
+    "addPlaceholder": "¿Qué has hecho? Ej.: reunión con QA sobre ABC-123",
+    "loadError": "No se pudo cargar el diario.",
+    "emptyToday": "Aún no hay entradas hoy.",
+    "emptyDay": "No hay entradas este día."
+  },
+  "entry": {
+    "commit": "Commit de opencode",
+    "jira": "JIRA",
+    "auto": "Automática",
+    "manual": "Manual",
+    "delete": "Borrar entrada: {{text}}",
+    "confirmDelete": "¿Borrar esta entrada del diario?"
+  },
+  "summary": {
+    "title": "Resumen para la daily",
+    "copied": "Copiado",
+    "preparing": "Preparando el resumen con opencode…",
+    "footer": "Con lo apuntado desde el {{since}}. Generado {{generated}} ·",
+    "regenerate": "Volver a generar",
+    "intro": "Con el botón \"Resumen para la daily\", opencode prepara ayer, hoy y bloqueos con las entradas desde el último día laborable y los recordatorios del día. No se envía a ningún sitio: lo copias tú.",
+    "loadError": "No se pudo cargar el resumen guardado."
+  },
+  "addForm": {
+    "label": "Nueva entrada del diario"
+  }
+}

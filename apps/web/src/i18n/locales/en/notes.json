@@ -1,0 +1,142 @@
+{
+  "kinds": {
+    "note": {
+      "label": "Notes",
+      "edit": "Edit note",
+      "new": "New note",
+      "noMatches": "No matching notes.",
+      "noArchived": "No archived notes."
+    },
+    "link": {
+      "label": "Links",
+      "edit": "Edit link",
+      "new": "New link",
+      "noMatches": "No matching links.",
+      "noArchived": "No archived links."
+    },
+    "doc": {
+      "label": "Documentation",
+      "edit": "Edit document",
+      "new": "New document",
+      "noMatches": "No matching documents.",
+      "noArchived": "No archived documents."
+    }
+  },
+  "notesPage": {
+    "title": "Notes",
+    "newNote": "New note"
+  },
+  "browser": {
+    "notesList": "Notes list",
+    "ownDocs": "My docs",
+    "searchType": "Search type",
+    "modeText": "Text",
+    "modeQuestion": "Ask",
+    "askLabel": "Ask about your notes",
+    "searchNotes": "Search notes",
+    "searchDocs": "Search documentation",
+    "askPlaceholder": "How do we deploy to pre?",
+    "askHint": "Press Enter. opencode answers only from your non-archived notes, links and documents.",
+    "all": "All",
+    "withTask": "With task",
+    "withoutTask": "Without task",
+    "archivedNotes": "Archived",
+    "archivedDocs": "Archived",
+    "loadError": "Couldn't load the list.",
+    "emptyNotes": "You don't have any notes yet. Create one with \"New note\" or with Alt+N.",
+    "emptyDocs": "You don't have any docs of your own yet. Create one with \"New document\".",
+    "relatedNotes": "Related notes",
+    "noteNotInList": "That note isn't in this list.",
+    "docNotInList": "That document isn't in this list."
+  },
+  "ask": {
+    "thinking": "Thinking…",
+    "answer": "Answer"
+  },
+  "detail": {
+    "pinnedNote": "Pinned",
+    "archivedNote": "Archived",
+    "archivedOther": "Archived",
+    "task": "Task",
+    "linkedTo": "Linked to",
+    "notSynced": "Not synced with JIRA yet",
+    "commit": "Commit",
+    "editedNote": "Edited {{when}}",
+    "editedOther": "Edited {{when}}",
+    "moreOptions": "More options",
+    "unpinNote": "Unpin",
+    "pinTop": "Pin to top",
+    "unarchive": "Unarchive",
+    "archive": "Archive",
+    "delete": "Delete",
+    "confirmDelete": "Delete \"{{title}}\"? This can't be undone.",
+    "noText": "No text."
+  },
+  "editor": {
+    "notFound": "Note not found.",
+    "titleRequired": "Enter a title.",
+    "urlRequired": "Enter a URL starting with http:// or https://.",
+    "badTaskKey": "\"{{key}}\" isn't a JIRA key (e.g. ABC-123).",
+    "url": "URL",
+    "title": "Title",
+    "body": "Text (Markdown)",
+    "editorMode": "Editor mode",
+    "write": "Write",
+    "preview": "Preview",
+    "nothingToShow": "Nothing to show yet.",
+    "tags": "Tags",
+    "linkTask": "Link to JIRA task",
+    "taskPlaceholder": "Key, e.g. ABC-123",
+    "notSyncedHint": "Not synced with JIRA yet. It will link automatically when the task arrives.",
+    "commit": "Task commit (optional)",
+    "pinTop": "Pin to the top of the list",
+    "shortcuts": "<kbd>Ctrl+Enter</kbd> save · <kbd>Esc</kbd> cancel"
+  },
+  "linkTitle": {
+    "loading": "Fetching the page title…",
+    "found": "Title taken from the page. You can change it.",
+    "notFound": "Couldn't get the title; type it yourself."
+  },
+  "links": {
+    "title": "Useful links",
+    "newLink": "New link",
+    "search": "Search links",
+    "all": "All",
+    "archived": "Archived",
+    "loadError": "Couldn't load the links.",
+    "noMatches": "No matching links.",
+    "noArchived": "No archived links.",
+    "empty": "You don't have any links yet. Save one with \"New link\" or with Alt+N.",
+    "colLink": "Link",
+    "colTags": "Tags",
+    "colTask": "Task",
+    "colActions": "Actions",
+    "hint": "When you paste a URL, the app fills in the page title. Links open in a new tab.",
+    "pinned": "Pinned",
+    "notSynced": "Not synced with JIRA yet",
+    "moreOptions": "More options for {{title}}",
+    "unpin": "Unpin",
+    "pinTop": "Pin to top",
+    "unarchive": "Unarchive",
+    "archive": "Archive",
+    "delete": "Delete",
+    "confirmDelete": "Delete \"{{title}}\"? This can't be undone."
+  },
+  "docs": {
+    "title": "Documentation",
+    "newDoc": "New document",
+    "tabsLabel": "Documentation type",
+    "tabTasks": "From tasks",
+    "tabOwn": "My docs",
+    "taskDocs": "Task documents",
+    "search": "Search documentation",
+    "hint": "opencode writes them when it closes each task.",
+    "loadError": "Couldn't read the task documentation.",
+    "noMatches": "No matching documents.",
+    "empty": "None yet. opencode writes the summary of each task when it finishes it (skill dev-assistant-tarea).",
+    "prCount_one": "{{count}} PR",
+    "prCount_other": "{{count}} PRs",
+    "updated": "Updated {{when}} · opencode's RESUMEN.md",
+    "viewTask": "View task"
+  }
+}

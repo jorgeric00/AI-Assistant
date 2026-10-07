@@ -1,10 +1,10 @@
 import { SNOOZE_OPTIONS, type SnoozeInput } from '@dev-assistant/shared';
 import { useEffect, useRef, useState } from 'react';
-
-const LABELS: Record<SnoozeInput['until'], string> = { '10m': '10 minutos', '1h': '1 hora', tomorrow: 'Mañana a las 9:00' };
+import { useTranslation } from 'react-i18next';
 
 /** Botón "Posponer" con las tres opciones acordadas. */
 export function SnoozeMenu({ onSnooze, up = false }: { onSnooze: (until: SnoozeInput['until']) => void; /** Abre el menú hacia arriba. */ up?: boolean }) {
+  const { t } = useTranslation('common');
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -30,10 +30,10 @@ export function SnoozeMenu({ onSnooze, up = false }: { onSnooze: (until: SnoozeI
         onClick={() => setOpen(!open)}
         className="h-8 rounded-md border border-line-strong px-2.5 text-[13px] text-ink hover:bg-surface-raised"
       >
-        Posponer
+        {t('snooze.button')}
       </button>
       {open && (
-        <div role="menu" aria-label="Posponer" className={`absolute right-0 z-20 ${up ? 'bottom-9' : 'top-9'} flex w-[220px] flex-col rounded-md border border-line-strong bg-surface-raised p-1`}>
+        <div role="menu" aria-label={t('snooze.button')} className={`absolute right-0 z-20 ${up ? 'bottom-9' : 'top-9'} flex w-[220px] flex-col rounded-md border border-line-strong bg-surface-raised p-1`}>
           {SNOOZE_OPTIONS.map((o) => (
             <button
               key={o}
@@ -45,7 +45,7 @@ export function SnoozeMenu({ onSnooze, up = false }: { onSnooze: (until: SnoozeI
               }}
               className="h-9 rounded-sm px-3 text-left text-ink hover:bg-surface"
             >
-              {LABELS[o]}
+              {t(`snooze.${o}`)}
             </button>
           ))}
         </div>

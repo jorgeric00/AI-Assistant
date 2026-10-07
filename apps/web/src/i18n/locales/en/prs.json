@@ -1,0 +1,35 @@
+{
+  "alerts": {
+    "notConfigured": "Add <code>GITHUB_TOKEN</code> to the .env file and restart the app to see failing CI and new comments here.",
+    "empty": "No alerts. Failing CI and new comments will show up here.",
+    "in": "in"
+  },
+  "state": {
+    "merged": "Merged",
+    "closed": "Closed",
+    "draft": "Draft",
+    "approved": "Approved",
+    "ready": "Ready for review"
+  },
+  "checks": {
+    "failingMany": "{{n}} checks failing",
+    "failingOne": "{{name}} failing",
+    "failing": "Checks failing",
+    "passing": "Checks passing",
+    "pending": "Checks running",
+    "none": "No checks"
+  },
+  "reviews": {
+    "comments_one": "{{count}} comment",
+    "comments_other": "{{count}} comments",
+    "changesRequested": "Changes requested by {{names}}",
+    "approvedBy": "Approved by {{names}}",
+    "none": "No reviews"
+  },
+  "taskPrs": {
+    "title": "Pull requests",
+    "fromGithub": "From GitHub",
+    "fromGithubChecked": "From GitHub · checked {{when}}",
+    "empty": "No PRs with {{taskKey}} in the branch or title yet."
+  }
+}
