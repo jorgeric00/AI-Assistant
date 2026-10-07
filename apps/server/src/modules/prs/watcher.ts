@@ -80,9 +80,15 @@ export class PrWatcher {
 
   constructor(
     private readonly db: Db,
-    private readonly client: GithubClient | null,
+    private client: GithubClient | null,
     private readonly notify: DesktopNotify = () => {},
   ) {}
+
+  /** Cambia el token (Ajustes > Conexiones) sin reiniciar la app. */
+  setClient(client: GithubClient | null) {
+    this.client = client;
+    this.lastError = null;
+  }
 
   private stored(): StoredStatus | null {
     return (this.db.select().from(settings).where(eq(settings.key, STATUS_KEY)).get()?.valueJson as StoredStatus | undefined) ?? null;
@@ -95,7 +101,7 @@ export class PrWatcher {
 
   /** Una consulta a GitHub. Si ya hay una en marcha, espera a esa. */
   check(): Promise<void> {
-    if (!this.client) return Promise.reject(new GithubError('GitHub no está configurado: añade GITHUB_TOKEN al fichero .env.'));
+    if (!this.client) return Promise.reject(new GithubError('GitHub no está configurado: pon el token en Ajustes > Conexiones.'));
     this.running ??= this.run(this.client).finally(() => {
       this.running = null;
     });
@@ -193,11 +199,12 @@ export class PrWatcher {
       .map(({ activityCursor: _c, lastSeenAt: _l, ...pr }) => pr);
   }
 
-  /** Comprueba al arrancar y cada 10 minutos. Sin GITHUB_TOKEN no hace nada. */
+  /** Comprueba al arrancar y cada 10 minutos. Mientras no haya token no hace nada. */
   start(log: FastifyBaseLogger) {
-    if (!this.client) return () => {};
-    const tick = () => this.check().catch((err: unknown) => log.warn(`No se pudieron consultar tus PR en GitHub: ${err instanceof Error ? err.message : String(err)}`));
-    void tick();
+    const tick = () => {
+      if (this.client) void this.check().catch((err: unknown) => log.warn(`No se pudieron consultar tus PR en GitHub: ${err instanceof Error ? err.message : String(err)}`));
+    };
+    tick();
     const timer = setInterval(tick, INTERVAL_MS);
     timer.unref();
     return () => clearInterval(timer);

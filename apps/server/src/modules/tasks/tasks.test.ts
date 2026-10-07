@@ -130,11 +130,11 @@ describe('tareas de JIRA', () => {
       user: null,
       lastCount: null,
       lastError: null,
-      writeProblem: 'JIRA no está configurado: añade JIRA_URL y JIRA_TOKEN al fichero .env.',
+      writeProblem: 'JIRA no está configurado: pon la URL y el token en Ajustes > Conexiones.',
     });
     const res = await ctx.sync();
     expect(res.statusCode).toBe(503);
-    expect(res.json().error).toContain('JIRA_URL');
+    expect(res.json().error).toContain('Ajustes > Conexiones');
     expect((await ctx.app.inject({ method: 'GET', url: '/api/tasks/ABC-404' })).statusCode).toBe(404);
   });
 });

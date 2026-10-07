@@ -4,13 +4,15 @@ import { api, queryKeys } from '../api';
 import { Card } from '../components/Card';
 import { primaryButtonClass, secondaryButtonClass } from '../components/fields';
 import { dayAndTime } from '../dates';
+import { ConnectionsCard } from './ConnectionsCard';
 
-/** Sección "Ajustes": skill de opencode, arranque automático y copias de seguridad. */
+/** Sección "Ajustes": conexiones, skill de opencode, arranque automático y copias de seguridad. */
 export function AjustesPage() {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="m-0 text-display font-semibold">Ajustes</h1>
       <div className="flex max-w-[640px] flex-col gap-4">
+        <ConnectionsCard />
         <OpencodeSkillCard />
         <AutostartCard />
         <BackupsCard />

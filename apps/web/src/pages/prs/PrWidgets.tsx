@@ -23,7 +23,11 @@ export function PrAlertsList() {
   if (status.data && !status.data.configured) {
     return (
       <EmptyState>
-        Añade <code className="font-mono text-code">GITHUB_TOKEN</code> al fichero .env y reinicia la app para ver aquí CI en rojo y comentarios nuevos.
+        Pon tu token de GitHub en{' '}
+        <a href="#/ajustes" className="text-info">
+          Ajustes &gt; Conexiones
+        </a>{' '}
+        para ver aquí CI en rojo y comentarios nuevos.
       </EmptyState>
     );
   }

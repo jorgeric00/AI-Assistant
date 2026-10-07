@@ -144,7 +144,7 @@ export class GithubClient {
       const cause = err instanceof Error ? (err.cause instanceof Error ? err.cause.message : err.message) : String(err);
       throw new GithubError(`No se pudo conectar con GitHub: ${cause}`);
     }
-    if (res.status === 401) throw new GithubError('GitHub rechazó el token (401). Revisa GITHUB_TOKEN.');
+    if (res.status === 401) throw new GithubError('GitHub rechazó el token (401). Revisa el token en Ajustes > Conexiones.');
     const data = (await res.json().catch(() => null)) as { data?: T; errors?: { message: string; type?: string }[]; message?: string } | null;
     if (!res.ok) throw new GithubError(`GitHub respondió ${res.status}${data?.message ? `: ${data.message}` : ''}`);
     const errors = data?.errors ?? [];
@@ -156,6 +156,11 @@ export class GithubClient {
       ? ['Hay PR de una organización con SSO que el token no puede ver. En GitHub: Settings > Developer settings > tokens > Configure SSO > Authorize.']
       : errors.map((e) => e.message);
     return data.data;
+  }
+
+  /** Usuario del token (para "Probar conexión"). */
+  async viewer(): Promise<string> {
+    return (await this.query<{ viewer: { login: string } }>('query { viewer { login } }')).viewer.login;
   }
 
   /** Tu usuario y tus PR abiertas (las 50 actualizadas más recientemente). */

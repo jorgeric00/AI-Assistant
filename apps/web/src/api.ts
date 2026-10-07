@@ -39,6 +39,9 @@ import type {
   AutostartStatus,
   AutostartUpdate,
   BackupStatus,
+  ConnectionsStatus,
+  ConnectionsUpdate,
+  ConnectionTestResult,
 } from '@dev-assistant/shared';
 
 async function request<T>(method: string, url: string, body?: unknown): Promise<T> {
@@ -130,6 +133,9 @@ export const api = {
   updateAutostart: (input: AutostartUpdate) => request<AutostartStatus>('PATCH', '/api/system/autostart', input),
   getBackups: () => request<BackupStatus>('GET', '/api/system/backups'),
   runBackup: () => request<BackupStatus>('POST', '/api/system/backups'),
+  getConnections: () => request<ConnectionsStatus>('GET', '/api/system/connections'),
+  updateConnections: (input: ConnectionsUpdate) => request<ConnectionsStatus>('PATCH', '/api/system/connections', input),
+  testConnection: (target: 'jira' | 'github') => request<ConnectionTestResult>('POST', '/api/system/connections/test', { target }),
 };
 
 /** Claves de consulta de React Query; invalidar `notes` refresca listas, notas y etiquetas. */
@@ -157,6 +163,7 @@ export const queryKeys = {
   opencodeSkill: ['opencode-skill'] as const,
   autostart: ['system', 'autostart'] as const,
   backups: ['system', 'backups'] as const,
+  connections: ['system', 'connections'] as const,
   /** Invalidar `prs` refresca avisos, estado y PR de las tareas. */
   prs: ['prs'] as const,
   prStatus: ['prs', 'status'] as const,

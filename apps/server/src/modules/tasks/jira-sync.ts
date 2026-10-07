@@ -24,9 +24,16 @@ export class JiraSync {
   constructor(
     private readonly db: Db,
     private readonly repo: TasksRepository,
-    private readonly client: JiraClient | null,
-    private readonly jql: string,
+    private client: JiraClient | null,
+    private jql: string,
   ) {}
+
+  /** Cambia la conexión (Ajustes > Conexiones) sin reiniciar la app. */
+  setClient(client: JiraClient | null, jql: string) {
+    this.client = client;
+    this.jql = jql;
+    this.lastError = null;
+  }
 
   private lastSync(): LastSync | null {
     return (this.db.select().from(settings).where(eq(settings.key, LAST_SYNC_KEY)).get()?.valueJson as LastSync | undefined) ?? null;
@@ -47,7 +54,7 @@ export class JiraSync {
 
   /** Trae las tareas de la JQL y completa las claves escritas en notas. Devuelve cuántas se actualizaron. */
   sync(): Promise<LastSync> {
-    if (!this.client) return Promise.reject(new JiraError('JIRA no está configurado: añade JIRA_URL y JIRA_TOKEN al fichero .env.'));
+    if (!this.client) return Promise.reject(new JiraError('JIRA no está configurado: pon la URL y el token en Ajustes > Conexiones.'));
     this.running ??= this.run(this.client).finally(() => {
       this.running = null;
     });
@@ -81,15 +88,16 @@ export class JiraSync {
     }
   }
 
-  /** Sincroniza al arrancar y cada 15 minutos. Sin JIRA configurado no hace nada. */
+  /** Sincroniza al arrancar y cada 15 minutos. Mientras JIRA no esté configurado no hace nada. */
   start(log: FastifyBaseLogger) {
-    if (!this.client) return () => {};
-    const tick = () =>
-      this.sync().then(
+    const tick = () => {
+      if (!this.client) return;
+      void this.sync().then(
         (last) => log.info(`JIRA sincronizado como ${last.user}: ${last.count} tareas`),
         (err: unknown) => log.warn(`No se pudo sincronizar JIRA: ${err instanceof Error ? err.message : String(err)}`),
       );
-    void tick();
+    };
+    tick();
     const timer = setInterval(tick, INTERVAL_MS);
     timer.unref();
     return () => clearInterval(timer);

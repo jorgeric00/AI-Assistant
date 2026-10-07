@@ -6,7 +6,7 @@ import { ZodError } from 'zod';
 import type { HealthResponse } from '@dev-assistant/shared';
 import { loadConfig } from './config.js';
 import type { Db } from './db/client.js';
-import { JiraError, type JiraClient } from './integrations/jira/client.js';
+import { JiraClient, JiraError } from './integrations/jira/client.js';
 import { LlmUnavailableError, type Llm } from './integrations/opencode/llm.js';
 import { aiRoutes } from './modules/ai/routes.js';
 import { DiaryFeed } from './modules/journal/feed.js';
@@ -26,6 +26,8 @@ import { webRoutes } from './modules/system/web.js';
 import { Autostart, REPO_ROOT } from './modules/system/autostart.js';
 import { Backups } from './modules/system/backup.js';
 import { systemRoutes } from './modules/system/routes.js';
+import { Connections } from './modules/system/connections.js';
+import { GithubClient } from './integrations/github/client.js';
 import { DevSessionService, type TerminalLauncher } from './modules/tasks/session.js';
 
 export interface BuildAppOptions {
@@ -43,6 +45,8 @@ export interface BuildAppOptions {
   autostart?: Autostart;
   /** Copias de la base de datos (Ajustes); sin ellas, Ajustes dice que no hay. */
   backups?: Backups;
+  /** Ajustes > Conexiones; por defecto, el .env de la app y process.env. */
+  connections?: Connections;
   /** Cliente REST de JIRA (estados posibles y refresco tras actualizar). */
   jiraClient?: JiraClient | null;
   /** Carpeta de trabajo (worktrees y ficheros de cada tarea). Por defecto ~/.dev-assistant. */
@@ -95,10 +99,28 @@ export async function buildApp(db: Db, opts: BuildAppOptions = {}) {
   await app.register(journalRoutes, { db, diaryFeed });
   await app.register(aiRoutes, { db, llm: opts.llm ?? noLlm, diaryFeed });
   const tasksRepo = new TasksRepository(db);
+  const jiraSync = opts.jiraSync ?? new JiraSync(db, tasksRepo, null, '');
+  const jiraUpdates = new JiraUpdateService(db, tasksRepo, opts.jiraClient ?? null, opts.llm ?? noLlm, devAssistantHome);
+  const prWatcher = opts.prWatcher ?? new PrWatcher(db, null);
+  // Lo que se cambia en Ajustes > Conexiones se aplica al momento, sin reiniciar.
+  const connections = opts.connections ?? new Connections(join(REPO_ROOT, '.env'));
+  connections.onChange((env, changed) => {
+    const cfg = loadConfig(env);
+    if (changed.jira) {
+      const jira = cfg.jira ? new JiraClient(cfg.jira) : null;
+      jiraSync.setClient(jira, cfg.jira?.jql ?? '');
+      jiraUpdates.setClient(jira);
+      if (jira) void jiraSync.sync().catch(() => {});
+    }
+    if (changed.github) {
+      prWatcher.setClient(cfg.github ? new GithubClient(cfg.github) : null);
+      if (cfg.github) void prWatcher.check().catch(() => {});
+    }
+  });
   await app.register(tasksRoutes, {
     db,
-    jiraSync: opts.jiraSync ?? new JiraSync(db, tasksRepo, null, ''),
-    jiraUpdates: new JiraUpdateService(db, tasksRepo, opts.jiraClient ?? null, opts.llm ?? noLlm, devAssistantHome),
+    jiraSync,
+    jiraUpdates,
     devAssistantHome,
     sessions: new DevSessionService(db, tasksRepo, devAssistantHome, opts.git, opts.terminalLauncher),
   });
@@ -107,9 +129,10 @@ export async function buildApp(db: Db, opts: BuildAppOptions = {}) {
       opts.autostart ??
       new Autostart(db, { platform: process.platform, appData: process.env.APPDATA, repoRoot: REPO_ROOT, logFile: join(devAssistantHome, 'logs', 'app.log') }),
     backups: opts.backups ?? new Backups(null, join(devAssistantHome, 'copias')),
+    connections,
   });
   await app.register(webRoutes, { dist: opts.webDist });
-  await app.register(prsRoutes, { prWatcher: opts.prWatcher ?? new PrWatcher(db, null) });
+  await app.register(prsRoutes, { prWatcher });
   await app.register(reposRoutes, { db, llm: opts.llm ?? noLlm, git: opts.git });
   await app.register(opencodeSkillRoutes, { skillsDir: opts.opencodeSkillsDir ?? config.opencodeSkillsDir });
   return app;

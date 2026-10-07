@@ -93,12 +93,12 @@ describe('avisos de tus PR', () => {
     expect(prs).toEqual([expect.objectContaining({ number: 212, state: 'merged', checks: 'success', approvedBy: ['maria'], changesRequestedBy: [] })]);
   });
 
-  it('sin GITHUB_TOKEN lo explica', async () => {
+  it('sin token de GitHub lo explica', async () => {
     const app = await buildApp(openDatabase(':memory:').db);
     expect((await app.inject({ method: 'GET', url: '/api/prs/status' })).json()).toMatchObject({ configured: false });
     const res = await app.inject({ method: 'POST', url: '/api/prs/check' });
     expect(res.statusCode).toBe(503);
-    expect(res.json().error).toContain('GITHUB_TOKEN');
+    expect(res.json().error).toContain('Ajustes > Conexiones');
     await app.close();
   });
 });

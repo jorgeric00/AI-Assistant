@@ -561,6 +561,52 @@ export interface AutostartStatus {
 export const AutostartUpdate = z.object({ enabled: z.boolean().optional(), openBrowser: z.boolean().optional() });
 export type AutostartUpdate = z.infer<typeof AutostartUpdate>;
 
+// ── Ajustes: conexiones (URL y tokens de JIRA y GitHub, guardados en el .env de la app) ──
+
+/** Un token guardado no se devuelve nunca: solo si está y sus 4 últimos caracteres. */
+export interface SecretState {
+  set: boolean;
+  hint: string | null;
+}
+
+export interface ConnectionsStatus {
+  jiraUrl: string | null;
+  jiraToken: SecretState;
+  jiraMcpToken: SecretState;
+  githubToken: SecretState;
+  /** Fichero donde se guardan. */
+  envFile: string;
+}
+
+const secretInput = z.string().trim().min(1, 'Escribe el token.').max(4096).regex(/^[^\r\n]*$/, 'El token no puede tener saltos de línea.').nullable().optional();
+
+/** Cada campo: texto para guardarlo, null para borrarlo, sin él no se toca. */
+export const ConnectionsUpdate = z.object({
+  jiraUrl: z
+    .string()
+    .trim()
+    .url('La URL de JIRA no es válida.')
+    .regex(/^https?:\/\//, 'La URL de JIRA debe empezar por http:// o https://.')
+    .transform((u) => u.replace(/\/+$/, ''))
+    .nullable()
+    .optional(),
+  jiraToken: secretInput,
+  jiraMcpToken: secretInput,
+  githubToken: secretInput,
+});
+export type ConnectionsUpdate = z.infer<typeof ConnectionsUpdate>;
+
+export const CONNECTION_TARGETS = ['jira', 'github'] as const;
+export const ConnectionTestInput = z.object({ target: z.enum(CONNECTION_TARGETS) });
+export type ConnectionTestInput = z.infer<typeof ConnectionTestInput>;
+
+export interface ConnectionTestResult {
+  ok: boolean;
+  /** Usuario con el que entra el token, si funciona. */
+  user: string | null;
+  error: string | null;
+}
+
 export interface BackupStatus {
   supported: boolean;
   dir: string;

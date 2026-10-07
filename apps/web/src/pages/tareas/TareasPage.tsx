@@ -101,12 +101,13 @@ function NotConfigured() {
         Conecta JIRA
       </h2>
       <p className="m-0 text-ink-muted">
-        Añade al fichero <code className="font-mono text-code">.env</code> de la app la URL de JIRA y tu token personal, y reinicia la app:
+        Pon la URL de JIRA y tu token personal en{' '}
+        <a href="#/ajustes" className="text-info">
+          Ajustes &gt; Conexiones
+        </a>
+        . Las tareas se cargan al momento, sin reiniciar la app.
       </p>
-      <pre className="m-0 overflow-x-auto rounded-md bg-bg p-3 font-mono text-code text-ink">
-        {'JIRA_URL=https://jira.tuempresa.com\nJIRA_TOKEN=tu-token-personal'}
-      </pre>
-      <p className="m-0 text-small text-ink-faint">En JIRA Cloud (*.atlassian.net) añade también JIRA_EMAIL con tu email.</p>
+      <p className="m-0 text-small text-ink-faint">En JIRA Cloud (*.atlassian.net) añade también JIRA_EMAIL con tu email al fichero .env.</p>
     </section>
   );
 }

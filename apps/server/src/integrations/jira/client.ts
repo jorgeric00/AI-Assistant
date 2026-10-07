@@ -113,7 +113,7 @@ export class JiraClient {
         `JIRA redirige a una página de inicio de sesión${host}: desde esta red la API no acepta el token. Prueba desde la red de la empresa o con la VPN.`,
       );
     }
-    if (res.status === 401) throw new JiraError('JIRA rechazó las credenciales (401). Revisa JIRA_TOKEN (y JIRA_EMAIL si es JIRA Cloud).');
+    if (res.status === 401) throw new JiraError('JIRA rechazó las credenciales (401). Revisa el token en Ajustes > Conexiones (y JIRA_EMAIL en .env si es JIRA Cloud).');
     if (res.status === 403) throw new JiraError('JIRA no da permiso a este token (403).');
     if (res.status === 404) return { status: 404, body: null };
     if (!res.ok) {
@@ -171,7 +171,7 @@ export class JiraClient {
   private required<T>({ body }: { body: T | null }): T {
     if (!body) {
       throw new JiraError(
-        `JIRA no encontró la API en ${this.baseUrl}/rest/api. Revisa JIRA_URL: debe ser la parte de la dirección de una tarea anterior a /browse/.`,
+        `JIRA no encontró la API en ${this.baseUrl}/rest/api. Revisa la URL de JIRA en Ajustes > Conexiones: debe ser la parte de la dirección de una tarea anterior a /browse/.`,
       );
     }
     return body;

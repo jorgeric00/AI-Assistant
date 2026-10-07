@@ -84,12 +84,12 @@ describe('cliente de JIRA', () => {
     const notFound = new JiraClient({ baseUrl: 'https://j', token: 't' }, fakeFetch(() => ({ status: 404 })).impl);
     expect(await notFound.getIssue('ABC-9')).toBeNull();
     // En cambio, un 404 en la búsqueda o en /myself es que JIRA_URL no apunta a JIRA.
-    await expect(notFound.search('x')).rejects.toThrow(/Revisa JIRA_URL/);
-    await expect(notFound.myself()).rejects.toThrow(/Revisa JIRA_URL/);
+    await expect(notFound.search('x')).rejects.toThrow(/Revisa la URL de JIRA/);
+    await expect(notFound.myself()).rejects.toThrow(/Revisa la URL de JIRA/);
 
     const denied = new JiraClient({ baseUrl: 'https://j', token: 't' }, fakeFetch(() => ({ status: 401 })).impl);
     await expect(denied.search('x')).rejects.toThrow(JiraError);
-    await expect(denied.search('x')).rejects.toThrow(/JIRA_TOKEN/);
+    await expect(denied.search('x')).rejects.toThrow(/Ajustes > Conexiones/);
   });
 
   it('un login corporativo delante de JIRA da un mensaje claro', async () => {

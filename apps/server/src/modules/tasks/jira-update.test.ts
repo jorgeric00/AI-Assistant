@@ -121,7 +121,7 @@ describe('Actualizar JIRA', () => {
 
   it('sin JIRA configurado no envía nada y explica por qué', async () => {
     ctx = await setup({ configured: false });
-    expect((await ctx.inject<JiraSyncStatus>('GET', '/api/jira/status')).body.writeProblem).toContain('JIRA_TOKEN');
+    expect((await ctx.inject<JiraSyncStatus>('GET', '/api/jira/status')).body.writeProblem).toContain('Ajustes > Conexiones');
     const res = await ctx.inject<{ error: string }>('POST', '/api/tasks/ABC-1/jira-update', { comment: 'Hola' });
     expect(res.status).toBe(503);
     expect(res.body.error).toContain('JIRA no está configurado');

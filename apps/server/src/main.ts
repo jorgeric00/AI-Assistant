@@ -30,10 +30,10 @@ await app.listen({ host: config.host, port: config.port });
 // Recordatorios: aviso en la app y notificación del sistema (Teams queda pospuesto).
 startReminderScheduler(new RemindersRepository(db), desktopNotifier, app.log);
 
-// Tareas de JIRA: al arrancar y cada 15 minutos (si JIRA está configurado en .env).
+// Tareas de JIRA: al arrancar y cada 15 minutos (si JIRA está configurado en Ajustes > Conexiones o en .env).
 jiraSync.start(app.log);
 
-// Avisos de tus PR: al arrancar y cada 10 minutos (si GITHUB_TOKEN está en .env).
+// Avisos de tus PR: al arrancar y cada 10 minutos (si hay token de GitHub).
 prWatcher.start(app.log);
 
 // Copia de la base de datos: una al día en ~/.dev-assistant/copias (se guardan 7).

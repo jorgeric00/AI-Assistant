@@ -66,13 +66,18 @@ export class JiraUpdateService {
   constructor(
     private readonly db: Db,
     private readonly repo: TasksRepository,
-    private readonly client: JiraClient | null,
+    private client: JiraClient | null,
     private readonly llm: Llm,
     private readonly devAssistantHome: string,
   ) {}
 
+  /** Cambia la conexión (Ajustes > Conexiones) sin reiniciar la app. */
+  setClient(client: JiraClient | null) {
+    this.client = client;
+  }
+
   writerStatus(): { writeProblem: string | null } {
-    return { writeProblem: this.client ? null : 'JIRA no está configurado: añade JIRA_URL y JIRA_TOKEN al fichero .env.' };
+    return { writeProblem: this.client ? null : 'JIRA no está configurado: pon la URL y el token en Ajustes > Conexiones.' };
   }
 
   private taskRow(key: string) {
@@ -82,7 +87,7 @@ export class JiraUpdateService {
   }
 
   private requireClient(): JiraClient {
-    if (!this.client) throw new JiraError('JIRA no está configurado: añade JIRA_URL y JIRA_TOKEN al fichero .env.');
+    if (!this.client) throw new JiraError('JIRA no está configurado: pon la URL y el token en Ajustes > Conexiones.');
     return this.client;
   }
 
