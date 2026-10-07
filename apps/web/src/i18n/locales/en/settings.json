@@ -1,0 +1,41 @@
+{
+  "page": {
+    "title": "Settings"
+  },
+  "language": {
+    "title": "Language",
+    "description": "Language for the interface, messages and AI-written text."
+  },
+  "skill": {
+    "title": "opencode skill",
+    "description": "Teaches opencode to work on tasks the same way every time: it writes the plan in <code>PLAN.md</code>, logs every commit in <code>HISTORIAL.md</code> and never pushes, opens a PR or changes JIRA without your confirmation. That way each task's details page shows the phase and the changes.",
+    "upToDate": "Installed and up to date",
+    "newVersion": "A new version is available.",
+    "notInstalled": "Not installed.",
+    "installing": "Installing…",
+    "update": "Update",
+    "install": "Install",
+    "installedAt": "Installed in {{path}}"
+  },
+  "autostart": {
+    "title": "Startup",
+    "description": "The app opens at <code>http://127.0.0.1:4321</code>. To start it manually, run <code>npx pnpm@10.28.0 start</code> in the app folder.",
+    "windowsOnly": "Automatic startup is only available on Windows.",
+    "enabled": "Start AI-Assistant when signing in to Windows",
+    "enabledHint": "No window: it keeps running in the background.",
+    "openBrowser": "Open the app in the browser on startup",
+    "openBrowserHint": "Only when it starts automatically at sign-in.",
+    "logFile": "If it doesn't start, check the log at {{file}}"
+  },
+  "backups": {
+    "title": "Backups",
+    "description": "A copy of the database is saved every day. The 7 most recent are kept.",
+    "lastLabel": "Last backup:",
+    "copies_one": "{{count}} backup",
+    "copies_other": "{{count}} backups",
+    "none": "No backups yet.",
+    "copying": "Backing up…",
+    "runNow": "Back up now",
+    "savedIn": "Saved in {{dir}}"
+  }
+}

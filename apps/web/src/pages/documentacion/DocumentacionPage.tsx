@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { TaskDoc } from '@dev-assistant/shared';
 import { Plus, Search } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api, queryKeys } from '../../api';
 import { Markdown } from '../../components/Markdown';
 import { primaryButtonClass, secondaryButtonClass } from '../../components/fields';
@@ -35,23 +36,24 @@ export function DocumentacionPage({ params }: { params: string[] }) {
 }
 
 function Layout({ tab, children }: { tab: 'tareas' | 'propia'; children: ReactNode }) {
+  const { t } = useTranslation(['notes', 'common']);
   const tabClass = (active: boolean) =>
     `h-9 border-b-2 px-3 ${active ? 'border-accent font-medium text-ink' : 'border-transparent text-ink-muted hover:text-ink'}`;
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="m-0 text-display font-semibold">Documentación</h1>
+        <h1 className="m-0 text-display font-semibold">{t('docs.title')}</h1>
         <button type="button" onClick={() => navigate('documentacion/propia/nuevo')} className={primaryButtonClass}>
           <Plus size={16} strokeWidth={2} aria-hidden />
-          Nuevo documento
+          {t('docs.newDoc')}
         </button>
       </header>
-      <div role="tablist" aria-label="Tipo de documentación" className="-mt-2 flex gap-1 border-b border-line">
+      <div role="tablist" aria-label={t('docs.tabsLabel')} className="-mt-2 flex gap-1 border-b border-line">
         <button type="button" role="tab" aria-selected={tab === 'tareas'} onClick={() => navigate('documentacion')} className={tabClass(tab === 'tareas')}>
-          De tareas
+          {t('docs.tabTasks')}
         </button>
         <button type="button" role="tab" aria-selected={tab === 'propia'} onClick={() => navigate('documentacion/propia')} className={tabClass(tab === 'propia')}>
-          Propia
+          {t('docs.tabOwn')}
         </button>
       </div>
       <div role="tabpanel">{children}</div>
@@ -69,6 +71,7 @@ function useDebounced<T>(value: T, ms: number): T {
 }
 
 function TaskDocsBrowser({ selectedKey }: { selectedKey?: string }) {
+  const { t } = useTranslation(['notes', 'common']);
   const [search, setSearch] = useState('');
   const q = useDebounced(search.trim(), 200);
   const docs = useQuery({ queryKey: queryKeys.taskDocs(q), queryFn: () => api.listTaskDocs(q || undefined), placeholderData: (prev) => prev });
@@ -77,10 +80,10 @@ function TaskDocsBrowser({ selectedKey }: { selectedKey?: string }) {
 
   return (
     <div className="flex flex-wrap items-start gap-4">
-      <section aria-label="Documentos de tareas" className="flex max-w-full min-w-0 flex-[1_1_340px] flex-col gap-3">
+      <section aria-label={t('docs.taskDocs')} className="flex max-w-full min-w-0 flex-[1_1_340px] flex-col gap-3">
         <div role="search" className="relative">
           <label htmlFor="buscar-doc" className="sr-only">
-            Buscar en la documentación
+            {t('docs.search')}
           </label>
           <Search size={16} strokeWidth={1.5} className="absolute top-3 left-3 text-ink-faint" aria-hidden />
           <input
@@ -88,18 +91,18 @@ function TaskDocsBrowser({ selectedKey }: { selectedKey?: string }) {
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar en la documentación"
+            placeholder={t('docs.search')}
             className="h-10 w-full rounded-md border border-line-strong bg-surface-raised pr-3 pl-9 text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none"
           />
         </div>
-        <p className="m-0 text-small text-ink-faint">Los escribe opencode al cerrar cada tarea.</p>
+        <p className="m-0 text-small text-ink-faint">{t('docs.hint')}</p>
         {docs.isError ? (
-          <p className="m-0 text-danger">No se pudo leer la documentación de las tareas.</p>
+          <p className="m-0 text-danger">{t('docs.loadError')}</p>
         ) : docs.isPending ? (
-          <p className="m-0 text-ink-muted">Cargando…</p>
+          <p className="m-0 text-ink-muted">{t('common:status.loading')}</p>
         ) : list.length === 0 ? (
           <p className="m-0 py-2 text-ink-muted">
-            {q ? 'No hay documentos que coincidan.' : 'Aún no hay ninguno. opencode escribe el resumen de cada tarea al terminarla (skill dev-assistant-tarea).'}
+            {q ? t('docs.noMatches') : t('docs.empty')}
           </p>
         ) : (
           <ul className="flex flex-col gap-1">
@@ -117,7 +120,8 @@ function TaskDocsBrowser({ selectedKey }: { selectedKey?: string }) {
 }
 
 function TaskDocItem({ doc, active }: { doc: TaskDoc; active: boolean }) {
-  const meta = [...doc.repos, doc.prCount ? `${doc.prCount} PR` : ''].filter(Boolean);
+  const { t } = useTranslation(['notes', 'common']);
+  const meta = [...doc.repos, doc.prCount ? t('docs.prCount', { count: doc.prCount }) : ''].filter(Boolean);
   return (
     <a
       href={`#/documentacion/tareas/${doc.key}`}
@@ -142,9 +146,10 @@ function withoutTitle(markdown: string) {
 }
 
 function TaskDocView({ taskKey }: { taskKey: string }) {
+  const { t } = useTranslation(['notes', 'common']);
   const doc = useQuery({ queryKey: queryKeys.taskDoc(taskKey), queryFn: () => api.getTaskDoc(taskKey), retry: false });
   if (!doc.data) {
-    return <p className="flex-[999_1_420px] text-ink-muted">{doc.isError ? doc.error.message : 'Cargando…'}</p>;
+    return <p className="flex-[999_1_420px] text-ink-muted">{doc.isError ? doc.error.message : t('common:status.loading')}</p>;
   }
   const d = doc.data;
   return (
@@ -155,10 +160,10 @@ function TaskDocView({ taskKey }: { taskKey: string }) {
             <code className="mr-2 font-mono font-normal text-info">{d.key}</code>
             {d.title}
           </h2>
-          <span className="text-small text-ink-muted">Actualizado {dayAndTime(d.updatedAt)} · RESUMEN.md de opencode</span>
+          <span className="text-small text-ink-muted">{t('docs.updated', { when: dayAndTime(d.updatedAt) })}</span>
         </div>
         <a href={`#/tareas/${d.key}/detalle`} className={`${secondaryButtonClass} no-underline`}>
-          Ver la tarea
+          {t('docs.viewTask')}
         </a>
       </div>
       <Markdown>{withoutTitle(d.markdown)}</Markdown>

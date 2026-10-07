@@ -3,6 +3,7 @@ import type { Repo, RepoDetail, RepoProfile, RepoProfileInput, RepoProfileStatus
 import { RepoInput, RepoUpdate } from '@dev-assistant/shared';
 import type { Db } from '../../db/client.js';
 import { repoProfiles, repos } from '../../db/schema.js';
+import { t } from '../../i18n/index.js';
 
 type RepoRow = typeof repos.$inferSelect;
 type ProfileRow = typeof repoProfiles.$inferSelect;
@@ -62,7 +63,7 @@ export class ReposRepository {
 
   create(input: RepoInput): number {
     const data = RepoInput.parse(input);
-    if (this.nameTaken(data.name)) throw new RepoConflictError(`Ya hay un repositorio llamado ${data.name}.`);
+    if (this.nameTaken(data.name)) throw new RepoConflictError(t('repos.nameTaken', { name: data.name }));
     const row = this.db
       .insert(repos)
       .values({ name: data.name, localPath: data.localPath, ...splitGithub(data.github), defaultBranch: data.defaultBranch, jiraProjectKeys: data.jiraProjectKeys })
@@ -75,7 +76,7 @@ export class ReposRepository {
   update(id: number, input: RepoUpdate): boolean {
     const data = RepoUpdate.parse(input);
     if (!this.db.select({ id: repos.id }).from(repos).where(eq(repos.id, id)).get()) return false;
-    if (data.name !== undefined && this.nameTaken(data.name, id)) throw new RepoConflictError(`Ya hay un repositorio llamado ${data.name}.`);
+    if (data.name !== undefined && this.nameTaken(data.name, id)) throw new RepoConflictError(t('repos.nameTaken', { name: data.name }));
     this.db.transaction((tx) => {
       const { profile, github, ...rest } = data;
       const values = { ...rest, ...(github !== undefined ? splitGithub(github) : {}) };
@@ -98,7 +99,7 @@ export class ReposRepository {
       return !!this.db.delete(repos).where(eq(repos.id, id)).returning({ id: repos.id }).get();
     } catch (err) {
       if (err instanceof Error && /FOREIGN KEY/i.test(err.message)) {
-        throw new RepoConflictError('Este repositorio se usa en sesiones de desarrollo y no se puede quitar.');
+        throw new RepoConflictError(t('repos.inUse'));
       }
       throw err;
     }

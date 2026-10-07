@@ -2,9 +2,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { DailySummary } from '@dev-assistant/shared';
 import { Check, Copy } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api, queryKeys } from '../../api';
 import { Markdown } from '../../components/Markdown';
 import { dayAndTime, longDay, parseLocalDate } from '../../dates';
+import i18n from '../../i18n';
 
 /** Resumen guardado del día y la acción de generarlo (la usan el panel y el botón de la cabecera). */
 export function useDailySummary(date: string) {
@@ -20,7 +22,14 @@ export function useDailySummary(date: string) {
   return { summary, generate };
 }
 
+/** "lunes 6 de octubre" en minúscula a mitad de frase; en inglés los días van con mayúscula. */
+function sinceLabel(since: string): string {
+  const day = longDay(parseLocalDate(since));
+  return i18n.language === 'en' ? day : day.toLowerCase();
+}
+
 export function DailySummaryPanel({ date, state }: { date: string; state: ReturnType<typeof useDailySummary> }) {
+  const { t } = useTranslation(['diary', 'common']);
   const { summary, generate } = state;
   const [copied, setCopied] = useState(false);
   const data = summary.data;
@@ -45,7 +54,7 @@ export function DailySummaryPanel({ date, state }: { date: string; state: Return
     >
       <div className="flex items-center justify-between gap-3">
         <h2 id="h-resumen" className="m-0 text-heading font-semibold">
-          Resumen para la daily
+          {t('summary.title')}
         </h2>
         {data && !generate.isPending && (
           <button
@@ -54,30 +63,29 @@ export function DailySummaryPanel({ date, state }: { date: string; state: Return
             className="flex h-8 items-center gap-1.5 rounded-md border border-line-strong px-2.5 text-[13px] text-ink hover:bg-surface-raised"
           >
             {copied ? <Check size={14} className="text-success" aria-hidden /> : <Copy size={14} aria-hidden />}
-            {copied ? 'Copiado' : 'Copiar'}
+            {copied ? t('summary.copied') : t('common:actions.copy')}
           </button>
         )}
       </div>
 
       {generate.isPending ? (
         <p role="status" className="m-0 text-ink-muted">
-          Preparando el resumen con opencode…
+          {t('summary.preparing')}
         </p>
       ) : data ? (
         <>
           <Markdown>{data.contentMd}</Markdown>
           <p className="m-0 text-small text-ink-faint">
-            Con lo apuntado desde el {longDay(parseLocalDate(data.since)).toLowerCase()}. Generado {dayAndTime(data.generatedAt)} ·{' '}
+            {t('summary.footer', { since: sinceLabel(data.since), generated: dayAndTime(data.generatedAt) })}{' '}
             <button type="button" onClick={() => generate.mutate()} className="text-info hover:underline">
-              Volver a generar
+              {t('summary.regenerate')}
             </button>
           </p>
         </>
       ) : (
         summary.isSuccess && (
           <p className="m-0 text-ink-muted">
-            Con el botón "Resumen para la daily", opencode prepara ayer, hoy y bloqueos con las entradas desde el último día laborable y los recordatorios del
-            día. No se envía a ningún sitio: lo copias tú.
+            {t('summary.intro')}
           </p>
         )
       )}
@@ -87,7 +95,7 @@ export function DailySummaryPanel({ date, state }: { date: string; state: Return
           {generate.error.message}
         </p>
       )}
-      {summary.isError && <p className="m-0 text-danger">No se pudo cargar el resumen guardado.</p>}
+      {summary.isError && <p className="m-0 text-danger">{t('summary.loadError')}</p>}
     </aside>
   );
 }

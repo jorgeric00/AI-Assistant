@@ -7,6 +7,7 @@ import type { Db } from '../../db/client.js';
 import { changelog, journalEntries, notes, noteTasks, tasks } from '../../db/schema.js';
 import { JiraError, type JiraClient } from '../../integrations/jira/client.js';
 import type { Llm } from '../../integrations/opencode/llm.js';
+import { t } from '../../i18n/index.js';
 import { readTaskDevInfo } from './dev-files.js';
 import type { TasksRepository } from './repository.js';
 
@@ -45,9 +46,9 @@ export function jiraUpdatesOf(db: Db, taskId: number): JiraUpdateEntry[] {
   return [...bySend.values()];
 }
 
-const DRAFT_SYSTEM = `Eres el asistente personal de un desarrollador. Redactas el comentario que va a publicar en una tarea de JIRA para contar cómo va.
+const draftSystem = () => `Eres el asistente personal de un desarrollador. Redactas el comentario que va a publicar en una tarea de JIRA para contar cómo va.
 Reglas:
-- Responde solo con el texto del comentario, en español, sin saludo ni despedida y sin nada antes ni después.
+- ${t('ai.answerLanguage')} Responde solo con el texto del comentario, sin saludo ni despedida y sin nada antes ni después.
 - Usa solo la información que te doy. No inventes avances, PR ni fechas.
 - Texto plano, sin Markdown (nada de #, ** ni bloques de código). Si haces una lista, empieza cada línea con "- ".
 - Estructura sugerida: "Hecho:" con lo terminado, y si aplica "Pendiente:" o "Bloqueos:". Omite lo que no tenga contenido.
@@ -72,17 +73,17 @@ export class JiraUpdateService {
   ) {}
 
   writerStatus(): { writeProblem: string | null } {
-    return { writeProblem: this.client ? null : 'JIRA no está configurado: añade JIRA_URL y JIRA_TOKEN al fichero .env.' };
+    return { writeProblem: this.client ? null : t('jira.notConfigured') };
   }
 
   private taskRow(key: string) {
     const row = this.db.select().from(tasks).where(eq(tasks.jiraKey, key)).get();
-    if (!row) throw new JiraUpdateInputError(`La tarea ${key} no está en la app.`);
+    if (!row) throw new JiraUpdateInputError(t('jira.taskNotInApp', { key }));
     return row;
   }
 
   private requireClient(): JiraClient {
-    if (!this.client) throw new JiraError('JIRA no está configurado: añade JIRA_URL y JIRA_TOKEN al fichero .env.');
+    if (!this.client) throw new JiraError(t('jira.notConfigured'));
     return this.client;
   }
 
@@ -99,7 +100,7 @@ export class JiraUpdateService {
     let target: JiraTransitionOption | undefined;
     if (input.transitionId) {
       target = (await client.transitions(key)).find((t) => t.id === input.transitionId);
-      if (!target) throw new JiraError(`JIRA ya no permite ese cambio de estado desde "${task.status}". Cierra el diálogo y vuelve a abrirlo.`);
+      if (!target) throw new JiraError(t('jira.transitionGone', { status: task.status }));
     }
 
     const sendId = randomUUID();
@@ -109,7 +110,7 @@ export class JiraUpdateService {
       await client.addComment(key, input.comment);
       this.db
         .insert(changelog)
-        .values({ taskId: task.id, kind: 'jira_comment', title: 'Comentario en JIRA', payloadJson: { sendId, comment: input.comment } satisfies CommentPayload })
+        .values({ taskId: task.id, kind: 'jira_comment', title: t('jira.changelog.comment'), payloadJson: { sendId, comment: input.comment } satisfies CommentPayload })
         .run();
       entry.comment = input.comment;
     }
@@ -119,7 +120,7 @@ export class JiraUpdateService {
         await client.transition(key, target.id);
       } catch (err) {
         if (!entry.comment) throw err;
-        throw new JiraError(`Se añadió el comentario, pero no se pudo cambiar el estado: ${err instanceof Error ? err.message : String(err)}`);
+        throw new JiraError(t('jira.commentAddedTransitionFailed', { message: err instanceof Error ? err.message : String(err) }));
       }
       const transition = { from: task.status, to: target.to };
       this.db
@@ -127,7 +128,7 @@ export class JiraUpdateService {
         .values({
           taskId: task.id,
           kind: 'jira_transition',
-          title: `Estado ${transition.from} → ${transition.to}`,
+          title: t('jira.changelog.transition', transition),
           payloadJson: { sendId, ...transition, transitionId: target.id } satisfies TransitionPayload,
         })
         .run();
@@ -173,14 +174,10 @@ export class JiraUpdateService {
       .reverse();
 
     if (since && !linked.length && !journal.length && !history.length) {
-      throw new JiraUpdateInputError(
-        `No hay notas, entradas del diario ni commits nuevos de ${key} desde el último envío a JIRA. Escribe el comentario tú o apunta antes qué has hecho.`,
-      );
+      throw new JiraUpdateInputError(t('jira.draft.nothingNew', { key }));
     }
     if (!linked.length && !journal.length && !dev.plan && !history.length) {
-      throw new JiraUpdateInputError(
-        `No hay notas, entradas del diario ni cambios de opencode de ${key} con los que redactar el comentario. Escríbelo tú o apunta antes qué has hecho.`,
-      );
+      throw new JiraUpdateInputError(t('jira.draft.nothing', { key }));
     }
 
     const last = sends.find((u) => u.comment);
@@ -202,7 +199,7 @@ export class JiraUpdateService {
     if (history.length) parts.push(`\nCommits (histórico de opencode):\n${history.map((h) => `- ${h.date} ${h.repo}@${h.sha}${h.url ? ` ${h.url}` : ''}: ${h.text}`).join('\n')}`);
     if (last) parts.push(`\nÚltimo comentario enviado (${last.at.slice(0, 10)}):\n${clip(last.comment!, 2000)}`);
 
-    const comment = await this.llm.complete({ system: DRAFT_SYSTEM, user: parts.join('\n'), title: `Comentario JIRA ${key}` });
+    const comment = await this.llm.complete({ system: draftSystem(), user: parts.join('\n'), title: `Comentario JIRA ${key}` });
     return { comment: comment.trim(), since };
   }
 }

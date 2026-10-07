@@ -1,5 +1,15 @@
-const dayMonth = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'short' });
-const time = new Intl.DateTimeFormat('es-ES', { hour: '2-digit', minute: '2-digit' });
+import i18n, { locale } from './i18n';
+
+const formatters = new Map<string, Intl.DateTimeFormat>();
+/** Formateador de Intl en el idioma actual de la app (se crea una vez por idioma y formato). */
+function fmt(name: string, options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  const key = `${locale()}|${name}`;
+  let f = formatters.get(key);
+  if (!f) formatters.set(key, (f = new Intl.DateTimeFormat(locale(), options)));
+  return f;
+}
+const dayMonth = { format: (d: Date) => fmt('dayMonth', { day: 'numeric', month: 'short' }).format(d) };
+const time = { format: (d: Date) => fmt('time', { hour: '2-digit', minute: '2-digit' }).format(d) };
 
 function dayDiff(date: Date, now: Date): number {
   const a = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -11,21 +21,22 @@ function dayDiff(date: Date, now: Date): number {
 export function shortDay(iso: string, now = new Date()): string {
   const date = new Date(iso);
   const diff = dayDiff(date, now);
-  if (diff === 0) return 'Hoy';
-  if (diff === 1) return 'Ayer';
+  if (diff === 0) return i18n.t('dates.today');
+  if (diff === 1) return i18n.t('dates.yesterday');
   return dayMonth.format(date).replace('.', '');
 }
 
-/** "hoy a las 10:05", "ayer a las 18:30" o "el 2 oct a las 09:00". */
+/** "hoy a las 10:05", "ayer a las 18:30" o "el 2 oct a las 09:00" (en inglés, "today at 10:05"...). */
 export function dayAndTime(iso: string, now = new Date()): string {
   const date = new Date(iso);
   const diff = dayDiff(date, now);
-  const day = diff === 0 ? 'hoy' : diff === 1 ? 'ayer' : `el ${dayMonth.format(date).replace('.', '')}`;
-  return `${day} a las ${time.format(date)}`;
+  const day =
+    diff === 0 ? i18n.t('dates.todayLower') : diff === 1 ? i18n.t('dates.yesterdayLower') : i18n.t('dates.onDay', { day: dayMonth.format(date).replace('.', '') });
+  return i18n.t('dates.dayAtTime', { day, time: time.format(date) });
 }
 
-const weekdayDay = new Intl.DateTimeFormat('es-ES', { weekday: 'short', day: 'numeric' });
-const longDate = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+const weekdayDay = { format: (d: Date) => fmt('weekdayDay', { weekday: 'short', day: 'numeric' }).format(d) };
+const longDate = { format: (d: Date) => fmt('longDate', { weekday: 'long', day: 'numeric', month: 'long' }).format(d) };
 
 /** "10:05". */
 export function hhmm(iso: string | Date): string {
@@ -76,8 +87,8 @@ export function daysAgo(iso: string, now = new Date()): number {
 /** "hace un momento", "hace 3 min", "hace 2 h" o "el 2 oct a las 09:00". */
 export function timeAgo(iso: string, now = new Date()): string {
   const minutes = Math.floor((now.getTime() - new Date(iso).getTime()) / 60_000);
-  if (minutes < 1) return 'hace un momento';
-  if (minutes < 60) return `hace ${minutes} min`;
-  if (minutes < 12 * 60) return `hace ${Math.floor(minutes / 60)} h`;
+  if (minutes < 1) return i18n.t('dates.justNow');
+  if (minutes < 60) return i18n.t('dates.minutesAgo', { count: minutes });
+  if (minutes < 12 * 60) return i18n.t('dates.hoursAgo', { count: Math.floor(minutes / 60) });
   return dayAndTime(iso, now);
 }

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { HealthResponse } from '@dev-assistant/shared';
 import { CircleCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { QuickCapture, type Saved } from './components/QuickCapture';
 import { ReminderAlerts } from './components/ReminderAlerts';
 import { Sidebar } from './components/Sidebar';
@@ -15,7 +16,8 @@ import { RecordatoriosPage } from './pages/recordatorios/RecordatoriosPage';
 import { AjustesPage } from './pages/AjustesPage';
 import { RepositoriosPage } from './pages/repositorios/RepositoriosPage';
 import { TareasPage } from './pages/tareas/TareasPage';
-import { SECTIONS, routeFromHash, type Route } from './sections';
+import { routeFromHash, type Route } from './sections';
+import { useLanguage } from './i18n/useLanguage';
 
 function useHashRoute(): Route {
   const [route, setRoute] = useState(() => routeFromHash(window.location.hash));
@@ -28,6 +30,8 @@ function useHashRoute(): Route {
 }
 
 export function App() {
+  useLanguage();
+  const { t } = useTranslation('common');
   const { section, params } = useHashRoute();
   const [captureOpen, setCaptureOpen] = useState(false);
   const [saved, setSaved] = useState<Saved | null>(null);
@@ -58,7 +62,7 @@ export function App() {
     return () => clearTimeout(t);
   }, [saved]);
 
-  const current = SECTIONS.find((s) => s.id === section)!;
+  const sectionTitle = t(`sections.${section}`);
 
   return (
     <div className="flex min-h-screen flex-wrap">
@@ -84,7 +88,7 @@ export function App() {
           ) : section === 'ajustes' ? (
             <AjustesPage />
           ) : (
-            <PendingPage title={current.label} />
+            <PendingPage title={sectionTitle} />
           )}
         </div>
       </main>
@@ -106,7 +110,7 @@ export function App() {
           <CircleCheck size={16} className="text-success" aria-hidden />
           <span>{saved.message}</span>
           <a href={saved.href} onClick={() => setSaved(null)} className="text-info">
-            Ver
+            {t('app.view')}
           </a>
         </div>
       )}

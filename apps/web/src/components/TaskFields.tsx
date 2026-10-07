@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import type { CommitRef } from '@dev-assistant/shared';
+import { useTranslation } from 'react-i18next';
 import { api, queryKeys } from '../api';
 import { TASK_KEY_RE, inputClass } from './fields';
 
@@ -24,6 +25,7 @@ export function TaskOptions({ id }: { id: string }) {
  * Sin tarea válida no hay commits que elegir.
  */
 export function CommitSelect({ id, taskKey, value, onChange }: { id: string; taskKey: string | null; value: CommitRef | null; onChange: (commit: CommitRef | null) => void }) {
+  const { t } = useTranslation('common');
   const key = taskKey && TASK_KEY_RE.test(taskKey) ? taskKey : null;
   const dev = useQuery({ queryKey: queryKeys.taskDev(key ?? ''), queryFn: () => api.getTaskDev(key!), enabled: !!key });
   const options: CommitRef[] = (dev.data?.history ?? []).map((h) => ({ repo: h.repo, sha: h.sha, url: h.url, text: h.text }));
@@ -37,7 +39,7 @@ export function CommitSelect({ id, taskKey, value, onChange }: { id: string; tas
       onChange={(e) => onChange(options.find((o) => commitId(o) === e.target.value) ?? null)}
       className={`${inputClass} min-w-0 disabled:text-ink-faint`}
     >
-      <option value="">{!key ? 'Elige antes una tarea' : dev.isPending ? 'Cargando…' : options.length ? 'Sin commit' : 'La tarea aún no tiene commits'}</option>
+      <option value="">{!key ? t('taskFields.pickTaskFirst') : dev.isPending ? t('status.loading') : options.length ? t('taskFields.noCommit') : t('taskFields.noCommitsYet')}</option>
       {options.map((o) => (
         <option key={commitId(o)} value={commitId(o)}>
           {commitId(o)} · {o.text}

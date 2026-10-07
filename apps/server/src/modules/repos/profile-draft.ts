@@ -5,6 +5,7 @@ import { readdir, readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { RepoProfileInput } from '@dev-assistant/shared';
 import type { Llm } from '../../integrations/opencode/llm.js';
+import { t } from '../../i18n/index.js';
 
 /** Ficheros que se mandan a la IA si existen (en este orden), con su tope de caracteres. */
 const KEY_FILES: [string, number][] = [
@@ -29,16 +30,16 @@ const WORKFLOWS_DIR = '.github/workflows';
 const MAX_WORKFLOWS = 3;
 const SKIP_DIRS = new Set(['.git', 'node_modules', 'target', 'build', 'dist', 'out', '.idea', '.vscode', '.gradle', 'coverage', 'vendor', '__pycache__']);
 
-const SYSTEM = `Eres un desarrollador sénior que documenta un repositorio para que otro agente de IA (opencode) trabaje en él siguiendo sus normas.
-Responde en español, en Markdown, con exactamente estas tres secciones y en este orden:
-## Convenciones
-## Tests
-## Arquitectura
+const system = () => `Eres un desarrollador sénior que documenta un repositorio para que otro agente de IA (opencode) trabaje en él siguiendo sus normas.
+${t('ai.answerLanguage')} En Markdown, con exactamente estas tres secciones y en este orden:
+## ${t('ai.repoProfile.conventions')}
+## ${t('ai.repoProfile.tests')}
+## ${t('ai.repoProfile.architecture')}
 Reglas:
-- Usa solo lo que se deduce de los ficheros que te doy. Si algo no se puede saber, escribe "- Sin datos: [qué falta]" en vez de inventarlo.
-- Convenciones: lenguaje y versión, estilo, nombres, estructura de paquetes, formato de commits o ramas si aparece, linters y formateadores.
-- Tests: los comandos exactos para compilar, ejecutar los tests unitarios y los de integración, y qué necesitan (Docker, base de datos...). Un comando por viñeta, en \`código\`.
-- Arquitectura: para qué sirve el repo, sus carpetas principales y qué contiene cada una, y con qué se integra.
+- Usa solo lo que se deduce de los ficheros que te doy. Si algo no se puede saber, escribe "- ${t('ai.repoProfile.noData')}: [qué falta]" en vez de inventarlo.
+- ${t('ai.repoProfile.conventions')}: lenguaje y versión, estilo, nombres, estructura de paquetes, formato de commits o ramas si aparece, linters y formateadores.
+- ${t('ai.repoProfile.tests')}: los comandos exactos para compilar, ejecutar los tests unitarios y los de integración, y qué necesitan (Docker, base de datos...). Un comando por viñeta, en \`código\`.
+- ${t('ai.repoProfile.architecture')}: para qué sirve el repo, sus carpetas principales y qué contiene cada una, y con qué se integra.
 - Viñetas cortas. Máximo 12 por sección.
 - No añadas nada antes ni después de las tres secciones.`;
 
@@ -90,7 +91,7 @@ export async function collectRepoContext(localPath: string): Promise<string> {
   return parts.join('\n\n');
 }
 
-/** Separa la respuesta en las tres partes de la ficha (lo que no venga queda vacío). */
+/** Separa la respuesta en las tres partes de la ficha (lo que no venga queda vacío). Admite los títulos en castellano y en inglés. */
 export function parseProfile(markdown: string): RepoProfileInput {
   const sections: Record<string, string> = {};
   let current: string | null = null;
@@ -98,7 +99,7 @@ export function parseProfile(markdown: string): RepoProfileInput {
     const heading = line.match(/^#{1,3}\s*(.+?)\s*$/);
     if (heading) {
       const title = heading[1]!.toLowerCase();
-      current = title.startsWith('convenc') ? 'conv' : title.startsWith('test') ? 'tests' : title.startsWith('arquitec') ? 'arq' : null;
+      current = title.startsWith('conven') ? 'conv' : title.startsWith('test') ? 'tests' : /^(arquitec|architec)/.test(title) ? 'arq' : null;
       continue;
     }
     if (current) sections[current] = `${sections[current] ?? ''}${line}\n`;
@@ -112,6 +113,6 @@ export function parseProfile(markdown: string): RepoProfileInput {
 
 export async function draftRepoProfile(llm: Llm, repo: { name: string; localPath: string }): Promise<RepoProfileInput> {
   const context = await collectRepoContext(repo.localPath);
-  const answer = await llm.complete({ system: SYSTEM, user: `Repositorio: ${repo.name}\n\n${context}`, title: `Ficha del repo ${repo.name}` });
+  const answer = await llm.complete({ system: system(), user: `Repositorio: ${repo.name}\n\n${context}`, title: `Ficha del repo ${repo.name}` });
   return parseProfile(answer);
 }

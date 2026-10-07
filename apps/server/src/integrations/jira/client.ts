@@ -2,6 +2,7 @@
 // (Decisión de Jorge: lo que hace él a mano va por la API; el MCP de JIRA queda para lo automático de opencode.)
 // - JIRA Cloud (*.atlassian.net): JIRA_EMAIL + token de API, autenticación Basic, API v3.
 // - JIRA Server / Data Center: token personal (PAT) como Bearer, API v2.
+import { t } from '../../i18n/index.js';
 import { adfToText } from './adf.js';
 
 export interface JiraConfig {
@@ -104,36 +105,34 @@ export class JiraClient {
       });
     } catch (err) {
       const cause = err instanceof Error ? (err.cause instanceof Error ? err.cause.message : err.message) : String(err);
-      throw new JiraError(`No se pudo conectar con JIRA en ${this.baseUrl}: ${cause}`);
+      throw new JiraError(t('jira.connectFailed', { url: this.baseUrl, cause }));
     }
     if (res.type === 'opaqueredirect' || (res.status >= 300 && res.status < 400)) {
       const location = res.headers.get('location');
       const host = location ? ` (${new URL(location, this.baseUrl).host})` : '';
-      throw new JiraError(
-        `JIRA redirige a una página de inicio de sesión${host}: desde esta red la API no acepta el token. Prueba desde la red de la empresa o con la VPN.`,
-      );
+      throw new JiraError(t('jira.loginRedirect', { host }));
     }
-    if (res.status === 401) throw new JiraError('JIRA rechazó las credenciales (401). Revisa JIRA_TOKEN (y JIRA_EMAIL si es JIRA Cloud).');
-    if (res.status === 403) throw new JiraError('JIRA no da permiso a este token (403).');
+    if (res.status === 401) throw new JiraError(t('jira.unauthorized'));
+    if (res.status === 403) throw new JiraError(t('jira.forbidden'));
     if (res.status === 404) return { status: 404, body: null };
     if (!res.ok) {
       const data = (await res.json().catch(() => null)) as { errorMessages?: string[]; errors?: Record<string, string> } | null;
       const messages = [...(data?.errorMessages ?? []), ...Object.values(data?.errors ?? {})];
-      throw new JiraError(`JIRA respondió ${res.status}${messages.length ? `: ${messages.join('; ')}` : ''}`);
+      throw new JiraError(`${t('jira.httpError', { status: res.status })}${messages.length ? `: ${messages.join('; ')}` : ''}`);
     }
     const text = await res.text();
     if (!text) return { status: res.status, body: null };
     try {
       return { status: res.status, body: JSON.parse(text) as T };
     } catch {
-      throw new JiraError(`JIRA no devolvió datos de la API (respondió una página web). ¿Es correcta JIRA_URL? (${this.baseUrl})`);
+      throw new JiraError(t('jira.notJson', { url: this.baseUrl }));
     }
   }
 
   /** Usuario con el que entra el token: confirma que JIRA lo acepta (y no lo trata como anónimo). */
   async myself(): Promise<string> {
     const me = this.required(await this.get<{ displayName?: string; name?: string; emailAddress?: string }>('/myself', {}));
-    return me.displayName ?? me.name ?? me.emailAddress ?? 'desconocido';
+    return me.displayName ?? me.name ?? me.emailAddress ?? t('common.unknown');
   }
 
   /** Todas las incidencias de una JQL (hasta 1000). */
@@ -170,9 +169,7 @@ export class JiraClient {
   /** Un 404 en la API general significa que JIRA_URL no apunta a JIRA (p. ej. falta /jira al final). */
   private required<T>({ body }: { body: T | null }): T {
     if (!body) {
-      throw new JiraError(
-        `JIRA no encontró la API en ${this.baseUrl}/rest/api. Revisa JIRA_URL: debe ser la parte de la dirección de una tarea anterior a /browse/.`,
-      );
+      throw new JiraError(t('jira.apiNotFound', { url: this.baseUrl }));
     }
     return body;
   }
@@ -186,7 +183,7 @@ export class JiraClient {
   /** Estados a los que JIRA deja pasar la incidencia desde el actual. */
   async transitions(key: string): Promise<JiraTransition[]> {
     const { body } = await this.get<{ transitions?: RawTransition[] }>(`/issue/${encodeURIComponent(key)}/transitions`, {});
-    if (!body) throw new JiraError(`JIRA no encuentra ${key} o este token no puede verla.`);
+    if (!body) throw new JiraError(t('jira.issueNotVisible', { key }));
     return (body.transitions ?? []).map((t) => {
       const category = t.to?.statusCategory?.key;
       return {
@@ -208,13 +205,13 @@ export class JiraClient {
         }
       : text;
     const { status } = await this.request('POST', `/issue/${encodeURIComponent(key)}/comment`, { body });
-    if (status === 404) throw new JiraError(`JIRA no encuentra ${key} o este token no puede comentar en ella.`);
+    if (status === 404) throw new JiraError(t('jira.cannotComment', { key }));
   }
 
   /** Cambia el estado con una de las transiciones que devuelve `transitions`. */
   async transition(key: string, transitionId: string): Promise<void> {
     const { status } = await this.request('POST', `/issue/${encodeURIComponent(key)}/transitions`, { transition: { id: transitionId } });
-    if (status === 404) throw new JiraError(`JIRA no encuentra ${key} o este token no puede cambiar su estado.`);
+    if (status === 404) throw new JiraError(t('jira.cannotTransition', { key }));
   }
 
   private normalize({ key, fields: f }: RawIssue): JiraIssue {

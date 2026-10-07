@@ -567,3 +567,16 @@ export interface BackupStatus {
   count: number;
   last: { name: string; at: string; bytes: number } | null;
 }
+
+// ── Idioma de la app (Ajustes > Idioma) ─────────────────────────────────────
+
+export const LANGUAGES = ['es', 'en'] as const;
+export type Language = (typeof LANGUAGES)[number];
+
+/** `language` es null hasta que se elige (la web propone el del navegador). */
+export interface LanguageSetting {
+  language: Language | null;
+}
+
+export const LanguageUpdate = z.object({ language: z.enum(LANGUAGES) });
+export type LanguageUpdate = z.infer<typeof LanguageUpdate>;

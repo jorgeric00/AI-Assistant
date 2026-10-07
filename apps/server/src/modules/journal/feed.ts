@@ -4,6 +4,7 @@ import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { Db } from '../../db/client.js';
 import { journalEntries } from '../../db/schema.js';
+import { t } from '../../i18n/index.js';
 import { readTaskDevInfo } from '../tasks/dev-files.js';
 import { ensureTaskId } from '../tasks/ensure-task.js';
 
@@ -24,7 +25,7 @@ export function recordStatusChange(db: Db | Tx, taskId: number, key: string, fro
       date: localDay(new Date(at)),
       source: 'auto',
       taskId,
-      text: `Estado en JIRA: ${from} → ${to}`,
+      text: t('journal.statusChange', { from, to }),
       refKey: `jira:${key}:${at}`,
       createdAt: at,
     })
@@ -61,7 +62,7 @@ export class DiaryFeed {
             date: localDay(when),
             source: 'auto',
             taskId,
-            text: `Commit en ${h.repo}: ${h.text}`,
+            text: t('journal.commit', { repo: h.repo, text: h.text }),
             refKey: `commit:${key}:${h.repo}@${h.sha}`,
             url: h.url,
             createdAt: when.toISOString(),

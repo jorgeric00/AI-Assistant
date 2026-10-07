@@ -2,20 +2,16 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { CommitRef, Reminder, Repeat } from '@dev-assistant/shared';
 import { Bell, CircleAlert } from 'lucide-react';
 import { useId, useState, type FormEvent } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { api, queryKeys } from '../../api';
 import { TASK_KEY_RE, inputClass, labelClass, primaryButtonClass, secondaryButtonClass } from '../../components/fields';
 import { CommitSelect, TaskOptions } from '../../components/TaskFields';
 import { localDate, parseLocalDate } from '../../dates';
-import { WEEKDAYS, repeatSummary } from './repeat';
+import { repeatSummary, weekdays } from './repeat';
 
 type RepeatKind = Repeat['kind'];
 
-const REPEAT_OPTIONS: { kind: RepeatKind; label: string }[] = [
-  { kind: 'none', label: 'No se repite' },
-  { kind: 'daily', label: 'Cada día' },
-  { kind: 'weekdays', label: 'De lunes a viernes' },
-  { kind: 'weekly', label: 'Semanal' },
-];
+const REPEAT_OPTIONS: RepeatKind[] = ['none', 'daily', 'weekdays', 'weekly'];
 
 function defaultStart(): Date {
   const next = new Date();
@@ -37,6 +33,7 @@ interface Props {
 
 /** Formulario de recordatorio (diseño: "Nuevo recordatorio"). Lo usan el diálogo y la captura rápida. */
 export function ReminderForm({ reminder, onSaved, onCancel, onDeleted }: Props) {
+  const { t } = useTranslation(['reminders', 'common']);
   const queryClient = useQueryClient();
   const ids = useId();
   const start = reminder ? new Date(reminder.dueAt) : defaultStart();
@@ -85,10 +82,10 @@ export function ReminderForm({ reminder, onSaved, onCancel, onDeleted }: Props) 
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return setError('Escribe qué quieres recordar.');
-    if (!validStart) return setError('Elige fecha y hora.');
-    if (repeatKind === 'weekly' && !days.length) return setError('Elige al menos un día de la semana.');
-    if (taskKey.trim() && !TASK_KEY_RE.test(taskKey.trim().toUpperCase())) return setError(`"${taskKey}" no es una clave de JIRA (ej.: ABC-123).`);
+    if (!title.trim()) return setError(t('form.errors.title'));
+    if (!validStart) return setError(t('form.errors.start'));
+    if (repeatKind === 'weekly' && !days.length) return setError(t('form.errors.days'));
+    if (taskKey.trim() && !TASK_KEY_RE.test(taskKey.trim().toUpperCase())) return setError(t('form.errors.taskKey', { key: taskKey }));
     setError(null);
     save.mutate();
   };
@@ -99,7 +96,7 @@ export function ReminderForm({ reminder, onSaved, onCancel, onDeleted }: Props) 
     <form onSubmit={submit} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
         <label htmlFor={`${ids}-title`} className={labelClass}>
-          Qué
+          {t('form.what')}
         </label>
         <input id={`${ids}-title`} type="text" value={title} autoFocus onChange={(e) => setTitle(e.target.value)} className={inputClass} />
       </div>
@@ -107,13 +104,13 @@ export function ReminderForm({ reminder, onSaved, onCancel, onDeleted }: Props) 
       <div className="flex flex-wrap gap-3">
         <div className="flex flex-[1_1_200px] flex-col gap-1.5">
           <label htmlFor={`${ids}-date`} className={labelClass}>
-            {repeatKind === 'none' ? 'Fecha' : 'Empieza el'}
+            {repeatKind === 'none' ? t('form.date') : t('form.startsOn')}
           </label>
           <input id={`${ids}-date`} type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} />
         </div>
         <div className="flex flex-[1_1_140px] flex-col gap-1.5">
           <label htmlFor={`${ids}-time`} className={labelClass}>
-            Hora
+            {t('form.time')}
           </label>
           <input id={`${ids}-time`} type="time" value={time} onChange={(e) => setTime(e.target.value)} className={inputClass} />
         </div>
@@ -121,24 +118,24 @@ export function ReminderForm({ reminder, onSaved, onCancel, onDeleted }: Props) 
 
       <div className="flex flex-col gap-1.5">
         <span id={`${ids}-repeat`} className={labelClass}>
-          Repetir
+          {t('form.repeat')}
         </span>
         <div role="group" aria-labelledby={`${ids}-repeat`} className="flex flex-wrap gap-1 self-start rounded-md border border-line bg-bg p-1">
-          {REPEAT_OPTIONS.map((o) => (
+          {REPEAT_OPTIONS.map((kind) => (
             <button
-              key={o.kind}
+              key={kind}
               type="button"
-              aria-pressed={repeatKind === o.kind}
-              onClick={() => setRepeatKind(o.kind)}
-              className={`h-8 rounded-sm px-3 text-[13px] ${repeatKind === o.kind ? 'bg-surface-raised font-medium text-ink' : 'text-ink-muted hover:text-ink'}`}
+              aria-pressed={repeatKind === kind}
+              onClick={() => setRepeatKind(kind)}
+              className={`h-8 rounded-sm px-3 text-[13px] ${repeatKind === kind ? 'bg-surface-raised font-medium text-ink' : 'text-ink-muted hover:text-ink'}`}
             >
-              {o.label}
+              {t(`repeatOptions.${kind}`)}
             </button>
           ))}
         </div>
         {repeatKind === 'weekly' && (
-          <div role="group" aria-label="Días de la semana" className="flex flex-wrap gap-1.5 pt-1">
-            {WEEKDAYS.map((w) => (
+          <div role="group" aria-label={t('form.weekdays')} className="flex flex-wrap gap-1.5 pt-1">
+            {weekdays().map((w) => (
               <button
                 key={w.day}
                 type="button"
@@ -158,7 +155,7 @@ export function ReminderForm({ reminder, onSaved, onCancel, onDeleted }: Props) 
       <div className="flex flex-wrap gap-3">
         <div className="flex flex-[1_1_200px] flex-col gap-1.5">
           <label htmlFor={`${ids}-task`} className={labelClass}>
-            Tarea (opcional)
+            {t('form.task')}
           </label>
           <input
             id={`${ids}-task`}
@@ -173,7 +170,7 @@ export function ReminderForm({ reminder, onSaved, onCancel, onDeleted }: Props) 
         </div>
         <div className="flex min-w-0 flex-[1_1_200px] flex-col gap-1.5">
           <label htmlFor={`${ids}-commit`} className={labelClass}>
-            Commit (opcional)
+            {t('form.commit')}
           </label>
           <CommitSelect id={`${ids}-commit`} taskKey={task} value={commit} onChange={(c) => setCommitPick({ task, commit: c })} />
         </div>
@@ -181,10 +178,10 @@ export function ReminderForm({ reminder, onSaved, onCancel, onDeleted }: Props) 
 
       <div className="flex flex-wrap gap-3">
         <div className="flex flex-[1_1_200px] flex-col gap-1.5">
-          <span className={labelClass}>Aviso</span>
+          <span className={labelClass}>{t('form.notice')}</span>
           <span className="flex h-10 items-center gap-2">
             <Bell size={16} strokeWidth={1.5} className="text-ink-muted" aria-hidden />
-            App y notificación de Windows
+            {t('form.noticeValue')}
           </span>
         </div>
       </div>
@@ -198,23 +195,23 @@ export function ReminderForm({ reminder, onSaved, onCancel, onDeleted }: Props) 
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="text-small text-ink-faint">
-          <kbd className="font-mono">Esc</kbd> cerrar · <kbd className="font-mono">Ctrl+Enter</kbd> guardar
+          <Trans t={t} i18nKey="form.shortcuts" components={{ kbd: <kbd className="font-mono" /> }} />
         </span>
         <div className="flex gap-2">
           {reminder && onDeleted && (
             <button
               type="button"
-              onClick={() => window.confirm(`¿Eliminar "${reminder.title}"?`) && remove.mutate()}
+              onClick={() => window.confirm(t('form.confirmDelete', { title: reminder.title })) && remove.mutate()}
               className="h-10 rounded-md px-3 text-danger hover:bg-surface-raised"
             >
-              Eliminar
+              {t('form.delete')}
             </button>
           )}
           <button type="button" onClick={onCancel} className={secondaryButtonClass}>
-            Cancelar
+            {t('common:actions.cancel')}
           </button>
           <button type="submit" disabled={save.isPending} className={primaryButtonClass}>
-            {save.isPending ? 'Guardando…' : 'Guardar'}
+            {save.isPending ? t('common:actions.saving') : t('common:actions.save')}
           </button>
         </div>
       </div>

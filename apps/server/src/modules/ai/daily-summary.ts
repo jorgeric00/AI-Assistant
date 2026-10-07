@@ -3,6 +3,7 @@ import type { DailySummary, Reminder } from '@dev-assistant/shared';
 import type { Db } from '../../db/client.js';
 import { dailySummaries, journalEntries, tasks } from '../../db/schema.js';
 import type { Llm } from '../../integrations/opencode/llm.js';
+import { locale, t } from '../../i18n/index.js';
 import { RemindersRepository } from '../reminders/repository.js';
 
 /** Error de datos que se enseña tal cual (p. ej. no hay nada que resumir). */
@@ -16,18 +17,18 @@ export function previousWorkday(date: string): string {
   return d.toISOString().slice(0, 10);
 }
 
-const SYSTEM = `Eres el asistente personal de un desarrollador. Preparas lo que va a contar en la daily (reunión diaria de 15 minutos).
-Responde en español, en Markdown, con exactamente estas tres secciones y en este orden:
-## Ayer
-## Hoy
-## Bloqueos
+const system = () => `Eres el asistente personal de un desarrollador. Preparas lo que va a contar en la daily (reunión diaria de 15 minutos).
+${t('ai.answerLanguage')} En Markdown, con exactamente estas tres secciones y en este orden:
+## ${t('ai.daily.yesterday')}
+## ${t('ai.daily.today')}
+## ${t('ai.daily.blockers')}
 Reglas:
 - Usa solo la información que te doy. No inventes tareas, avances ni bloqueos.
-- "Ayer" resume lo hecho desde el día laborable anterior. "Hoy" recoge lo apuntado para hoy y los recordatorios del día.
+- "${t('ai.daily.yesterday')}" resume lo hecho desde el día laborable anterior. "${t('ai.daily.today')}" recoge lo apuntado para hoy y los recordatorios del día.
 - Agrupa lo que sea de la misma tarea y menciona la clave de JIRA (por ejemplo ABC-123) cuando la haya.
 - Viñetas cortas, en primera persona, como se diría en voz alta. Máximo 5 viñetas por sección.
 - Pon un bloqueo solo si las entradas lo dicen claramente (bloqueado, esperando a, no puedo...).
-- Si una sección no tiene nada, escribe "- Nada".
+- Si una sección no tiene nada, escribe "- ${t('ai.daily.nothing')}".
 - No añadas nada antes ni después de las tres secciones.`;
 
 type EntryRow = { date: string; text: string; taskKey: string | null; createdAt: string };
@@ -65,10 +66,10 @@ export class DailySummaryService {
     const todays = remindersOn(this.reminders.list(), date);
 
     if (entries.length === 0 && todays.length === 0) {
-      throw new NothingToSummarizeError('No hay entradas en el diario desde el último día laborable ni recordatorios para hoy. Apunta qué hiciste y vuelve a generarlo.');
+      throw new NothingToSummarizeError(t('ai.daily.nothingToSummarize'));
     }
 
-    const contentMd = await this.llm.complete({ system: SYSTEM, user: buildPrompt(date, since, entries, todays), title: `Resumen daily ${date}` });
+    const contentMd = await this.llm.complete({ system: system(), user: buildPrompt(date, since, entries, todays), title: `Resumen daily ${date}` });
     const row = this.db.insert(dailySummaries).values({ date, contentMd }).returning().get();
     return { id: row.id, date: row.date, since, contentMd: row.contentMd, generatedAt: row.generatedAt };
   }
@@ -86,7 +87,7 @@ function remindersOn(list: Reminder[], date: string): Reminder[] {
   });
 }
 
-const time = (iso: string) => new Date(iso).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+const time = (iso: string) => new Date(iso).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
 
 function line(e: EntryRow): string {
   return `- ${e.taskKey ? `[${e.taskKey}] ` : ''}${e.text.replace(/\s+/g, ' ').trim()}`;

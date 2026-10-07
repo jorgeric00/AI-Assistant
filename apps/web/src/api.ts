@@ -39,6 +39,8 @@ import type {
   AutostartStatus,
   AutostartUpdate,
   BackupStatus,
+  Language,
+  LanguageSetting,
 } from '@dev-assistant/shared';
 
 async function request<T>(method: string, url: string, body?: unknown): Promise<T> {
@@ -126,6 +128,9 @@ export const api = {
   opencodeSkill: () => request<OpencodeSkillStatus>('GET', '/api/opencode/skill'),
   installOpencodeSkill: () => request<OpencodeSkillStatus>('POST', '/api/opencode/skill/install'),
 
+  getLanguage: () => request<LanguageSetting>('GET', '/api/settings/language'),
+  setLanguage: (language: Language) => request<LanguageSetting>('PUT', '/api/settings/language', { language }),
+
   getAutostart: () => request<AutostartStatus>('GET', '/api/system/autostart'),
   updateAutostart: (input: AutostartUpdate) => request<AutostartStatus>('PATCH', '/api/system/autostart', input),
   getBackups: () => request<BackupStatus>('GET', '/api/system/backups'),
@@ -155,6 +160,7 @@ export const queryKeys = {
   taskSession: (key: string) => ['tasks', 'session', key] as const,
   jiraTransitions: (key: string) => ['tasks', 'transitions', key] as const,
   opencodeSkill: ['opencode-skill'] as const,
+  language: ['settings', 'language'] as const,
   autostart: ['system', 'autostart'] as const,
   backups: ['system', 'backups'] as const,
   /** Invalidar `prs` refresca avisos, estado y PR de las tareas. */

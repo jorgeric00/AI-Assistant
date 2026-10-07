@@ -1,0 +1,67 @@
+{
+  "status": {
+    "completa": "Ficha completa",
+    "por_revisar": "Ficha por revisar",
+    "sin_ficha": "Sin ficha"
+  },
+  "page": {
+    "title": "Repositorios",
+    "subtitle": "Dónde trabaja opencode y qué debe saber de cada repo",
+    "add": "Añadir repositorio",
+    "loadError": "No se pudieron cargar los repositorios.",
+    "empty": "Aún no hay repositorios. Pulsa \"Añadir repositorio\" e indica la carpeta de un repo de tu PC."
+  },
+  "list": {
+    "label": "Repositorios",
+    "noGithub": "Sin repo de GitHub",
+    "branch": "rama {{branch}}",
+    "noJira": "Sin proyectos de JIRA"
+  },
+  "data": {
+    "legend": "Datos",
+    "path": "Carpeta en tu PC",
+    "pathPlaceholder": "C:\\repos\\mi-repo",
+    "gitFound": "Repo git encontrado",
+    "notGit": "No es un repo git",
+    "checking": "Comprobando…",
+    "name": "Nombre",
+    "github": "Repo de GitHub",
+    "githubPlaceholder": "dueño/nombre",
+    "githubHint": "Se rellena solo desde el remoto de git.",
+    "branch": "Rama base",
+    "branchHint": "De aquí salen las ramas feature/<CLAVE>-… y aquí van las PR.",
+    "jira": "Proyectos de JIRA",
+    "jiraHint": "Separados por comas. La IA sugiere este repo para las tareas de esos proyectos."
+  },
+  "newRepo": {
+    "title": "Nuevo repositorio",
+    "intro": "Indica la carpeta: el nombre, el repo de GitHub y la rama base se rellenan solos.",
+    "afterAdd": "Después de añadirlo podrás rellenar su ficha con IA.",
+    "adding": "Añadiendo…",
+    "submit": "Añadir repositorio"
+  },
+  "tabs": {
+    "conventions": "Convenciones",
+    "conventionsTitle": "Convenciones",
+    "tests": "Tests",
+    "testsTitle": "Cómo ejecutar los tests",
+    "architecture": "Arquitectura",
+    "architectureTitle": "Arquitectura"
+  },
+  "editor": {
+    "aiDrafted": "redactada por la IA",
+    "reviewed": "revisada",
+    "confirmRedraft": "La IA sustituirá la ficha actual por un borrador nuevo. ¿Seguir?",
+    "confirmRemove": "¿Quitar {{name}} de la app? El repo de tu PC no se toca.",
+    "remove": "Quitar repositorio",
+    "profileHeading": "Ficha del repositorio",
+    "readingRepo": "Leyendo el repo…",
+    "fillWithAi": "Rellenar con IA",
+    "profileHint": "opencode la usa como contexto al hacer el plan y al programar. La IA la redacta leyendo el repo (README, configuración de build y tests) y tú la revisas.",
+    "tabsLabel": "Partes de la ficha",
+    "aiReadingPlaceholder": "La IA está leyendo el repo…",
+    "placeholder": "Escríbelo tú o pulsa \"Rellenar con IA\".",
+    "savedInApp": "Se guarda en la app, no en el repo.",
+    "discard": "Descartar cambios"
+  }
+}

@@ -2,16 +2,19 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { JiraUpdateEntry, TaskDetail } from '@dev-assistant/shared';
 import { ArrowRight, CircleAlert, Info, Sparkles } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { api, queryKeys } from '../../api';
 import { Modal } from '../../components/Modal';
 import { inputClass, primaryButtonClass, secondaryButtonClass } from '../../components/fields';
 import { dayAndTime, hhmm, shortDay } from '../../dates';
+import i18n from '../../i18n';
 
 const hint = 'text-small text-ink-faint';
 const checkbox = 'size-[18px] accent-accent';
 
 /** Diálogo "Actualizar JIRA" (R3): comentario y/o cambio de estado que se envían solo al confirmar. */
 export function ActualizarJiraDialog({ task, onClose }: { task: TaskDetail; onClose: () => void }) {
+  const { t } = useTranslation(['tasks', 'common']);
   const queryClient = useQueryClient();
   const status = useQuery({ queryKey: queryKeys.jiraStatus, queryFn: api.jiraStatus });
   const transitions = useQuery({ queryKey: queryKeys.jiraTransitions(task.key), queryFn: () => api.jiraTransitions(task.key), staleTime: 0, retry: false });
@@ -22,7 +25,7 @@ export function ActualizarJiraDialog({ task, onClose }: { task: TaskDetail; onCl
   const [transitionId, setTransitionId] = useState<string>();
 
   const options = transitions.data ?? [];
-  const selected = options.find((t) => t.id === transitionId) ?? options[0];
+  const selected = options.find((o) => o.id === transitionId) ?? options[0];
   const canChange = cambiar && !!selected;
   const sendsComment = comentar && comment.trim() !== '';
 
@@ -41,15 +44,15 @@ export function ActualizarJiraDialog({ task, onClose }: { task: TaskDetail; onCl
   });
 
   const writeProblem = status.data?.writeProblem;
-  let summary = 'No hay nada que enviar.';
-  if (sendsComment && canChange) summary = `Se enviará a JIRA un comentario y el cambio de estado a ${selected.to}.`;
-  else if (sendsComment) summary = 'Se enviará a JIRA un comentario.';
-  else if (canChange) summary = `Se cambiará el estado en JIRA a ${selected.to}.`;
-  else if (comentar && !comment.trim()) summary = 'Escribe el comentario o pulsa "Redactar con IA".';
+  let summary = t('updateJira.nothingToSend');
+  if (sendsComment && canChange) summary = t('updateJira.willSendBoth', { status: selected.to });
+  else if (sendsComment) summary = t('updateJira.willSendComment');
+  else if (canChange) summary = t('updateJira.willChangeStatus', { status: selected.to });
+  else if (comentar && !comment.trim()) summary = t('updateJira.writeOrDraft');
   const nothing = !sendsComment && !canChange;
 
   const askDraft = () => {
-    if (comment.trim() && !window.confirm('¿Sustituir el comentario que has escrito por el de la IA?')) return;
+    if (comment.trim() && !window.confirm(t('updateJira.confirmReplace'))) return;
     draft.mutate();
   };
   const submit = (e: FormEvent) => {
@@ -62,7 +65,7 @@ export function ActualizarJiraDialog({ task, onClose }: { task: TaskDetail; onCl
       <form onSubmit={submit} className="flex flex-col gap-5">
         <div className="flex flex-col gap-1">
           <h1 id="actualizar-jira-titulo" className="m-0 text-title font-semibold">
-            Actualizar JIRA
+            {t('updateJira.title')}
           </h1>
           <p className="m-0 text-ink-muted">
             <span className="font-mono text-code text-info">{task.key}</span> · {task.summary}
@@ -72,7 +75,7 @@ export function ActualizarJiraDialog({ task, onClose }: { task: TaskDetail; onCl
         {writeProblem && (
           <p role="alert" className="m-0 flex items-start gap-2 rounded-md border border-line p-3 text-danger">
             <CircleAlert size={16} className="mt-0.5 shrink-0" aria-hidden />
-            <span>No se puede escribir en JIRA: {writeProblem}</span>
+            <span>{t('updateJira.cannotWrite', { problem: writeProblem })}</span>
           </p>
         )}
 
@@ -80,15 +83,15 @@ export function ActualizarJiraDialog({ task, onClose }: { task: TaskDetail; onCl
           <div className="flex flex-wrap items-center justify-between gap-2">
             <label className="flex cursor-pointer items-center gap-2 font-medium">
               <input type="checkbox" checked={comentar} onChange={(e) => setComentar(e.target.checked)} className={checkbox} />
-              Añadir comentario
+              {t('updateJira.addComment')}
             </label>
             <button type="button" onClick={askDraft} disabled={!comentar || draft.isPending} className={`${secondaryButtonClass} h-8 px-3 text-small`}>
               <Sparkles size={14} strokeWidth={1.5} className="text-accent" aria-hidden />
-              {draft.isPending ? 'Redactando…' : 'Redactar con IA'}
+              {draft.isPending ? t('updateJira.drafting') : t('updateJira.draftWithAi')}
             </button>
           </div>
           <label htmlFor="jira-comentario" className="sr-only">
-            Comentario
+            {t('updateJira.comment')}
           </label>
           <textarea
             id="jira-comentario"
@@ -96,7 +99,7 @@ export function ActualizarJiraDialog({ task, onClose }: { task: TaskDetail; onCl
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             disabled={!comentar || draft.isPending}
-            placeholder="Qué has hecho, qué falta y si hay algo que bloquee."
+            placeholder={t('updateJira.placeholder')}
             className={`${inputClass} h-auto resize-y py-2.5 leading-[21px] disabled:text-ink-faint`}
           />
           {draft.isError ? (
@@ -106,8 +109,8 @@ export function ActualizarJiraDialog({ task, onClose }: { task: TaskDetail; onCl
           ) : (
             <span className={hint}>
               {draft.data?.since
-                ? `Redactado solo con lo nuevo desde el último envío a JIRA (${dayAndTime(draft.data.since)}). Puedes editarlo antes de enviar.`
-                : 'La IA lo redacta con lo nuevo desde el último envío a JIRA: notas vinculadas, diario y commits de opencode, más el plan. Puedes editarlo antes de enviar.'}
+                ? t('updateJira.draftedSince', { when: dayAndTime(draft.data.since) })
+                : t('updateJira.draftHint')}
             </span>
           )}
         </div>
@@ -115,13 +118,13 @@ export function ActualizarJiraDialog({ task, onClose }: { task: TaskDetail; onCl
         <div className="flex flex-col gap-2">
           <label className="flex cursor-pointer items-center gap-2 self-start font-medium">
             <input type="checkbox" checked={cambiar} onChange={(e) => setCambiar(e.target.checked)} className={checkbox} />
-            Cambiar estado
+            {t('updateJira.changeStatus')}
           </label>
           <div className="flex flex-wrap items-center gap-3">
             <span className="rounded-sm border border-line-strong px-1.5 py-0.5 text-small whitespace-nowrap text-ink-muted">{task.status}</span>
             <ArrowRight size={16} strokeWidth={1.5} className="text-ink-muted" aria-hidden />
             <label htmlFor="jira-estado" className="sr-only">
-              Nuevo estado
+              {t('updateJira.newStatus')}
             </label>
             <select
               id="jira-estado"
@@ -130,23 +133,23 @@ export function ActualizarJiraDialog({ task, onClose }: { task: TaskDetail; onCl
               disabled={!cambiar || !options.length}
               className={`${inputClass} min-w-[200px] [color-scheme:dark] disabled:text-ink-faint`}
             >
-              {transitions.isPending && <option value="">Cargando…</option>}
-              {transitions.isSuccess && !options.length && <option value="">Ninguno disponible</option>}
-              {transitions.isError && <option value="">No disponible</option>}
-              {options.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.to}
-                  {t.name !== t.to ? ` (${t.name})` : ''}
+              {transitions.isPending && <option value="">{t('common:status.loading')}</option>}
+              {transitions.isSuccess && !options.length && <option value="">{t('updateJira.noneAvailable')}</option>}
+              {transitions.isError && <option value="">{t('updateJira.notAvailable')}</option>}
+              {options.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.to}
+                  {o.name !== o.to ? ` (${o.name})` : ''}
                 </option>
               ))}
             </select>
           </div>
           {transitions.isError ? (
             <p role="alert" className="m-0 text-small text-danger">
-              No se pudieron leer los estados de JIRA: {transitions.error.message}
+              {t('updateJira.transitionsError', { message: transitions.error.message })}
             </p>
           ) : (
-            <span className={hint}>Solo aparecen los estados a los que JIRA permite pasar desde el actual.</span>
+            <span className={hint}>{t('updateJira.transitionsHint')}</span>
           )}
         </div>
 
@@ -164,14 +167,14 @@ export function ActualizarJiraDialog({ task, onClose }: { task: TaskDetail; onCl
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <span className={hint}>
-            <kbd className="font-mono">Esc</kbd> cerrar · <kbd className="font-mono">Ctrl+Enter</kbd> enviar
+            <Trans t={t} i18nKey="updateJira.shortcuts" components={{ kbd: <kbd className="font-mono" /> }} />
           </span>
           <div className="flex gap-2">
             <button type="button" onClick={onClose} className={secondaryButtonClass}>
-              Cancelar
+              {t('common:actions.cancel')}
             </button>
             <button type="submit" disabled={nothing || !!writeProblem || send.isPending || draft.isPending} className={primaryButtonClass}>
-              {send.isPending ? 'Enviando…' : 'Enviar a JIRA'}
+              {send.isPending ? t('updateJira.sending') : t('updateJira.send')}
             </button>
           </div>
         </div>
@@ -182,6 +185,7 @@ export function ActualizarJiraDialog({ task, onClose }: { task: TaskDetail; onCl
 
 /** Botón que abre el diálogo; las tareas sin sincronizar no existen en JIRA y no se pueden actualizar. */
 export function ActualizarJiraButton({ task, className }: { task: TaskDetail; className: string }) {
+  const { t } = useTranslation(['tasks', 'common']);
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -189,10 +193,10 @@ export function ActualizarJiraButton({ task, className }: { task: TaskDetail; cl
         type="button"
         onClick={() => setOpen(true)}
         disabled={!task.synced}
-        title={task.synced ? undefined : 'La tarea aún no se ha encontrado en JIRA'}
+        title={task.synced ? undefined : t('updateJira.notFoundInJira')}
         className={className}
       >
-        Actualizar JIRA
+        {t('updateJira.button')}
       </button>
       {open && <ActualizarJiraDialog task={task} onClose={() => setOpen(false)} />}
     </>
@@ -200,17 +204,18 @@ export function ActualizarJiraButton({ task, className }: { task: TaskDetail; cl
 }
 
 function updateLabel(u: JiraUpdateEntry) {
-  if (u.comment && u.transition) return 'Comentario y estado';
-  if (u.comment) return 'Comentario';
-  return 'Estado';
+  if (u.comment && u.transition) return i18n.t('tasks:updateJira.labelBoth');
+  if (u.comment) return i18n.t('tasks:updateJira.labelComment');
+  return i18n.t('tasks:updateJira.labelStatus');
 }
 
 /** Registro "Enviado a JIRA" de la ficha de la tarea. */
 export function JiraUpdatesList({ updates, headingClass }: { updates: JiraUpdateEntry[]; headingClass: string }) {
+  const { t } = useTranslation(['tasks', 'common']);
   if (!updates.length) return null;
   return (
     <div className="flex flex-col gap-2">
-      <h3 className={headingClass}>Enviado a JIRA</h3>
+      <h3 className={headingClass}>{t('updateJira.sentTitle')}</h3>
       <ul className="flex flex-col gap-2">
         {updates.map((u, i) => (
           <li key={`${u.at}-${i}`} className="flex gap-3">
@@ -229,7 +234,7 @@ export function JiraUpdatesList({ updates, headingClass }: { updates: JiraUpdate
               </span>
               {u.comment && (
                 <details className="mt-1">
-                  <summary className="cursor-pointer text-small text-info">Ver comentario</summary>
+                  <summary className="cursor-pointer text-small text-info">{t('updateJira.viewComment')}</summary>
                   <p className="mt-1 mb-0 whitespace-pre-wrap break-words text-ink-muted">{u.comment}</p>
                 </details>
               )}

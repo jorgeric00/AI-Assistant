@@ -2,6 +2,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import type { DevPlan, DevSession, SessionRepo, TaskDetail } from '@dev-assistant/shared';
 import { AlertTriangle, Check, Circle, Copy, ExternalLink, SquareTerminal } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { api, queryKeys } from '../../api';
 import { primaryButtonClass, secondaryButtonClass } from '../../components/fields';
 import { ActualizarJiraButton } from './ActualizarJira';
@@ -12,6 +13,7 @@ const caption = 'text-small text-ink-muted';
 
 /** Página "Sesión de desarrollo" (`#/tareas/:clave/sesion`): opencode trabaja en la terminal y aquí se ve cómo va. */
 export function SesionPage({ taskKey }: { taskKey: string }) {
+  const { t } = useTranslation(['tasks', 'common']);
   const task = useQuery({ queryKey: queryKeys.task(taskKey), queryFn: () => api.getTask(taskKey), retry: false });
   // opencode cambia PLAN.md, HISTORIAL.md y los clones mientras trabaja: se relee cada 15 s.
   const session = useQuery({ queryKey: queryKeys.taskSession(taskKey), queryFn: () => api.getTaskSession(taskKey), refetchInterval: 15_000 });
@@ -19,15 +21,15 @@ export function SesionPage({ taskKey }: { taskKey: string }) {
 
   return (
     <div className="flex flex-col gap-5">
-      <nav aria-label="Ruta" className={caption}>
+      <nav aria-label={t('breadcrumb.label')} className={caption}>
         <a href={`#/tareas/${taskKey}`} className="text-ink-muted">
-          Tareas de JIRA
+          {t('breadcrumb.tasks')}
         </a>{' '}
         /{' '}
         <a href={`#/tareas/${taskKey}/detalle`} className="font-mono text-ink-muted">
           {taskKey}
         </a>{' '}
-        / Sesión de desarrollo
+        / {t('breadcrumb.session')}
       </nav>
 
       <Header taskKey={taskKey} task={task.data ?? null} />
@@ -72,15 +74,17 @@ function phaseDone(plan: DevPlan | null, name: string) {
 
 /** Las cuatro fases de la sesión (skill dev-assistant-tarea), sacadas de PLAN.md. */
 function Steps({ session, plan }: { session: DevSession | null; plan: DevPlan | null }) {
+  const { t } = useTranslation(['tasks', 'common']);
+  // Las fases se buscan por su nombre en castellano, que es como las escribe opencode en PLAN.md.
   const steps = [
-    { label: '1 · Repos', done: !!session?.reposConfirmed },
-    { label: '2 · Plan aprobado', done: phaseDone(plan, 'Plan aprobado') },
-    { label: '3 · Desarrollo', done: phaseDone(plan, 'Implementación') },
-    { label: '4 · Entrega (push y PR)', done: phaseDone(plan, 'Pruebas y PR') },
+    { label: t('session.stepRepos'), done: !!session?.reposConfirmed },
+    { label: t('session.stepPlan'), done: phaseDone(plan, 'Plan aprobado') },
+    { label: t('session.stepDev'), done: phaseDone(plan, 'Implementación') },
+    { label: t('session.stepDelivery'), done: phaseDone(plan, 'Pruebas y PR') },
   ];
   const current = steps.findIndex((s) => !s.done);
   return (
-    <ol aria-label="Progreso" className="m-0 flex list-none flex-wrap gap-2 p-0 text-small">
+    <ol aria-label={t('session.progress')} className="m-0 flex list-none flex-wrap gap-2 p-0 text-small">
       {steps.map((s, i) => (
         <li
           key={s.label}
@@ -95,7 +99,10 @@ function Steps({ session, plan }: { session: DevSession | null; plan: DevPlan | 
             <Circle size={14} strokeWidth={2} className="text-accent" aria-hidden />
           ) : null}
           {s.label}
-          <span className="sr-only">{s.done ? ' (hecho)' : i === current ? ' (en curso)' : ' (pendiente)'}</span>
+          <span className="sr-only">
+            {' '}
+            {s.done ? t('shared.srDone') : i === current ? t('shared.srInProgress') : t('shared.srPending')}
+          </span>
         </li>
       ))}
     </ol>
@@ -103,6 +110,7 @@ function Steps({ session, plan }: { session: DevSession | null; plan: DevPlan | 
 }
 
 function OpencodeCard({ taskKey, session }: { taskKey: string; session: DevSession | null }) {
+  const { t } = useTranslation(['tasks', 'common']);
   const [copied, setCopied] = useState(false);
   const open = useMutation({ mutationFn: () => api.openTaskSession(taskKey) });
   const command = open.data?.command ?? session?.command ?? '';
@@ -116,26 +124,26 @@ function OpencodeCard({ taskKey, session }: { taskKey: string; session: DevSessi
     <section aria-labelledby="opencode-titulo" className={`${card} border-accent`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id="opencode-titulo" className="m-0 text-heading font-semibold">
-          opencode en tu terminal
+          {t('session.opencodeTitle')}
         </h2>
         {open.data?.opened && (
           <span className="flex items-center gap-1.5 text-small text-success">
             <Circle size={12} strokeWidth={2} aria-hidden />
-            Abierto
+            {t('session.opened')}
           </span>
         )}
       </div>
       <p className="m-0 text-ink-muted">
-        Hablas con opencode en la terminal. Te propone cada commit y no hace push ni abre PR sin que se lo confirmes. Esta página se actualiza sola con el plan y los commits.
+        {t('session.opencodeIntro')}
       </p>
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" className={primaryButtonClass} disabled={open.isPending} onClick={() => open.mutate()}>
           <SquareTerminal size={16} strokeWidth={1.5} aria-hidden />
-          {open.isPending ? 'Abriendo…' : 'Abrir opencode'}
+          {open.isPending ? t('session.opening') : t('session.openOpencode')}
         </button>
         <button type="button" className={secondaryButtonClass} disabled={!command} onClick={copy}>
           <Copy size={16} strokeWidth={1.5} aria-hidden />
-          {copied ? 'Copiado' : 'Copiar comando'}
+          {copied ? t('session.copied') : t('session.copyCommand')}
         </button>
         {session && <code className="min-w-0 truncate font-mono text-code text-ink-faint">{session.folder}</code>}
       </div>
@@ -143,9 +151,9 @@ function OpencodeCard({ taskKey, session }: { taskKey: string; session: DevSessi
         {open.isError
           ? open.error.message
           : open.data && !open.data.opened
-            ? 'Aquí la app no puede abrir la terminal. Copia el comando y pégalo en una terminal.'
+            ? t('session.cannotOpen')
             : open.data?.opened
-              ? 'Se ha abierto una ventana con opencode en la carpeta de la tarea.'
+              ? t('session.openedWindow')
               : ''}
       </p>
     </section>
@@ -153,22 +161,23 @@ function OpencodeCard({ taskKey, session }: { taskKey: string; session: DevSessi
 }
 
 function ReposCard({ session, error }: { session: DevSession | null; error: string | null }) {
+  const { t } = useTranslation(['tasks', 'common']);
   const anyDirty = session?.repos.some((r) => r.dirty);
   return (
     <section aria-labelledby="repos-titulo" className={card}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 id="repos-titulo" className="m-0 text-heading font-semibold">
-          Repositorios de la tarea
+          {t('session.reposTitle')}
         </h2>
-        {session && !session.reposConfirmed && session.repos.length > 0 && <span className={caption}>Sugeridos por el proyecto de JIRA, hasta que opencode los fije en el plan</span>}
+        {session && !session.reposConfirmed && session.repos.length > 0 && <span className={caption}>{t('session.reposSuggested')}</span>}
       </div>
       {error ? (
         <p className="m-0 text-ink-muted">{error}</p>
       ) : !session ? (
-        <p className="m-0 text-ink-muted">Cargando…</p>
+        <p className="m-0 text-ink-muted">{t('common:status.loading')}</p>
       ) : !session.repos.length ? (
         <p className="m-0 text-ink-muted">
-          Aún no hay repos. opencode te propondrá cuáles tocar; si das de alta los del proyecto en <a href="#/repositorios">Repositorios</a>, se los sugerirá él.
+          <Trans t={t} i18nKey="session.noRepos" components={{ link: <a href="#/repositorios" /> }} />
         </p>
       ) : (
         <>
@@ -177,16 +186,16 @@ function ReposCard({ session, error }: { session: DevSession | null; error: stri
               <thead>
                 <tr className="text-left text-small text-ink-muted">
                   <th scope="col" className="px-3 py-2 font-medium">
-                    Repo
+                    {t('session.colRepo')}
                   </th>
                   <th scope="col" className="px-3 py-2 font-medium">
-                    Rama en tu clon
+                    {t('session.colBranch')}
                   </th>
                   <th scope="col" className="px-3 py-2 font-medium">
-                    Commits
+                    {t('session.colCommits')}
                   </th>
                   <th scope="col" className="px-3 py-2 font-medium">
-                    PR
+                    {t('session.colPr')}
                   </th>
                 </tr>
               </thead>
@@ -198,7 +207,7 @@ function ReposCard({ session, error }: { session: DevSession | null; error: stri
             </table>
           </div>
           <p className="m-0 text-small text-ink-muted">
-            Se trabaja en tu clon de siempre{anyDirty ? '. Guarda o aparca tus cambios: opencode no cambia de rama con cambios sin guardar.' : '.'}
+            {anyDirty ? t('session.ownCloneDirty') : t('session.ownClone')}
           </p>
         </>
       )}
@@ -207,22 +216,23 @@ function ReposCard({ session, error }: { session: DevSession | null; error: stri
 }
 
 function RepoRow({ repo, branch }: { repo: SessionRepo; branch: string | null }) {
+  const { t } = useTranslation(['tasks', 'common']);
   const onTaskBranch = !!branch && repo.currentBranch === branch;
   return (
     <tr className="border-t border-line align-top">
       <td className="px-3 py-2.5">
         <div className="font-mono">{repo.name}</div>
-        <div className="text-small break-all text-ink-faint">{repo.localPath ?? <a href="#/repositorios">No está en Repositorios</a>}</div>
+        <div className="text-small break-all text-ink-faint">{repo.localPath ?? <a href="#/repositorios">{t('session.notInRepos')}</a>}</div>
       </td>
       <td className="px-3 py-2.5">
         {!repo.localPath ? (
           <span className="text-ink-faint">—</span>
         ) : !repo.pathOk ? (
-          <Warning>No se encuentra el repo en esa carpeta</Warning>
+          <Warning>{t('session.repoNotFound')}</Warning>
         ) : (
           <>
-            <div className={`font-mono text-small ${onTaskBranch ? 'text-ink' : 'text-ink-muted'}`}>{repo.currentBranch ?? '(sin rama)'}</div>
-            {repo.dirty && <Warning>{onTaskBranch ? 'Cambios sin guardar' : 'Tienes cambios sin guardar: no se cambia de rama'}</Warning>}
+            <div className={`font-mono text-small ${onTaskBranch ? 'text-ink' : 'text-ink-muted'}`}>{repo.currentBranch ?? t('session.noBranch')}</div>
+            {repo.dirty && <Warning>{onTaskBranch ? t('session.dirty') : t('session.dirtyOtherBranch')}</Warning>}
           </>
         )}
       </td>
@@ -230,11 +240,11 @@ function RepoRow({ repo, branch }: { repo: SessionRepo; branch: string | null })
       <td className="px-3 py-2.5">
         {repo.prUrl ? (
           <a href={repo.prUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 whitespace-nowrap text-info">
-            PR #{repo.prUrl.split('/').pop()}
-            <ExternalLink size={12} strokeWidth={1.5} aria-label="(abre GitHub)" />
+            {t('session.prNumber', { number: repo.prUrl.split('/').pop() })}
+            <ExternalLink size={12} strokeWidth={1.5} aria-label={t('shared.opensGithub')} />
           </a>
         ) : (
-          <span className="text-ink-faint">Sin PR</span>
+          <span className="text-ink-faint">{t('session.noPr')}</span>
         )}
       </td>
     </tr>

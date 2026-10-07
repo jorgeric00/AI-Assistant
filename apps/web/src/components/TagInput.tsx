@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
 import { useState, type KeyboardEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
   id: string;
@@ -10,12 +11,13 @@ interface Props {
 
 /** Etiquetas como chips: Intro o coma añade, Retroceso con el campo vacío quita la última. */
 export function TagInput({ id, value, onChange, suggestions = [] }: Props) {
+  const { t } = useTranslation('common');
   const [draft, setDraft] = useState('');
 
   const add = (raw: string) => {
     const names = raw
       .split(',')
-      .map((t) => t.trim().toLowerCase())
+      .map((s) => s.trim().toLowerCase())
       .filter(Boolean);
     const next = [...value, ...names.filter((n) => !value.includes(n))];
     if (next.length !== value.length) onChange(next);
@@ -38,8 +40,8 @@ export function TagInput({ id, value, onChange, suggestions = [] }: Props) {
           {tag}
           <button
             type="button"
-            aria-label={`Quitar ${tag}`}
-            onClick={() => onChange(value.filter((t) => t !== tag))}
+            aria-label={t('tagInput.remove', { tag })}
+            onClick={() => onChange(value.filter((v) => v !== tag))}
             className="flex size-5 items-center justify-center text-ink-muted hover:text-ink"
           >
             <X size={12} aria-hidden />
@@ -51,7 +53,7 @@ export function TagInput({ id, value, onChange, suggestions = [] }: Props) {
         type="text"
         value={draft}
         list={`${id}-suggestions`}
-        placeholder={value.length ? '' : 'Añadir etiqueta'}
+        placeholder={value.length ? '' : t('tagInput.placeholder')}
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={onKeyDown}
         onBlur={() => draft.trim() && add(draft)}

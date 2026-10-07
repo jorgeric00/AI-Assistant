@@ -1,4 +1,5 @@
 import { CircleCheck, CircleX, Plus } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { SECTIONS, type SectionId } from '../sections';
 
 interface Props {
@@ -8,9 +9,10 @@ interface Props {
 }
 
 export function Sidebar({ current, serverOk, onQuickCapture }: Props) {
+  const { t } = useTranslation('common');
   return (
     <nav
-      aria-label="Secciones"
+      aria-label={t('sidebar.ariaLabel')}
       className="flex max-w-full flex-[1_1_232px] flex-col gap-4 border-r border-line bg-surface px-3 py-4 md:max-w-[232px]"
     >
       <div className="px-2 py-1 text-heading font-semibold">AI-Assistant</div>
@@ -21,12 +23,12 @@ export function Sidebar({ current, serverOk, onQuickCapture }: Props) {
         className="flex h-10 items-center gap-2 rounded-md border border-line-strong bg-surface-raised px-3 text-ink hover:border-ink-muted"
       >
         <Plus size={16} strokeWidth={1.5} aria-hidden />
-        <span className="grow text-left">Captura rápida</span>
+        <span className="grow text-left">{t('sidebar.quickCapture')}</span>
         <kbd className="font-mono text-small text-ink-faint">Alt+N</kbd>
       </button>
 
       <ul className="flex flex-col gap-0.5">
-        {SECTIONS.map(({ id, label, icon: Icon }) => {
+        {SECTIONS.map(({ id, icon: Icon }) => {
           const active = id === current;
           return (
             <li key={id}>
@@ -38,7 +40,7 @@ export function Sidebar({ current, serverOk, onQuickCapture }: Props) {
                 }`}
               >
                 <Icon size={20} strokeWidth={1.5} aria-hidden className={active ? 'text-accent' : undefined} />
-                {label}
+                {t(`sections.${id}`)}
               </a>
             </li>
           );
@@ -51,7 +53,7 @@ export function Sidebar({ current, serverOk, onQuickCapture }: Props) {
         ) : (
           <CircleCheck size={12} className="text-success" aria-hidden />
         )}
-        {serverOk === false ? 'Servidor sin conexión' : serverOk ? 'Servidor conectado' : 'Conectando…'}
+        {serverOk === false ? t('sidebar.serverOffline') : serverOk ? t('sidebar.serverOnline') : t('sidebar.connecting')}
       </div>
     </nav>
   );

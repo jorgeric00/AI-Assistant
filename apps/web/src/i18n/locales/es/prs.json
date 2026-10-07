@@ -1,0 +1,35 @@
+{
+  "alerts": {
+    "notConfigured": "Añade <code>GITHUB_TOKEN</code> al fichero .env y reinicia la app para ver aquí CI en rojo y comentarios nuevos.",
+    "empty": "Sin avisos. Aquí verás CI en rojo y comentarios nuevos.",
+    "in": "en"
+  },
+  "state": {
+    "merged": "Mergeada",
+    "closed": "Cerrada",
+    "draft": "Borrador",
+    "approved": "Aprobada",
+    "ready": "Lista para revisar"
+  },
+  "checks": {
+    "failingMany": "{{n}} checks en rojo",
+    "failingOne": "{{name}} en rojo",
+    "failing": "Checks en rojo",
+    "passing": "Checks en verde",
+    "pending": "Checks en curso",
+    "none": "Sin checks"
+  },
+  "reviews": {
+    "comments_one": "{{count}} comentario",
+    "comments_other": "{{count}} comentarios",
+    "changesRequested": "Cambios pedidos por {{names}}",
+    "approvedBy": "Aprobada por {{names}}",
+    "none": "Sin revisiones"
+  },
+  "taskPrs": {
+    "title": "Pull requests",
+    "fromGithub": "De GitHub",
+    "fromGithubChecked": "De GitHub · comprobado {{when}}",
+    "empty": "Aún no hay PR con {{taskKey}} en la rama o el título."
+  }
+}

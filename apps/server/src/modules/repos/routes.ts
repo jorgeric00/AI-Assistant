@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { RepoInput, RepoInspectInput, RepoUpdate, type RepoDetail } from '@dev-assistant/shared';
 import type { Db } from '../../db/client.js';
 import type { Llm } from '../../integrations/opencode/llm.js';
+import { t } from '../../i18n/index.js';
 import { inspectRepo, runGit, type GitRunner } from './git.js';
 import { draftRepoProfile } from './profile-draft.js';
 import { RepoConflictError, ReposRepository } from './repository.js';
@@ -18,7 +19,7 @@ export interface ReposRoutesOptions {
 /** Repositorios y su ficha (R17): dónde trabaja opencode y qué debe saber de cada repo. */
 export async function reposRoutes(app: FastifyInstance, { db, llm, git = runGit }: ReposRoutesOptions) {
   const repo = new ReposRepository(db);
-  const notFound = (reply: FastifyReply) => reply.code(404).send({ error: 'Repositorio no encontrado' });
+  const notFound = (reply: FastifyReply) => reply.code(404).send({ error: t('repos.notFound') });
   const conflict = (reply: FastifyReply) => (err: unknown) => {
     if (err instanceof RepoConflictError) return reply.code(409).send({ error: err.message });
     throw err;
@@ -40,7 +41,7 @@ export async function reposRoutes(app: FastifyInstance, { db, llm, git = runGit 
   app.post('/api/repos', async (req, reply) => {
     const input = RepoInput.parse(req.body);
     if (!(await inspectRepo(input.localPath, git)).isGitRepo) {
-      return reply.code(400).send({ error: `${input.localPath} no es un repositorio git (o no existe).` });
+      return reply.code(400).send({ error: t('repos.notGitRepo', { path: input.localPath }) });
     }
     try {
       return reply.code(201).send(await detail(repo.create(input)));
@@ -72,7 +73,7 @@ export async function reposRoutes(app: FastifyInstance, { db, llm, git = runGit 
     const found = repo.get(id);
     if (!found) return notFound(reply);
     if (!(await inspectRepo(found.localPath, git)).isGitRepo) {
-      return reply.code(400).send({ error: `No se encuentra el repositorio en ${found.localPath}.` });
+      return reply.code(400).send({ error: t('repos.pathMissing', { path: found.localPath }) });
     }
     repo.saveProfile(id, await draftRepoProfile(llm, found), true);
     return detail(id);

@@ -1,0 +1,142 @@
+{
+  "kinds": {
+    "note": {
+      "label": "Notas",
+      "edit": "Editar nota",
+      "new": "Nueva nota",
+      "noMatches": "No hay notas que coincidan.",
+      "noArchived": "No hay notas archivadas."
+    },
+    "link": {
+      "label": "Enlaces",
+      "edit": "Editar enlace",
+      "new": "Nuevo enlace",
+      "noMatches": "No hay enlaces que coincidan.",
+      "noArchived": "No hay enlaces archivados."
+    },
+    "doc": {
+      "label": "Documentación",
+      "edit": "Editar documento",
+      "new": "Nuevo documento",
+      "noMatches": "No hay documentos que coincidan.",
+      "noArchived": "No hay documentos archivados."
+    }
+  },
+  "notesPage": {
+    "title": "Notas",
+    "newNote": "Nueva nota"
+  },
+  "browser": {
+    "notesList": "Lista de notas",
+    "ownDocs": "Documentos propios",
+    "searchType": "Tipo de búsqueda",
+    "modeText": "Texto",
+    "modeQuestion": "Pregunta",
+    "askLabel": "Pregunta sobre tus notas",
+    "searchNotes": "Buscar en notas",
+    "searchDocs": "Buscar en la documentación",
+    "askPlaceholder": "¿Cómo se despliega en pre?",
+    "askHint": "Pulsa Enter. opencode responde solo con lo que hay en tus notas, enlaces y documentos no archivados.",
+    "all": "Todas",
+    "withTask": "Con tarea",
+    "withoutTask": "Sin tarea",
+    "archivedNotes": "Archivadas",
+    "archivedDocs": "Archivados",
+    "loadError": "No se pudo cargar la lista.",
+    "emptyNotes": "Aún no tienes notas. Crea una con \"Nueva nota\" o con Alt+N.",
+    "emptyDocs": "Aún no tienes documentos propios. Crea uno con \"Nuevo documento\".",
+    "relatedNotes": "Notas relacionadas",
+    "noteNotInList": "Esa nota no está en esta lista.",
+    "docNotInList": "Ese documento no está en esta lista."
+  },
+  "ask": {
+    "thinking": "Pensando…",
+    "answer": "Respuesta"
+  },
+  "detail": {
+    "pinnedNote": "Fijada",
+    "archivedNote": "Archivada",
+    "archivedOther": "Archivado",
+    "task": "Tarea",
+    "linkedTo": "Vinculado a",
+    "notSynced": "Aún sin sincronizar con JIRA",
+    "commit": "Commit",
+    "editedNote": "Editada {{when}}",
+    "editedOther": "Editado {{when}}",
+    "moreOptions": "Más opciones",
+    "unpinNote": "Quitar de fijadas",
+    "pinTop": "Fijar arriba",
+    "unarchive": "Sacar del archivo",
+    "archive": "Archivar",
+    "delete": "Eliminar",
+    "confirmDelete": "¿Eliminar \"{{title}}\"? No se puede deshacer.",
+    "noText": "Sin texto."
+  },
+  "editor": {
+    "notFound": "No se encontró la nota.",
+    "titleRequired": "Escribe un título.",
+    "urlRequired": "Escribe una URL que empiece por http:// o https://.",
+    "badTaskKey": "\"{{key}}\" no es una clave de JIRA (ej.: ABC-123).",
+    "url": "URL",
+    "title": "Título",
+    "body": "Texto (Markdown)",
+    "editorMode": "Modo del editor",
+    "write": "Escribir",
+    "preview": "Vista previa",
+    "nothingToShow": "Nada que mostrar todavía.",
+    "tags": "Etiquetas",
+    "linkTask": "Vincular a tarea de JIRA",
+    "taskPlaceholder": "Clave, p. ej. ABC-123",
+    "notSyncedHint": "Aún sin sincronizar con JIRA. Se enlazará sola cuando llegue la tarea.",
+    "commit": "Commit de la tarea (opcional)",
+    "pinTop": "Fijar arriba en la lista",
+    "shortcuts": "<kbd>Ctrl+Enter</kbd> guardar · <kbd>Esc</kbd> cancelar"
+  },
+  "linkTitle": {
+    "loading": "Buscando el título de la página…",
+    "found": "Título obtenido de la página. Puedes cambiarlo.",
+    "notFound": "No se pudo obtener el título; escríbelo tú."
+  },
+  "links": {
+    "title": "Enlaces de interés",
+    "newLink": "Nuevo enlace",
+    "search": "Buscar en enlaces",
+    "all": "Todos",
+    "archived": "Archivados",
+    "loadError": "No se pudieron cargar los enlaces.",
+    "noMatches": "No hay enlaces que coincidan.",
+    "noArchived": "No hay enlaces archivados.",
+    "empty": "Aún no tienes enlaces. Guarda uno con \"Nuevo enlace\" o con Alt+N.",
+    "colLink": "Enlace",
+    "colTags": "Etiquetas",
+    "colTask": "Tarea",
+    "colActions": "Acciones",
+    "hint": "Al pegar una URL, la app rellena el título de la página. Se abren en una pestaña nueva.",
+    "pinned": "Fijado",
+    "notSynced": "Aún sin sincronizar con JIRA",
+    "moreOptions": "Más opciones de {{title}}",
+    "unpin": "Quitar de fijados",
+    "pinTop": "Fijar arriba",
+    "unarchive": "Sacar del archivo",
+    "archive": "Archivar",
+    "delete": "Eliminar",
+    "confirmDelete": "¿Eliminar \"{{title}}\"? No se puede deshacer."
+  },
+  "docs": {
+    "title": "Documentación",
+    "newDoc": "Nuevo documento",
+    "tabsLabel": "Tipo de documentación",
+    "tabTasks": "De tareas",
+    "tabOwn": "Propia",
+    "taskDocs": "Documentos de tareas",
+    "search": "Buscar en la documentación",
+    "hint": "Los escribe opencode al cerrar cada tarea.",
+    "loadError": "No se pudo leer la documentación de las tareas.",
+    "noMatches": "No hay documentos que coincidan.",
+    "empty": "Aún no hay ninguno. opencode escribe el resumen de cada tarea al terminarla (skill dev-assistant-tarea).",
+    "prCount_one": "{{count}} PR",
+    "prCount_other": "{{count}} PR",
+    "updated": "Actualizado {{when}} · RESUMEN.md de opencode",
+    "viewTask": "Ver la tarea"
+  }
+}

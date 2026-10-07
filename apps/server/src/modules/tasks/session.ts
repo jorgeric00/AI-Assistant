@@ -9,6 +9,7 @@ import type { Db } from '../../db/client.js';
 import { runGit, type GitRunner } from '../repos/git.js';
 import { ReposRepository } from '../repos/repository.js';
 import { parsePlanHeader } from './dev-files.js';
+import { language, t } from '../../i18n/index.js';
 import type { TasksRepository } from './repository.js';
 
 /** Abre una terminal con opencode en la carpeta de la tarea; false si no sabe hacerlo en este sistema. */
@@ -17,8 +18,10 @@ export type TerminalLauncher = (folder: string, key: string, prompt: string) => 
 const SKILL = 'dev-assistant-tarea';
 
 export function openPrompt(key: string): string {
-  // Sin comillas ni caracteres especiales: viaja dentro de una línea de cmd.exe.
-  return `Desarrolla la tarea ${key} con la skill ${SKILL}. Lee primero TAREA.md`;
+  // Sin comillas ni caracteres especiales: viaja dentro de una línea de cmd.exe. La skill y TAREA.md van en
+  // castellano; en otro idioma se pide además que opencode conteste en él.
+  const base = `Desarrolla la tarea ${key} con la skill ${SKILL}. Lee primero TAREA.md`;
+  return language() === 'es' ? base : `${base}. ${t('ai.answerLanguage')}`;
 }
 
 export function openCommand(folder: string, key: string): string {

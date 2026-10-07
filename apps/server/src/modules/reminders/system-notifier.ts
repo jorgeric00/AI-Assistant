@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import notifier from 'node-notifier';
+import { t } from '../../i18n/index.js';
 import type { SystemNotifier } from './scheduler.js';
 
 export const WINDOWS_APP_ID = 'AI-Assistant';
@@ -61,4 +62,4 @@ export async function notifyDesktop(title: string, message: string) {
   });
 }
 
-export const desktopNotifier: SystemNotifier = ({ reminder, late }) => notifyDesktop(late ? 'Recordatorio atrasado' : 'Recordatorio', reminder.title);
+export const desktopNotifier: SystemNotifier = ({ reminder, late }) => notifyDesktop(late ? t('reminders.notificationLate') : t('reminders.notification'), reminder.title);

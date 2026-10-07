@@ -7,6 +7,7 @@ import type { PrAlert, PrAlertKind, PrWatchStatus, PullRequestInfo } from '@dev-
 import type { Db } from '../../db/client.js';
 import { prAlerts, pullRequests, settings } from '../../db/schema.js';
 import { GithubError, type GhPullRequest, type GithubClient } from '../../integrations/github/client.js';
+import { t } from '../../i18n/index.js';
 
 const INTERVAL_MS = 10 * 60_000;
 const STATUS_KEY = 'github.prWatch';
@@ -49,7 +50,7 @@ function reviewState(pr: GhPullRequest) {
 export function diffPr(prev: PrRow, pr: GhPullRequest): { alerts: NewAlert[]; cursor: string | null } {
   const alerts: NewAlert[] = [];
   if (pr.checks === 'failure' && prev.checks !== 'failure') {
-    alerts.push({ kind: 'ci_failed', title: 'CI en rojo', detail: pr.failingChecks.length ? `Falla ${pr.failingChecks.slice(0, 3).join(', ')}` : null });
+    alerts.push({ kind: 'ci_failed', title: t('prs.alert.ciFailed'), detail: pr.failingChecks.length ? t('prs.alert.failing', { checks: pr.failingChecks.slice(0, 3).join(', ') }) : null });
   }
 
   const since = Date.parse(prev.activityCursor ?? prev.lastSeenAt);
@@ -57,12 +58,12 @@ export function diffPr(prev: PrRow, pr: GhPullRequest): { alerts: NewAlert[]; cu
   const comments = pr.comments.filter((c) => Date.parse(c.at) > since);
   const changes = reviews.filter((r) => r.state === 'CHANGES_REQUESTED');
   const approvals = reviews.filter((r) => r.state === 'APPROVED');
-  if (changes.length) alerts.push({ kind: 'changes_requested', title: 'Cambios pedidos', detail: `Por ${people(changes.map((r) => r.author))}` });
-  if (approvals.length) alerts.push({ kind: 'approved', title: 'Aprobada', detail: `Por ${people(approvals.map((r) => r.author))}` });
+  if (changes.length) alerts.push({ kind: 'changes_requested', title: t('prs.alert.changesRequested'), detail: t('prs.alert.by', { people: people(changes.map((r) => r.author)) }) });
+  if (approvals.length) alerts.push({ kind: 'approved', title: t('prs.alert.approved'), detail: t('prs.alert.by', { people: people(approvals.map((r) => r.author)) }) });
   // Los comentarios de una revisión con cambios pedidos ya van en ese aviso.
   const commentAuthors = [...comments.map((c) => c.author), ...reviews.filter((r) => r.state !== 'CHANGES_REQUESTED' && r.comments > 0).map((r) => r.author)];
   const count = comments.length + reviews.filter((r) => r.state !== 'CHANGES_REQUESTED').reduce((n, r) => n + r.comments, 0);
-  if (count > 0) alerts.push({ kind: 'comments', title: count === 1 ? '1 comentario nuevo' : `${count} comentarios nuevos`, detail: `De ${people(commentAuthors)}` });
+  if (count > 0) alerts.push({ kind: 'comments', title: count === 1 ? t('prs.alert.commentsOne') : t('prs.alert.commentsOther', { count }), detail: t('prs.alert.from', { people: people(commentAuthors) }) });
 
   const times = [...reviews.map((r) => r.at), ...comments.map((c) => c.at)];
   const cursor = times.length ? times.sort((a, b) => Date.parse(a) - Date.parse(b)).at(-1)! : prev.activityCursor;
@@ -95,7 +96,7 @@ export class PrWatcher {
 
   /** Una consulta a GitHub. Si ya hay una en marcha, espera a esa. */
   check(): Promise<void> {
-    if (!this.client) return Promise.reject(new GithubError('GitHub no está configurado: añade GITHUB_TOKEN al fichero .env.'));
+    if (!this.client) return Promise.reject(new GithubError(t('github.notConfigured')));
     this.running ??= this.run(this.client).finally(() => {
       this.running = null;
     });
@@ -126,7 +127,7 @@ export class PrWatcher {
           let cursor = latestActivity(pr);
           if (prev) {
             ({ alerts, cursor } = diffPr(prev, pr));
-            if (pr.state === 'merged' && prev.state !== 'merged') alerts.push({ kind: 'merged', title: 'Mergeada', detail: null });
+            if (pr.state === 'merged' && prev.state !== 'merged') alerts.push({ kind: 'merged', title: t('prs.alert.merged'), detail: null });
           }
           const values = {
             repo: pr.repo,
