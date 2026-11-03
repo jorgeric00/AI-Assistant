@@ -10,9 +10,12 @@ import { DailySummaryService, NothingToSummarizeError } from './daily-summary.js
 const DateQuery = z.object({ date: IsoDate });
 
 /** Funciones con IA (R5 resumen para la daily, R7 búsqueda en lenguaje natural) a través de opencode. */
-export async function aiRoutes(app: FastifyInstance, { db, llm, diaryFeed }: { db: Db; llm: Llm; diaryFeed: DiaryFeed }) {
+export async function aiRoutes(
+  app: FastifyInstance,
+  { db, llm, diaryFeed, devAssistantHome }: { db: Db; llm: Llm; diaryFeed: DiaryFeed; devAssistantHome: string },
+) {
   const daily = new DailySummaryService(db, llm);
-  const ask = new AskService(db, llm);
+  const ask = new AskService(db, llm, devAssistantHome);
 
   app.get('/api/daily-summary', async (req) => daily.latest(DateQuery.parse(req.query).date));
 
@@ -27,5 +30,10 @@ export async function aiRoutes(app: FastifyInstance, { db, llm, diaryFeed }: { d
     }
   });
 
-  app.post('/api/search/ask', async (req) => ask.ask(AskInput.parse(req.body).question));
+  app.post('/api/search/ask', async (req) => {
+    const { question, sources } = AskInput.parse(req.body);
+    // Los commits de opencode entran en el diario antes de buscar en él.
+    if (sources.includes('diary')) await diaryFeed.importCommits();
+    return ask.ask(question, sources);
+  });
 }

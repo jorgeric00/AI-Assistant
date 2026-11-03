@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { AskResponse, Note, NoteKind } from '@dev-assistant/shared';
-import { ExternalLink, FileText, Link2, MoreHorizontal, Pin, Plus, Search, Sparkles } from 'lucide-react';
+import type { Note, NoteKind } from '@dev-assistant/shared';
+import { ExternalLink, FileText, Link2, MoreHorizontal, Pin, Plus, Search } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api, queryKeys } from '../../api';
@@ -57,35 +57,21 @@ function excerpt(note: Note): string {
   return line ?? '';
 }
 
-type SearchMode = 'texto' | 'pregunta';
-
-/** Lista con búsqueda y la nota elegida al lado. Las notas (kind note) además filtran por tarea y admiten preguntas a la IA. */
+/** Lista con búsqueda y la nota elegida al lado. Las notas (kind note) además filtran por tarea. */
 export function NotesBrowser({ kind, selectedId }: { kind: NoteKind; selectedId?: number }) {
   const { t } = useTranslation(['notes', 'common']);
   const isNote = kind === 'note';
-  const [mode, setMode] = useState<SearchMode>('texto');
   const [search, setSearch] = useState('');
-  const [question, setQuestion] = useState('');
   const [tag, setTag] = useState<string | undefined>();
   const [archived, setArchived] = useState(false);
   const [withTask, setWithTask] = useState<'con' | 'sin' | undefined>();
-  const inputRef = useRef<HTMLInputElement>(null);
   const q = useDebounced(search.trim(), 200);
-  const asking = isNote && mode === 'pregunta';
-  // En modo pregunta la lista parte de todas las notas activas y luego muestra las relacionadas.
-  const filter = asking ? { kind } : { kind, q: q || undefined, tag, archived, task: withTask };
+  const filter = { kind, q: q || undefined, tag, archived, task: withTask };
 
   const notes = useQuery({ queryKey: queryKeys.noteList(filter), queryFn: () => api.listNotes(filter), placeholderData: (prev) => prev });
   const tags = useQuery({ queryKey: queryKeys.tags(kind), queryFn: () => api.listTags(kind) });
-  const ask = useMutation({ mutationFn: (text: string) => api.ask(text) });
 
-  const switchMode = (next: SearchMode) => {
-    setMode(next);
-    inputRef.current?.focus();
-  };
-
-  const answer = asking ? ask.data : undefined;
-  const list = answer ? answer.sources.flatMap((s) => notes.data?.find((n) => n.id === s.id) ?? []) : (notes.data ?? []);
+  const list = notes.data ?? [];
   const selected = list.find((n) => n.id === selectedId) ?? (selectedId === undefined ? list[0] : undefined);
 
   const chipClass = (active: boolean) =>
@@ -95,91 +81,60 @@ export function NotesBrowser({ kind, selectedId }: { kind: NoteKind; selectedId?
       <div className="flex flex-wrap items-start gap-4">
         <section aria-label={isNote ? t('browser.notesList') : t('browser.ownDocs')} className="flex max-w-full min-w-0 flex-[1_1_340px] flex-col gap-3">
           <div className="flex flex-col gap-2">
-            {isNote && <div role="group" aria-label={t('browser.searchType')} className="flex gap-1 self-start rounded-md border border-line bg-surface p-1">
-              {(['texto', 'pregunta'] as const).map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  aria-pressed={mode === m}
-                  onClick={() => switchMode(m)}
-                  className={`h-8 rounded-sm px-3 text-[13px] ${mode === m ? 'bg-surface-raised font-medium text-ink' : 'text-ink-muted hover:text-ink'}`}
-                >
-                  {m === 'texto' ? t('browser.modeText') : t('browser.modeQuestion')}
-                </button>
-              ))}
-            </div>}
-            <form
-              role="search"
-              className="relative"
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (asking && question.trim()) ask.mutate(question.trim());
-              }}
-            >
+            <form role="search" className="relative" onSubmit={(e) => e.preventDefault()}>
               <label htmlFor="buscar-notas" className="sr-only">
-                {asking ? t('browser.askLabel') : isNote ? t('browser.searchNotes') : t('browser.searchDocs')}
+                {isNote ? t('browser.searchNotes') : t('browser.searchDocs')}
               </label>
-              {asking ? (
-                <Sparkles size={16} strokeWidth={1.5} className="absolute top-3 left-3 text-accent" aria-hidden />
-              ) : (
-                <Search size={16} strokeWidth={1.5} className="absolute top-3 left-3 text-ink-faint" aria-hidden />
-              )}
+              <Search size={16} strokeWidth={1.5} className="absolute top-3 left-3 text-ink-faint" aria-hidden />
               <input
-                ref={inputRef}
                 id="buscar-notas"
                 type="search"
-                value={asking ? question : search}
-                onChange={(e) => (asking ? setQuestion(e.target.value) : setSearch(e.target.value))}
-                placeholder={asking ? t('browser.askPlaceholder') : isNote ? t('browser.searchNotes') : t('browser.searchDocs')}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={isNote ? t('browser.searchNotes') : t('browser.searchDocs')}
                 className="h-10 w-full rounded-md border border-line-strong bg-surface-raised pr-3 pl-9 text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none"
               />
             </form>
-            {asking ? (
-              <p className="m-0 text-small text-ink-faint">{t('browser.askHint')}</p>
-            ) : (
-              <div className="flex flex-wrap gap-1.5">
-                <button
-                  type="button"
-                  aria-pressed={!tag && !withTask}
-                  onClick={() => {
-                    setTag(undefined);
-                    setWithTask(undefined);
-                  }}
-                  className={chipClass(!tag && !withTask)}
-                >
-                  {t('browser.all')}
-                </button>
-                {isNote &&
-                  (['con', 'sin'] as const).map((w) => (
-                    <button key={w} type="button" aria-pressed={withTask === w} onClick={() => setWithTask(withTask === w ? undefined : w)} className={chipClass(withTask === w)}>
-                      {w === 'con' ? t('browser.withTask') : t('browser.withoutTask')}
-                    </button>
-                  ))}
-                {tags.data?.map((tg) => (
-                  <button
-                    key={tg.name}
-                    type="button"
-                    aria-pressed={tag === tg.name}
-                    onClick={() => setTag(tag === tg.name ? undefined : tg.name)}
-                    className={chipClass(tag === tg.name)}
-                  >
-                    {tg.name}
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                aria-pressed={!tag && !withTask}
+                onClick={() => {
+                  setTag(undefined);
+                  setWithTask(undefined);
+                }}
+                className={chipClass(!tag && !withTask)}
+              >
+                {t('browser.all')}
+              </button>
+              {isNote &&
+                (['con', 'sin'] as const).map((w) => (
+                  <button key={w} type="button" aria-pressed={withTask === w} onClick={() => setWithTask(withTask === w ? undefined : w)} className={chipClass(withTask === w)}>
+                    {w === 'con' ? t('browser.withTask') : t('browser.withoutTask')}
                   </button>
                 ))}
-                <button type="button" aria-pressed={archived} onClick={() => setArchived(!archived)} className={chipClass(archived)}>
-                  {isNote ? t('browser.archivedNotes') : t('browser.archivedDocs')}
+              {tags.data?.map((tg) => (
+                <button
+                  key={tg.name}
+                  type="button"
+                  aria-pressed={tag === tg.name}
+                  onClick={() => setTag(tag === tg.name ? undefined : tg.name)}
+                  className={chipClass(tag === tg.name)}
+                >
+                  {tg.name}
                 </button>
-              </div>
-            )}
+              ))}
+              <button type="button" aria-pressed={archived} onClick={() => setArchived(!archived)} className={chipClass(archived)}>
+                {isNote ? t('browser.archivedNotes') : t('browser.archivedDocs')}
+              </button>
+            </div>
           </div>
-
-          {asking && <AskResult pending={ask.isPending} error={ask.error} answer={answer} />}
 
           {notes.isError ? (
             <p className="m-0 text-danger">{t('browser.loadError')}</p>
           ) : notes.isPending ? (
             <p className="m-0 text-ink-muted">{t('common:status.loading')}</p>
-          ) : asking && (ask.isPending || answer?.sources.length === 0) ? null : list.length === 0 ? (
+          ) : list.length === 0 ? (
             <p className="m-0 py-2 text-ink-muted">
               {q || tag || withTask
                 ? t(`kinds.${kind}.noMatches`)
@@ -190,7 +145,7 @@ export function NotesBrowser({ kind, selectedId }: { kind: NoteKind; selectedId?
                     : t('browser.emptyDocs')}
             </p>
           ) : (
-            <ul aria-label={answer ? t('browser.relatedNotes') : undefined} className="flex flex-col gap-1">
+            <ul className="flex flex-col gap-1">
               {list.map((note) => (
                 <li key={note.id}>
                   <NoteListItem note={note} active={note.id === selected?.id} />
@@ -206,48 +161,6 @@ export function NotesBrowser({ kind, selectedId }: { kind: NoteKind; selectedId?
           list.length > 0 && <p className="flex-[999_1_420px] text-ink-muted">{isNote ? t('browser.noteNotInList') : t('browser.docNotInList')}</p>
         )}
       </div>
-  );
-}
-
-function AskResult({ pending, error, answer }: { pending: boolean; error: Error | null; answer?: AskResponse }) {
-  const { t } = useTranslation(['notes', 'common']);
-  if (pending) {
-    return (
-      <p role="status" className="m-0 flex items-center gap-2 rounded-lg border border-line bg-surface p-4 text-ink-muted">
-        <Sparkles size={16} strokeWidth={1.5} className="text-accent" aria-hidden />
-        {t('ask.thinking')}
-      </p>
-    );
-  }
-  if (error) {
-    return (
-      <p role="alert" className="m-0 rounded-lg border border-line bg-surface p-4 text-danger">
-        {error.message}
-      </p>
-    );
-  }
-  if (!answer) return null;
-  const cited = answer.sources.filter((s) => s.cited);
-  return (
-    <section aria-label={t('ask.answer')} className="flex flex-col gap-3 rounded-lg border border-line bg-surface p-4">
-      <span className="flex items-center gap-2 text-small font-medium tracking-[.04em] text-ink-muted uppercase">
-        <Sparkles size={14} strokeWidth={1.5} className="text-accent" aria-hidden />
-        {t('ask.answer')}
-      </span>
-      <Markdown>{answer.answer}</Markdown>
-      {cited.length > 0 && (
-        <ul className="m-0 flex flex-col gap-1 border-t border-line pt-3 text-small">
-          {cited.map((s) => (
-            <li key={s.id} className="flex gap-2">
-              <span className="font-mono text-ink-faint">[{s.ref}]</span>
-              <a href={`#/notas/${s.id}`} className="text-info">
-                {s.title}
-              </a>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
   );
 }
 

@@ -29,14 +29,8 @@
   "browser": {
     "notesList": "Lista de notas",
     "ownDocs": "Documentos propios",
-    "searchType": "Tipo de búsqueda",
-    "modeText": "Texto",
-    "modeQuestion": "Pregunta",
-    "askLabel": "Pregunta sobre tus notas",
     "searchNotes": "Buscar en notas",
     "searchDocs": "Buscar en la documentación",
-    "askPlaceholder": "¿Cómo se despliega en pre?",
-    "askHint": "Pulsa Enter. opencode responde solo con lo que hay en tus notas, enlaces y documentos no archivados.",
     "all": "Todas",
     "withTask": "Con tarea",
     "withoutTask": "Sin tarea",
@@ -45,13 +39,8 @@
     "loadError": "No se pudo cargar la lista.",
     "emptyNotes": "Aún no tienes notas. Crea una con \"Nueva nota\" o con Alt+N.",
     "emptyDocs": "Aún no tienes documentos propios. Crea uno con \"Nuevo documento\".",
-    "relatedNotes": "Notas relacionadas",
     "noteNotInList": "Esa nota no está en esta lista.",
     "docNotInList": "Ese documento no está en esta lista."
-  },
-  "ask": {
-    "thinking": "Pensando…",
-    "answer": "Respuesta"
   },
   "detail": {
     "pinnedNote": "Fijada",

@@ -1,4 +1,5 @@
 import type {
+  AskSourceType,
   JiraCreateDraft,
   JiraCreateDraftInput,
   JiraCreateForm,
@@ -107,7 +108,7 @@ export const api = {
 
   getDailySummary: (date: string) => request<DailySummary | null>('GET', `/api/daily-summary?date=${date}`),
   generateDailySummary: (date: string) => request<DailySummary>('POST', '/api/daily-summary', { date }),
-  ask: (question: string) => request<AskResponse>('POST', '/api/search/ask', { question }),
+  ask: (question: string, sources?: AskSourceType[]) => request<AskResponse>('POST', '/api/search/ask', { question, sources }),
 
   listTasks: (done: boolean) => request<Task[]>('GET', `/api/tasks${done ? '?done=true' : ''}`),
   taskProjects: () => request<JiraProjectOption[]>('GET', '/api/tasks/projects'),

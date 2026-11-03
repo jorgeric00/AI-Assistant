@@ -55,7 +55,8 @@
     "quickCapture": "Quick capture",
     "serverOffline": "Server offline",
     "serverOnline": "Server connected",
-    "connecting": "Connecting…"
+    "connecting": "Connecting…",
+    "ask": "Ask"
   },
   "snooze": {
     "button": "Snooze",
@@ -108,5 +109,33 @@
     "pickTaskFirst": "Pick a task first",
     "noCommit": "No commit",
     "noCommitsYet": "The task has no commits yet"
+  },
+  "ask": {
+    "title": "Ask",
+    "anywhere": "<kbd>Alt+P</kbd> from any screen",
+    "label": "Your question",
+    "placeholder": "What did we agree with the business about the CSV format?",
+    "submit": "Ask",
+    "where": "Where to search",
+    "sources": {
+      "notes": "Notes",
+      "links": "Links",
+      "docs": "Documentation",
+      "tasks": "JIRA tasks",
+      "diary": "Journal"
+    },
+    "type": {
+      "notes": "Note",
+      "links": "Link",
+      "docs": "Documentation",
+      "tasks": "JIRA task",
+      "diary": "Journal"
+    },
+    "thinking": "Thinking…",
+    "answer": "Answer",
+    "sourcesTitle": "Sources",
+    "notCited": "not cited",
+    "hint": "It answers only with what is in the app and cites where it got it from.",
+    "close": "<kbd>Esc</kbd> close"
   }
 }

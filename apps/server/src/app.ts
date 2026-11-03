@@ -113,7 +113,7 @@ export async function buildApp(db: Db, opts: BuildAppOptions = {}) {
   // Los commits que anota opencode en HISTORIAL.md entran en el diario antes de leerlo.
   const diaryFeed = new DiaryFeed(db, devAssistantHome);
   await app.register(journalRoutes, { db, diaryFeed });
-  await app.register(aiRoutes, { db, llm: opts.llm ?? noLlm, diaryFeed });
+  await app.register(aiRoutes, { db, llm: opts.llm ?? noLlm, diaryFeed, devAssistantHome });
   const tasksRepo = new TasksRepository(db);
   await app.register(tasksRoutes, {
     db,

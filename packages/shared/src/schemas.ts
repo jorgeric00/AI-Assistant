@@ -211,18 +211,26 @@ export interface DailySummary {
   generatedAt: string;
 }
 
+/** Dónde busca "Pregunta": notas, enlaces, documentación (propia y resúmenes de tareas), tareas de JIRA y diario. */
+export const ASK_SOURCES = ['notes', 'links', 'docs', 'tasks', 'diary'] as const;
+export type AskSourceType = (typeof ASK_SOURCES)[number];
+
 export const AskInput = z.object({
   question: z.string().trim().min(3, 'Escribe una pregunta').max(500, 'La pregunta es demasiado larga'),
+  sources: z.array(z.enum(ASK_SOURCES)).min(1).default([...ASK_SOURCES]),
 });
 export type AskInput = z.input<typeof AskInput>;
 
 export interface AskSource {
-  /** Número con el que la respuesta cita la nota: [1], [2]... */
+  /** Número con el que la respuesta la cita: [1], [2]... */
   ref: number;
-  id: number;
+  type: AskSourceType;
   title: string;
-  kind: NoteKind;
-  /** true si la respuesta cita esta nota. */
+  /** Ruta de la app donde se ve (#/...). */
+  href: string;
+  /** Fecha de la fuente (ISO o AAAA-MM-DD), si la tiene. */
+  date: string | null;
+  /** true si la respuesta la cita. */
   cited: boolean;
 }
 

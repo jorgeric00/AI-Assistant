@@ -1,7 +1,11 @@
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { AskResponse, DailySummary } from '@dev-assistant/shared';
 import { buildApp } from '../../app.js';
 import { openDatabase } from '../../db/client.js';
+import { tasks } from '../../db/schema.js';
 import { LlmUnavailableError, type Llm, type LlmRequest } from '../../integrations/opencode/llm.js';
 import { toRelatedFtsQuery } from '../notes/repository.js';
 import { previousWorkday } from './daily-summary.js';
@@ -86,7 +90,7 @@ describe('resumen para la daily', () => {
   });
 });
 
-describe('preguntas sobre las notas', () => {
+describe('Pregunta sobre todo', () => {
   it('construye la consulta con OR y sin palabras vacías', () => {
     expect(toRelatedFtsQuery('¿Dónde apunté el comando para desplegar en pre?')).toBe('"coman"* OR "desple"* OR "pre"*');
     expect(toRelatedFtsQuery('¿qué?')).toBeNull();
@@ -94,7 +98,7 @@ describe('preguntas sobre las notas', () => {
 
   it('pasa las notas relacionadas al modelo y enlaza las citas', async () => {
     // Cita la nota "Comandos útiles" con el número que le haya tocado en el prompt.
-    const { llm, calls } = fakeLlm((req) => `Se despliega con \`make deploy-pre\` [${/\[(\d+)\] Comandos útiles/.exec(req.user)![1]}].`);
+    const { llm, calls } = fakeLlm((req) => `Se despliega con \`make deploy-pre\` [${/\[(\d+)\] Nota: Comandos útiles/.exec(req.user)![1]}].`);
     ctx = await setup(llm);
     const create = async (payload: object) => (await ctx.post('/api/notes', payload)).json() as { id: number };
     await create({ title: 'Comida con el equipo', bodyMd: 'El jueves' });
@@ -109,10 +113,10 @@ describe('preguntas sobre las notas', () => {
     expect(calls[0]!.user).toContain('Pregunta: ¿Cómo se despliega en pre?');
     expect(calls[0]!.user).not.toContain('Comida');
     expect(calls[0]!.user).not.toContain('Despliegue viejo');
-    const refB = body.sources.find((s) => s.id === b.id)!.ref;
+    const refB = body.sources.find((s) => s.href === `#/notas/${b.id}`)!.ref;
     expect(body.answer).toBe(`Se despliega con \`make deploy-pre\` [[${refB}]](#/notas/${b.id}).`);
-    expect(body.sources[0]).toMatchObject({ id: b.id, cited: true });
-    expect(body.sources.map((s) => s.id).sort()).toEqual([a.id, b.id].sort());
+    expect(body.sources[0]).toMatchObject({ href: `#/notas/${b.id}`, type: 'notes', title: 'Comandos útiles', cited: true });
+    expect(body.sources.map((s) => s.href).sort()).toEqual([`#/notas/${a.id}`, `#/notas/${b.id}`].sort());
   });
 
   it('sin notas relacionadas responde sin llamar a la IA', async () => {
@@ -120,7 +124,35 @@ describe('preguntas sobre las notas', () => {
     ctx = await setup(llm);
     await ctx.post('/api/notes', { title: 'Comida con el equipo' });
     const res = await ctx.post('/api/search/ask', { question: '¿Cuál es la contraseña de la VPN?' });
-    expect(res.json()).toEqual({ answer: 'No he encontrado notas relacionadas con la pregunta.', sources: [] });
+    expect(res.json()).toEqual({ answer: 'No he encontrado nada en la app relacionado con la pregunta.', sources: [] });
     expect(calls).toHaveLength(0);
+  });
+
+  it('busca también en enlaces, documentación, tareas de JIRA y diario, y respeta los filtros', async () => {
+    const { db } = openDatabase(':memory:');
+    const home = mkdtempSync(join(tmpdir(), 'dev-assistant-'));
+    mkdirSync(join(home, 'worktrees', 'ABC-131'), { recursive: true });
+    writeFileSync(join(home, 'worktrees', 'ABC-131', 'RESUMEN.md'), '# ABC-131 · Exportar pedidos\n\nEl CSV usa punto y coma como separador.');
+    db.insert(tasks).values({ jiraKey: 'ABC-131', summary: 'Exportar informe de pedidos a CSV', status: 'En curso', descriptionMd: 'Columnas id, fecha, importe' }).run();
+    db.insert(tasks).values({ jiraKey: 'ABC-200', summary: 'Login único', status: 'Por hacer' }).run();
+    const { llm, calls } = fakeLlm('Se usa punto y coma [2].');
+    const app = await buildApp(db, { llm, devAssistantHome: home });
+    ctx = { app, post: (url: string, payload: object) => app.inject({ method: 'POST', url, payload }) };
+    await ctx.post('/api/notes', { kind: 'link', title: 'RFC 4180 formato CSV', url: 'https://www.rfc-editor.org/rfc/rfc4180' });
+    await ctx.post('/api/journal', { date: '2026-10-03', text: 'Reunión con negocio: el separador decimal del CSV sigue pendiente' });
+    await ctx.post('/api/journal', { date: '2026-10-04', text: 'Comida de equipo' });
+
+    const all = (await ctx.post('/api/search/ask', { question: '¿Qué separador usa el CSV?' })).json() as AskResponse;
+    expect(all.sources.map((s) => s.type).sort()).toEqual(['diary', 'docs', 'links', 'tasks']);
+    expect(all.sources.find((s) => s.type === 'tasks')).toMatchObject({ title: 'ABC-131 Exportar informe de pedidos a CSV', href: '#/tareas/ABC-131/detalle' });
+    expect(all.sources.find((s) => s.type === 'diary')).toMatchObject({ href: '#/diario/2026-10-03', date: '2026-10-03' });
+    expect(all.sources.find((s) => s.type === 'docs')).toMatchObject({ href: '#/documentacion/tareas/ABC-131' });
+    expect(all.sources[0]!.cited).toBe(true);
+    expect(calls[0]!.user).not.toContain('Comida');
+    expect(calls[0]!.user).not.toContain('Login');
+
+    const onlyDiary = (await ctx.post('/api/search/ask', { question: '¿Qué separador usa el CSV?', sources: ['diary'] })).json() as AskResponse;
+    expect(onlyDiary.sources.map((s) => s.type)).toEqual(['diary']);
+    expect((await ctx.post('/api/search/ask', { question: '¿Qué separador usa el CSV?', sources: [] })).statusCode).toBe(400);
   });
 });
