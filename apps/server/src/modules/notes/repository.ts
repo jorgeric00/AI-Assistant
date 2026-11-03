@@ -35,10 +35,14 @@ const STOPWORDS = new Set(
  * prefijos unidos con OR, para que baste con que una nota comparta alguna.
  */
 export function toRelatedFtsQuery(question: string): string | null {
+  const stems = relatedStems(question);
+  return stems.length ? stems.map((w) => `"${w}"*`).join(' OR ') : null;
+}
+
+/** Raíces de las palabras significativas de una pregunta: sin las últimas letras, "despliega" encuentra también "despliegue". */
+export function relatedStems(question: string): string[] {
   const words = [...new Set((question.toLowerCase().match(/[\p{L}\p{N}_]+/gu) ?? []).filter((w) => w.length >= 3 && !STOPWORDS.has(w)))];
-  if (!words.length) return null;
-  // Raíz aproximada: sin las últimas letras, "despliega" encuentra también "despliegue".
-  return [...new Set(words.map((w) => (w.length > 5 ? w.slice(0, Math.max(5, w.length - 3)) : w)))].map((w) => `"${w}"*`).join(' OR ');
+  return [...new Set(words.map((w) => (w.length > 5 ? w.slice(0, Math.max(5, w.length - 3)) : w)))];
 }
 
 export class NotesRepository {
@@ -86,14 +90,14 @@ export class NotesRepository {
   }
 
   /** Notas no archivadas que más se parecen a una pregunta (como mucho `limit`), por relevancia. */
-  related(question: string, limit: number): Note[] {
+  related(question: string, limit: number, kinds?: NoteKind[]): Note[] {
     const fts = toRelatedFtsQuery(question);
-    if (!fts) return [];
+    if (!fts || kinds?.length === 0) return [];
     const rows = this.db
       .select({ note: notes })
       .from(notes)
       .innerJoin(sql`notes_fts`, sql`notes_fts.rowid = ${notes.id}`)
-      .where(and(sql`notes_fts match ${fts}`, eq(notes.archived, false)))
+      .where(and(sql`notes_fts match ${fts}`, eq(notes.archived, false), kinds ? inArray(notes.kind, kinds) : undefined))
       .orderBy(sql`bm25(notes_fts, 5.0, 1.0, 1.0)`)
       .limit(limit)
       .all()

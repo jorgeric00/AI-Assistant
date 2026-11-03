@@ -31,7 +31,11 @@
     "branch": "Rama base",
     "branchHint": "De aquí salen las ramas feature/<CLAVE>-… y aquí van las PR.",
     "jira": "Proyectos de JIRA",
-    "jiraHint": "Separados por comas. La IA sugiere este repo para las tareas de esos proyectos."
+    "jiraHint": "Los proyectos de tus tareas de JIRA. La IA sugiere este repo para las tareas de esos proyectos.",
+    "jiraAdd": "Añadir proyecto…",
+    "jiraAllAdded": "Ya están todos añadidos",
+    "jiraNone": "Sincroniza tus tareas de JIRA para ver sus proyectos",
+    "jiraRemove": "Quitar {{key}}"
   },
   "newRepo": {
     "title": "Nuevo repositorio",

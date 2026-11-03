@@ -3,6 +3,7 @@ import type { HealthResponse } from '@dev-assistant/shared';
 import { CircleCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Pregunta } from './components/Pregunta';
 import { QuickCapture, type Saved } from './components/QuickCapture';
 import { ReminderAlerts } from './components/ReminderAlerts';
 import { Sidebar } from './components/Sidebar';
@@ -34,6 +35,7 @@ export function App() {
   const { t } = useTranslation('common');
   const { section, params } = useHashRoute();
   const [captureOpen, setCaptureOpen] = useState(false);
+  const [askOpen, setAskOpen] = useState(false);
   const [saved, setSaved] = useState<Saved | null>(null);
   const health = useQuery({
     queryKey: ['health'],
@@ -50,6 +52,9 @@ export function App() {
       if (e.altKey && e.key.toLowerCase() === 'n') {
         e.preventDefault();
         setCaptureOpen(true);
+      } else if (e.altKey && e.key.toLowerCase() === 'p') {
+        e.preventDefault();
+        setAskOpen(true);
       }
     };
     window.addEventListener('keydown', onKeyDown);
@@ -66,7 +71,7 @@ export function App() {
 
   return (
     <div className="flex min-h-screen flex-wrap">
-      <Sidebar current={section} serverOk={health.isError ? false : health.data ? true : undefined} onQuickCapture={() => setCaptureOpen(true)} />
+      <Sidebar current={section} serverOk={health.isError ? false : health.data ? true : undefined} onQuickCapture={() => setCaptureOpen(true)} onAsk={() => setAskOpen(true)} />
       <main className="min-w-0 flex-[999_1_560px] p-6">
         <div className="mx-auto w-full max-w-[1120px]">
           {section === 'hoy' ? (
@@ -102,6 +107,8 @@ export function App() {
           }}
         />
       )}
+
+      {askOpen && <Pregunta onClose={() => setAskOpen(false)} />}
 
       <ReminderAlerts />
 

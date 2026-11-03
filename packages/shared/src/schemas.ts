@@ -30,6 +30,9 @@ export const JiraKey = z
   .toUpperCase()
   .regex(/^[A-Z][A-Z0-9_]*-\d+$/, 'Clave de JIRA no válida (ej.: ABC-123)');
 
+/** Clave de proyecto de JIRA, p. ej. ABC. */
+export const ProjectKey = z.string().trim().toUpperCase().regex(/^[A-Z][A-Z0-9_]*$/, 'Clave de proyecto de JIRA no válida (ej.: ABC)');
+
 /** Commit de una tarea (de su HISTORIAL.md) al que se asocia una nota o un recordatorio. */
 export const CommitRef = z.object({
   repo: z.string().trim().min(1),
@@ -208,18 +211,26 @@ export interface DailySummary {
   generatedAt: string;
 }
 
+/** Dónde busca "Pregunta": notas, enlaces, documentación (propia y resúmenes de tareas), tareas de JIRA y diario. */
+export const ASK_SOURCES = ['notes', 'links', 'docs', 'tasks', 'diary'] as const;
+export type AskSourceType = (typeof ASK_SOURCES)[number];
+
 export const AskInput = z.object({
   question: z.string().trim().min(3, 'Escribe una pregunta').max(500, 'La pregunta es demasiado larga'),
+  sources: z.array(z.enum(ASK_SOURCES)).min(1).default([...ASK_SOURCES]),
 });
 export type AskInput = z.input<typeof AskInput>;
 
 export interface AskSource {
-  /** Número con el que la respuesta cita la nota: [1], [2]... */
+  /** Número con el que la respuesta la cita: [1], [2]... */
   ref: number;
-  id: number;
+  type: AskSourceType;
   title: string;
-  kind: NoteKind;
-  /** true si la respuesta cita esta nota. */
+  /** Ruta de la app donde se ve (#/...). */
+  href: string;
+  /** Fecha de la fuente (ISO o AAAA-MM-DD), si la tiene. */
+  date: string | null;
+  /** true si la respuesta la cita. */
   cited: boolean;
 }
 
@@ -316,6 +327,90 @@ export interface JiraUpdateEntry {
   at: string;
   comment: string | null;
   transition: { from: string; to: string } | null;
+}
+
+// ── Nueva tarea en JIRA (API REST, con confirmación) ─────────────────────────
+
+export interface JiraProjectOption {
+  key: string;
+  name: string;
+}
+
+export interface JiraIssueTypeOption {
+  id: string;
+  name: string;
+}
+
+/** Proyectos donde crear y lo último que se usó (para volver a proponerlo). */
+export interface JiraCreateProjects {
+  projects: JiraProjectOption[];
+  last: { project: string; issueTypeId: string | null } | null;
+}
+
+/** Cómo se rellena un campo obligatorio extra del proyecto en el diálogo. */
+export type JiraFieldInput = 'text' | 'textarea' | 'number' | 'date' | 'select' | 'multi' | 'list' | 'unsupported';
+
+export interface JiraExtraField {
+  id: string;
+  name: string;
+  input: JiraFieldInput;
+  options: { id: string; name: string }[];
+}
+
+/** Campos del formulario según proyecto y tipo, sacados de los metadatos de creación de JIRA. */
+export interface JiraCreateForm {
+  /** null si el proyecto no deja elegir prioridad al crear. */
+  priorities: { id: string; name: string }[] | null;
+  defaultPriorityId: string | null;
+  labels: boolean;
+  assignee: boolean;
+  /** Obligatorios del proyecto que no cubre el formulario básico. */
+  extraFields: JiraExtraField[];
+}
+
+export interface JiraEpicOption {
+  key: string;
+  summary: string;
+}
+
+export interface JiraSprintOption {
+  id: number;
+  name: string;
+  state: 'active' | 'future';
+}
+
+export const JiraCreateDraftInput = z.object({
+  idea: z.string().trim().min(1).max(4000),
+  project: ProjectKey,
+  issueType: z.string().trim().max(100).optional(),
+});
+export type JiraCreateDraftInput = z.input<typeof JiraCreateDraftInput>;
+
+export interface JiraCreateDraft {
+  summary: string;
+  description: string;
+}
+
+export const JiraCreateInput = z.object({
+  project: ProjectKey,
+  issueTypeId: z.string().trim().min(1),
+  summary: z.string().trim().min(1, 'El título es obligatorio').max(255),
+  description: z.string().max(32_000).default(''),
+  assignToMe: z.boolean().default(true),
+  priorityId: z.string().trim().min(1).optional(),
+  labels: z.array(z.string().trim().min(1).max(255).regex(/^\S+$/)).max(50).default([]),
+  epicKey: JiraKey.optional(),
+  sprintId: z.number().int().positive().optional(),
+  /** Valores de los campos obligatorios extra: texto, o ids de opciones. */
+  extra: z.record(z.string(), z.union([z.string(), z.array(z.string())])).default({}),
+});
+export type JiraCreateInput = z.input<typeof JiraCreateInput>;
+
+export interface JiraCreateResult {
+  key: string;
+  url: string;
+  /** Lo que no se pudo hacer después de crearla (épica o sprint), para avisar. */
+  warnings: string[];
 }
 
 // ── Desarrollo de una tarea: PLAN.md e HISTORIAL.md que mantiene opencode ───
@@ -430,7 +525,6 @@ export interface OpencodeSkillStatus {
 
 // ── Repositorios y su ficha (R17) ───────────────────────────────────────────
 
-const ProjectKey = z.string().trim().toUpperCase().regex(/^[A-Z][A-Z0-9_]*$/, 'Clave de proyecto de JIRA no válida (ej.: ABC)');
 
 export const RepoProfileInput = z.object({
   conventionsMd: z.string(),

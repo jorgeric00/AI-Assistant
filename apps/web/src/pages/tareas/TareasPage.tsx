@@ -8,6 +8,7 @@ import { noteHref } from '../../sections';
 import { primaryButtonClass, secondaryButtonClass } from '../../components/fields';
 import { timeAgo } from '../../dates';
 import { ActualizarJiraButton, JiraUpdatesList } from './ActualizarJira';
+import { NuevaTareaButton } from './NuevaTarea';
 import { SesionPage } from './SesionPage';
 import { TareaDetallePage } from './TareaDetallePage';
 import { useJiraSync, useTaskList } from './useTasks';
@@ -58,6 +59,7 @@ function TaskBrowser({ selectedKey }: { selectedKey?: string }) {
             <RefreshCw size={16} strokeWidth={1.5} className={syncing ? 'animate-spin' : undefined} aria-hidden />
             {syncing ? t('tasksPage.syncing') : t('tasksPage.sync')}
           </button>
+          <NuevaTareaButton disabled={!configured} className={primaryButtonClass} />
         </div>
       </header>
 

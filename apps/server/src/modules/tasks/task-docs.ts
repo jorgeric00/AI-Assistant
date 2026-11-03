@@ -29,16 +29,21 @@ async function readDoc(home: string, key: string): Promise<TaskDocDetail | null>
   }
 }
 
-/** Resúmenes de todas las tareas, del más reciente al más antiguo; con `q`, los que contienen todas las palabras. */
-export async function listTaskDocs(home: string, q?: string): Promise<TaskDoc[]> {
+/** Resúmenes de todas las tareas con su texto, en cualquier orden. */
+export async function readAllTaskDocs(home: string): Promise<TaskDocDetail[]> {
   let keys: string[];
   try {
     keys = (await readdir(join(home, 'worktrees'))).filter((k) => KEY_RE.test(k));
   } catch {
     return [];
   }
+  return (await Promise.all(keys.map((k) => readDoc(home, k)))).filter((d): d is TaskDocDetail => !!d);
+}
+
+/** Resúmenes de todas las tareas, del más reciente al más antiguo; con `q`, los que contienen todas las palabras. */
+export async function listTaskDocs(home: string, q?: string): Promise<TaskDoc[]> {
   const words = q ? fold(q).split(/\s+/).filter(Boolean) : [];
-  const docs = (await Promise.all(keys.map((k) => readDoc(home, k)))).filter((d): d is TaskDocDetail => !!d);
+  const docs = await readAllTaskDocs(home);
   return docs
     .filter((d) => words.every((w) => fold(`${d.key} ${d.markdown}`).includes(w)))
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))

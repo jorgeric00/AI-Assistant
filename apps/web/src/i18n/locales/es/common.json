@@ -55,7 +55,8 @@
     "quickCapture": "Captura rápida",
     "serverOffline": "Servidor sin conexión",
     "serverOnline": "Servidor conectado",
-    "connecting": "Conectando…"
+    "connecting": "Conectando…",
+    "ask": "Pregunta"
   },
   "snooze": {
     "button": "Posponer",
@@ -108,5 +109,33 @@
     "pickTaskFirst": "Elige antes una tarea",
     "noCommit": "Sin commit",
     "noCommitsYet": "La tarea aún no tiene commits"
+  },
+  "ask": {
+    "title": "Pregunta",
+    "anywhere": "<kbd>Alt+P</kbd> desde cualquier pantalla",
+    "label": "Tu pregunta",
+    "placeholder": "¿En qué quedamos con negocio sobre el formato del CSV?",
+    "submit": "Preguntar",
+    "where": "Dónde buscar",
+    "sources": {
+      "notes": "Notas",
+      "links": "Enlaces",
+      "docs": "Documentación",
+      "tasks": "Tareas de JIRA",
+      "diary": "Diario"
+    },
+    "type": {
+      "notes": "Nota",
+      "links": "Enlace",
+      "docs": "Documentación",
+      "tasks": "Tarea de JIRA",
+      "diary": "Diario"
+    },
+    "thinking": "Pensando…",
+    "answer": "Respuesta",
+    "sourcesTitle": "Fuentes",
+    "notCited": "no citado",
+    "hint": "Responde solo con lo que hay en la app y cita de dónde lo saca.",
+    "close": "<kbd>Esc</kbd> cerrar"
   }
 }

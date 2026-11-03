@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Repo, RepoDetail, RepoProfileInput, RepoProfileStatus } from '@dev-assistant/shared';
-import { CircleAlert, CircleCheck, Plus, Sparkles } from 'lucide-react';
+import { CircleAlert, CircleCheck, Plus, Sparkles, X } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api, queryKeys } from '../../api';
@@ -105,14 +105,61 @@ interface DataFields {
   localPath: string;
   github: string;
   defaultBranch: string;
-  jiraKeys: string;
+  jiraKeys: string[];
 }
 
-const parseKeys = (text: string) => [...new Set(text.split(/[\s,;]+/).map((k) => k.trim().toUpperCase()).filter(Boolean))];
+
+/** Proyectos de JIRA del repo: se eligen de un desplegable con los proyectos de las tareas cargadas. */
+function JiraProjectsPicker({ value, onChange }: { value: string[]; onChange: (keys: string[]) => void }) {
+  const { t } = useTranslation(['repos', 'common']);
+  const projects = useQuery({ queryKey: queryKeys.taskProjects, queryFn: api.taskProjects });
+  const names = new Map((projects.data ?? []).map((p) => [p.key, p.name]));
+  const available = (projects.data ?? []).filter((p) => !value.includes(p.key));
+  return (
+    <>
+      {!!value.length && (
+        <ul className="m-0 flex list-none flex-wrap gap-1.5 p-0">
+          {value.map((key) => (
+            <li key={key} className="flex items-center gap-1 rounded-sm bg-line py-1 pr-1 pl-2 text-small">
+              <span className="font-mono">{key}</span>
+              {names.get(key) && names.get(key) !== key && <span className="text-ink-muted">· {names.get(key)}</span>}
+              <button
+                type="button"
+                onClick={() => onChange(value.filter((k) => k !== key))}
+                aria-label={t('data.jiraRemove', { key })}
+                className="flex size-6 items-center justify-center rounded-sm text-ink-muted hover:bg-surface-raised hover:text-ink"
+              >
+                <X size={12} aria-hidden />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <select
+        id="repo-jira"
+        value=""
+        onChange={(e) => e.target.value && onChange([...value, e.target.value])}
+        disabled={!available.length}
+        className={`${inputClass} [color-scheme:dark] disabled:text-ink-faint`}
+      >
+        <option value="">
+          {projects.isPending ? t('common:status.loading') : available.length ? t('data.jiraAdd') : projects.data?.length ? t('data.jiraAllAdded') : t('data.jiraNone')}
+        </option>
+        {available.map((p) => (
+          <option key={p.key} value={p.key}>
+            {p.key}
+            {p.name !== p.key ? ` · ${p.name}` : ''}
+          </option>
+        ))}
+      </select>
+      <span className={hint}>{t('data.jiraHint')}</span>
+    </>
+  );
+}
 
 function DataFieldset({ data, onChange, pathStatus, onPathBlur }: { data: DataFields; onChange: (d: DataFields) => void; pathStatus: 'ok' | 'bad' | 'checking' | null; onPathBlur?: () => void }) {
   const { t } = useTranslation(['repos', 'common']);
-  const set = (k: keyof DataFields) => (e: { target: { value: string } }) => onChange({ ...data, [k]: e.target.value });
+  const set = (k: Exclude<keyof DataFields, 'jiraKeys'>) => (e: { target: { value: string } }) => onChange({ ...data, [k]: e.target.value });
   return (
     <fieldset className="m-0 grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-4 border-0 p-0">
       <legend className={`${subheading} pb-3`}>{t('data.legend')}</legend>
@@ -161,8 +208,7 @@ function DataFieldset({ data, onChange, pathStatus, onPathBlur }: { data: DataFi
         <label htmlFor="repo-jira" className={caption}>
           {t('data.jira')}
         </label>
-        <input id="repo-jira" value={data.jiraKeys} onChange={set('jiraKeys')} placeholder="ABC, XYZ" className={monoInput} />
-        <span className={hint}>{t('data.jiraHint')}</span>
+        <JiraProjectsPicker value={data.jiraKeys} onChange={(jiraKeys) => onChange({ ...data, jiraKeys })} />
       </div>
     </fieldset>
   );
@@ -171,7 +217,7 @@ function DataFieldset({ data, onChange, pathStatus, onPathBlur }: { data: DataFi
 function NewRepoForm() {
   const { t } = useTranslation(['repos', 'common']);
   const queryClient = useQueryClient();
-  const [data, setData] = useState<DataFields>({ name: '', localPath: '', github: '', defaultBranch: 'main', jiraKeys: '' });
+  const [data, setData] = useState<DataFields>({ name: '', localPath: '', github: '', defaultBranch: 'main', jiraKeys: [] });
   const [checkedPath, setCheckedPath] = useState('');
   const inspect = useMutation({
     mutationFn: (path: string) => api.inspectRepo(path),
@@ -189,7 +235,7 @@ function NewRepoForm() {
   });
   const create = useMutation({
     mutationFn: () =>
-      api.createRepo({ name: data.name, localPath: data.localPath, github: data.github, defaultBranch: data.defaultBranch, jiraProjectKeys: parseKeys(data.jiraKeys) }),
+      api.createRepo({ name: data.name, localPath: data.localPath, github: data.github, defaultBranch: data.defaultBranch, jiraProjectKeys: data.jiraKeys }),
     onSuccess: (repo) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.repos });
       navigate(`repositorios/${repo.id}`);
@@ -245,7 +291,7 @@ function RepoPanel({ id }: { id: number }) {
   return <RepoEditor key={repo.data.profile?.updatedAt ?? 'sin-ficha'} repo={repo.data} />;
 }
 
-const dataOf = (r: RepoDetail): DataFields => ({ name: r.name, localPath: r.localPath, github: r.github, defaultBranch: r.defaultBranch, jiraKeys: r.jiraProjectKeys.join(', ') });
+const dataOf = (r: RepoDetail): DataFields => ({ name: r.name, localPath: r.localPath, github: r.github, defaultBranch: r.defaultBranch, jiraKeys: r.jiraProjectKeys });
 const profileOf = (r: RepoDetail): RepoProfileInput => ({
   conventionsMd: r.profile?.conventionsMd ?? '',
   testCommandsMd: r.profile?.testCommandsMd ?? '',
@@ -275,7 +321,7 @@ function RepoEditor({ repo }: { repo: RepoDetail }) {
         localPath: data.localPath,
         github: data.github,
         defaultBranch: data.defaultBranch,
-        jiraProjectKeys: parseKeys(data.jiraKeys),
+        jiraProjectKeys: data.jiraKeys,
         profile,
       }),
     onSuccess: refresh,

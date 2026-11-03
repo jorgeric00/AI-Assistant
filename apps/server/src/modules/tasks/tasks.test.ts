@@ -69,6 +69,18 @@ describe('tareas de JIRA', () => {
     expect((await ctx.get<Task[]>('/api/tasks?done=true')).map((t) => t.key)).toEqual(['ABC-3', 'ABC-2', 'ABC-1']);
   });
 
+  it('lista los proyectos de las tareas cargadas, con su nombre', async () => {
+    const { client } = fakeClient([issue('ABC-1', { project: 'Backoffice' }), issue('ABC-2', { project: 'Backoffice' }), issue('DEF-7', { project: 'Plataforma' })]);
+    ctx = await setup(client);
+    await ctx.sync();
+    await ctx.note(['XYZ-3']);
+    expect(await ctx.get('/api/tasks/projects')).toEqual([
+      { key: 'ABC', name: 'Backoffice' },
+      { key: 'DEF', name: 'Plataforma' },
+      { key: 'XYZ', name: 'XYZ' },
+    ]);
+  });
+
   it('completa la tarea creada desde una nota sin perder el vínculo', async () => {
     const { client } = fakeClient([issue('ABC-131', { summary: 'Exportar informe a CSV', description: 'Columnas: id, fecha' })]);
     ctx = await setup(client);

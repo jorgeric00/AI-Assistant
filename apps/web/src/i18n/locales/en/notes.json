@@ -29,14 +29,8 @@
   "browser": {
     "notesList": "Notes list",
     "ownDocs": "My docs",
-    "searchType": "Search type",
-    "modeText": "Text",
-    "modeQuestion": "Ask",
-    "askLabel": "Ask about your notes",
     "searchNotes": "Search notes",
     "searchDocs": "Search documentation",
-    "askPlaceholder": "How do we deploy to pre?",
-    "askHint": "Press Enter. opencode answers only from your non-archived notes, links and documents.",
     "all": "All",
     "withTask": "With task",
     "withoutTask": "Without task",
@@ -45,13 +39,8 @@
     "loadError": "Couldn't load the list.",
     "emptyNotes": "You don't have any notes yet. Create one with \"New note\" or with Alt+N.",
     "emptyDocs": "You don't have any docs of your own yet. Create one with \"New document\".",
-    "relatedNotes": "Related notes",
     "noteNotInList": "That note isn't in this list.",
     "docNotInList": "That document isn't in this list."
-  },
-  "ask": {
-    "thinking": "Thinking…",
-    "answer": "Answer"
   },
   "detail": {
     "pinnedNote": "Pinned",

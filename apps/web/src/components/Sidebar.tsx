@@ -1,4 +1,4 @@
-import { CircleCheck, CircleX, Plus } from 'lucide-react';
+import { CircleCheck, CircleX, Plus, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { SECTIONS, type SectionId } from '../sections';
 
@@ -6,9 +6,10 @@ interface Props {
   current: SectionId;
   serverOk: boolean | undefined;
   onQuickCapture: () => void;
+  onAsk: () => void;
 }
 
-export function Sidebar({ current, serverOk, onQuickCapture }: Props) {
+export function Sidebar({ current, serverOk, onQuickCapture, onAsk }: Props) {
   const { t } = useTranslation('common');
   return (
     <nav
@@ -25,6 +26,16 @@ export function Sidebar({ current, serverOk, onQuickCapture }: Props) {
         <Plus size={16} strokeWidth={1.5} aria-hidden />
         <span className="grow text-left">{t('sidebar.quickCapture')}</span>
         <kbd className="font-mono text-small text-ink-faint">Alt+N</kbd>
+      </button>
+
+      <button
+        type="button"
+        onClick={onAsk}
+        className="-mt-2 flex h-10 items-center gap-2 rounded-md border border-line-strong px-3 text-ink hover:border-ink-muted hover:bg-surface-raised"
+      >
+        <Sparkles size={16} strokeWidth={1.5} className="text-accent" aria-hidden />
+        <span className="grow text-left">{t('sidebar.ask')}</span>
+        <kbd className="font-mono text-small text-ink-faint">Alt+P</kbd>
       </button>
 
       <ul className="flex flex-col gap-0.5">

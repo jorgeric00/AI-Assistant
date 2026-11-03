@@ -1,5 +1,5 @@
 import { and, asc, desc, eq, isNull, max, ne, or, sql } from 'drizzle-orm';
-import type { Task, TaskDetail } from '@dev-assistant/shared';
+import type { JiraProjectOption, Task, TaskDetail } from '@dev-assistant/shared';
 import type { Db } from '../../db/client.js';
 import { notes, noteTasks, tasks } from '../../db/schema.js';
 import type { JiraIssue } from '../../integrations/jira/client.js';
@@ -74,6 +74,17 @@ export class TasksRepository {
    * Guarda lo que llega de JIRA actualizando por clave: las tareas creadas desde notas se completan
    * y nunca se borra ninguna, para no perder vínculos con notas y recordatorios.
    */
+  /** Proyectos de JIRA de las tareas cargadas (por el prefijo de la clave), con su nombre si JIRA lo dio. */
+  projects(): JiraProjectOption[] {
+    const byKey = new Map<string, string>();
+    for (const row of this.db.select({ key: tasks.jiraKey, raw: tasks.rawJson, status: tasks.status }).from(tasks).all()) {
+      const key = row.key.replace(/-\d+$/, '');
+      const name = row.status === UNSYNCED_TASK_STATUS ? null : ((row.raw ?? {}) as Partial<StoredIssue>).project;
+      if (!byKey.has(key) || (name && byKey.get(key) === key)) byKey.set(key, name || key);
+    }
+    return [...byKey].map(([key, name]) => ({ key, name })).sort((a, b) => a.key.localeCompare(b.key));
+  }
+
   upsertFromJira(issues: JiraIssue[], syncedAt: string) {
     this.db.transaction((tx) => {
       for (const issue of issues) {
