@@ -3,7 +3,7 @@
 // mergeada) queda como aviso en la app (tarjeta de Hoy) y sale como notificación del sistema.
 import type { FastifyBaseLogger } from 'fastify';
 import { desc, eq, gte } from 'drizzle-orm';
-import type { PrAlert, PrAlertKind, PrWatchStatus, PullRequestInfo } from '@dev-assistant/shared';
+import type { PrAlert, PrAlertKind, PrFailures, PrWatchStatus, PullRequestInfo } from '@dev-assistant/shared';
 import type { Db } from '../../db/client.js';
 import { prAlerts, pullRequests, settings } from '../../db/schema.js';
 import { GithubError, type GhPullRequest, type GithubClient } from '../../integrations/github/client.js';
@@ -180,7 +180,7 @@ export class PrWatcher {
       .orderBy(desc(prAlerts.createdAt), desc(prAlerts.id))
       .limit(limit)
       .all()
-      .map(({ a, pr }) => ({ id: a.id, kind: a.kind, repo: pr.repo, number: pr.number, url: pr.url, taskKey: pr.taskKey, title: a.title, detail: a.detail, createdAt: a.createdAt }));
+      .map(({ a, pr }) => ({ id: a.id, kind: a.kind, prId: pr.id, repo: pr.repo, number: pr.number, url: pr.url, taskKey: pr.taskKey, title: a.title, detail: a.detail, createdAt: a.createdAt }));
   }
 
   /** PR de una tarea (abiertas y ya mergeadas o cerradas), la más reciente primero. */
@@ -192,6 +192,23 @@ export class PrWatcher {
       .orderBy(desc(pullRequests.updatedAt))
       .all()
       .map(({ activityCursor: _c, lastSeenAt: _l, ...pr }) => pr);
+  }
+
+  /** null si la PR no es una de las tuyas que conoce la app. */
+  pr(prId: string): PullRequestInfo | null {
+    const row = this.db.select().from(pullRequests).where(eq(pullRequests.id, prId)).get();
+    if (!row) return null;
+    const { activityCursor: _c, lastSeenAt: _l, ...pr } = row;
+    return pr;
+  }
+
+  /** Los checks en rojo de la PR tal como están ahora en GitHub. null si la PR no es una de las tuyas. */
+  async failures(prId: string): Promise<PrFailures | null> {
+    if (!this.client) throw new GithubError(t('github.notConfigured'));
+    const pr = this.pr(prId);
+    if (!pr) return null;
+    const { checks, failures } = await this.client.checkFailures(prId);
+    return { prId, repo: pr.repo, number: pr.number, url: pr.url, taskKey: pr.taskKey, checks, failures };
   }
 
   /** Comprueba al arrancar y cada 10 minutos. Sin GITHUB_TOKEN no hace nada. */

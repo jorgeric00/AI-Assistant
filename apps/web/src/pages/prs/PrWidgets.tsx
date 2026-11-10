@@ -2,10 +2,12 @@ import { useQuery } from '@tanstack/react-query';
 import type { PrAlert, PrAlertKind, PullRequestInfo } from '@dev-assistant/shared';
 import type { TFunction } from 'i18next';
 import { CircleCheck, CircleX, GitMerge, LoaderCircle, MessageSquare, type LucideIcon } from 'lucide-react';
+import { useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { api, queryKeys } from '../../api';
 import { EmptyState } from '../../components/Card';
 import { daysAgo, hhmm, shortDay, timeAgo } from '../../dates';
+import { PrFailuresPanel, useFixPr, usePrFailures } from './PrFailures';
 
 const ALERT_STYLE: Record<PrAlertKind, { icon: LucideIcon; color: string }> = {
   ci_failed: { icon: CircleX, color: 'text-danger' },
@@ -69,10 +71,41 @@ function AlertRow({ alert: a }: { alert: PrAlert }) {
             </>
           )}
         </span>
-        {a.detail && <span className="text-small text-ink-muted">{a.detail}</span>}
+        {a.kind === 'ci_failed' ? <CiFailedDetail alert={a} /> : a.detail && <span className="text-small text-ink-muted">{a.detail}</span>}
       </div>
       <span className="shrink-0 text-small text-ink-faint">{daysAgo(a.createdAt) === 0 ? hhmm(a.createdAt) : shortDay(a.createdAt)}</span>
     </li>
+  );
+}
+
+/** En un aviso de CI en rojo: una línea por check con lo que dice GitHub ahora, y los atajos. */
+function CiFailedDetail({ alert: a }: { alert: PrAlert }) {
+  const { t } = useTranslation('prs');
+  const failures = usePrFailures(a.prId);
+  const fix = useFixPr(a.prId);
+  // Mientras se lee GitHub (o si falla), lo que se guardó con el aviso.
+  if (!failures.data) return a.detail ? <span className="text-small text-ink-muted">{a.detail}</span> : null;
+  if (!failures.data.failures.length) return <span className="text-small text-ink-muted">{t('failures.none')}</span>;
+  return (
+    <div className="mt-1 flex min-w-0 flex-col gap-1">
+      <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
+        {failures.data.failures.map((f) => (
+          <li key={f.name} className="flex min-w-0 gap-2 text-small">
+            <span className="shrink-0 font-mono text-ink">{f.name}</span>
+            <span className="min-w-0 truncate text-ink-muted">{f.title ?? f.annotations[0]?.message ?? ''}</span>
+          </li>
+        ))}
+      </ul>
+      <div className="flex flex-wrap gap-4 text-small">
+        <a href={a.taskKey ? `#/tareas/${a.taskKey}/detalle` : a.url} {...(a.taskKey ? {} : { target: '_blank', rel: 'noreferrer' })}>
+          {t('failures.show')}
+        </a>
+        <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-info hover:underline disabled:cursor-not-allowed disabled:text-ink-faint" disabled={fix.isPending} onClick={() => fix.mutate()}>
+          {fix.isPending ? t('failures.fixing') : t('failures.fix')}
+        </button>
+      </div>
+      {fix.isError && <span className="text-small text-danger">{fix.error.message}</span>}
+    </div>
   );
 }
 
@@ -128,6 +161,31 @@ function Reviews({ pr }: { pr: PullRequestInfo }) {
   );
 }
 
+/** "Ver fallos / Ocultar fallos" y, abiertos (de entrada), los fallos de los checks en rojo. */
+function FailuresToggle({ prId, hasTask }: { prId: string; hasTask: boolean }) {
+  const { t } = useTranslation('prs');
+  const [open, setOpen] = useState(true);
+  const panelId = `fallos-${prId}`;
+  return (
+    <>
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen(!open)}
+        className="h-8 rounded-md border border-line-strong px-2.5 text-code text-ink hover:bg-surface-raised"
+      >
+        {open ? t('failures.hide') : t('failures.show')}
+      </button>
+      {open && (
+        <div id={panelId} className="w-full border-t border-line pt-3">
+          <PrFailuresPanel prId={prId} hasTask={hasTask} />
+        </div>
+      )}
+    </>
+  );
+}
+
 /** Bloque "Pull requests" del detalle de tarea (diseño aprobado). Solo aparece si GitHub está configurado. */
 export function TaskPullRequests({ taskKey, className }: { taskKey: string; className: string }) {
   const { t } = useTranslation(['prs', 'common']);
@@ -158,6 +216,7 @@ export function TaskPullRequests({ taskKey, className }: { taskKey: string; clas
               <span className="rounded-sm border border-line-strong px-1.5 py-0.5 text-small whitespace-nowrap text-ink-muted">{stateLabel(pr, t)}</span>
               {pr.state === 'open' && <Checks pr={pr} />}
               {pr.state === 'open' && <Reviews pr={pr} />}
+              {pr.state === 'open' && pr.checks === 'failure' && <FailuresToggle prId={pr.id} hasTask />}
             </li>
           ))}
         </ul>

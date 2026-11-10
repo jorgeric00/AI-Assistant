@@ -79,6 +79,12 @@ export const es = {
   'github.ssoWarning': 'Hay PR de una organización con SSO que el token no puede ver. En GitHub: Settings > Developer settings > tokens > Configure SSO > Authorize.',
 
   // Avisos de tus PR (se guardan en la base de datos y salen como notificación)
+  'prs.notFound': 'Esa PR no está entre las tuyas que conoce la app.',
+  'prs.fix.intro': 'La PR {{repo}} #{{number}} ({{url}}, rama {{branch}}) tiene checks en rojo en GitHub. Esto es lo que dicen:',
+  'prs.fix.more': 'y {{count}} más (en GitHub)',
+  'prs.fix.outro': 'Corrígelo en la rama {{branch}} y dime qué has cambiado.',
+  'prs.fix.whereRepo': 'Esta PR no va con ninguna tarea de la app: pregúntame en qué carpeta está el repo antes de tocar nada.',
+  'prs.fix.noFailures': 'La PR ya no tiene checks en rojo en GitHub.',
   'prs.alert.ciFailed': 'CI en rojo',
   'prs.alert.failing': 'Falla {{checks}}',
   'prs.alert.changesRequested': 'Cambios pedidos',

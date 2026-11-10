@@ -31,5 +31,20 @@
     "fromGithub": "From GitHub",
     "fromGithubChecked": "From GitHub · checked {{when}}",
     "empty": "No PRs with {{taskKey}} in the branch or title yet."
+  },
+  "failures": {
+    "title": "Failing checks",
+    "show": "Show failures",
+    "hide": "Hide failures",
+    "loading": "Reading the failures from GitHub…",
+    "none": "GitHub no longer has failing checks on this PR.",
+    "viewOnGithub": "View on GitHub ↗",
+    "more_one": "and {{count}} more on GitHub ↗",
+    "more_other": "and {{count}} more on GitHub ↗",
+    "noDetail": "This check publishes no further detail on GitHub.",
+    "fix": "Fix with opencode",
+    "fixing": "Sending to opencode…",
+    "fixHint": "Opens the task session and hands it these failures to fix. You will see what it does and it will ask for permission as usual.",
+    "fixHintChat": "Opens a Chat conversation with these failures. As the PR is not linked to a task, it will ask you where the repo is."
   }
 }

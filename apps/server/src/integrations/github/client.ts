@@ -1,6 +1,6 @@
 // GitHub por su API GraphQL (lectura): tus PR abiertas con sus checks, revisiones y comentarios.
 // Una sola consulta trae todo lo que necesitan los avisos de "Avisos de tus PR".
-import type { PrChecksState, PrState } from '@dev-assistant/shared';
+import type { PrCheckAnnotation, PrCheckFailure, PrChecksState, PrState } from '@dev-assistant/shared';
 import { t } from '../../i18n/index.js';
 
 export interface GithubConfig {
@@ -52,6 +52,16 @@ const PR_FIELDS = `
   comments(last: 30) { nodes { author { login __typename } createdAt } }
 `;
 
+// Lo que publica cada check (título, resumen, anotaciones en el código). Solo se pide al ver los fallos.
+const FAILURES = `query($id: ID!) { node(id: $id) { ... on PullRequest {
+  commits(last: 1) { nodes { commit { statusCheckRollup { state contexts(first: 100) { nodes {
+    __typename
+    ... on CheckRun { name conclusion title summary text detailsUrl
+      annotations(first: 30) { totalCount nodes { path location { start { line } } message title annotationLevel } } }
+    ... on StatusContext { context state description targetUrl }
+  } } } } } }
+} } }`;
+
 const OPEN_PRS = `query { viewer { login pullRequests(states: OPEN, first: 50, orderBy: { field: UPDATED_AT, direction: DESC }) { nodes { ${PR_FIELDS} } } } }`;
 const BY_IDS = `query($ids: [ID!]!) { nodes(ids: $ids) { ... on PullRequest { ${PR_FIELDS} } } }`;
 
@@ -81,6 +91,67 @@ interface RawPr {
   };
   reviews: { nodes: { author: RawAuthor | null; state: GhReview['state']; submittedAt: string | null; body: string; comments: { totalCount: number } }[] };
   comments: { nodes: { author: RawAuthor | null; createdAt: string }[] };
+}
+
+interface RawAnnotation {
+  path: string;
+  location: { start: { line: number | null } | null } | null;
+  message: string;
+  title: string | null;
+  annotationLevel: 'FAILURE' | 'WARNING' | 'NOTICE' | null;
+}
+type RawFailureContext =
+  | {
+      __typename: 'CheckRun';
+      name: string;
+      conclusion: string | null;
+      title: string | null;
+      summary: string | null;
+      text: string | null;
+      detailsUrl: string | null;
+      annotations: { totalCount: number; nodes: (RawAnnotation | null)[] } | null;
+    }
+  | { __typename: 'StatusContext'; context: string; state: string; description: string | null; targetUrl: string | null };
+
+const MAX_SUMMARY = 3000;
+const MAX_ANNOTATIONS = 8;
+const LEVEL_ORDER = { failure: 0, warning: 1, notice: 2 } as const;
+const clip = (text: string | null | undefined, max: number) => {
+  const clean = text?.trim();
+  if (!clean) return null;
+  return clean.length > max ? `${clean.slice(0, max)}…` : clean;
+};
+
+/** Los checks en rojo con lo que publican: título, resumen y las líneas que marcan (primero los errores). */
+export function failuresOf(contexts: RawFailureContext[]): PrCheckFailure[] {
+  const seen = new Set<string>();
+  return contexts.flatMap((c): PrCheckFailure[] => {
+    if (c.__typename === 'StatusContext') {
+      if ((c.state !== 'FAILURE' && c.state !== 'ERROR') || seen.has(c.context)) return [];
+      seen.add(c.context);
+      return [{ name: c.context, title: clip(c.description, 300), summary: null, url: c.targetUrl, annotations: [], annotationsTotal: 0 }];
+    }
+    if (!c.conclusion || !FAILED_CONCLUSIONS.has(c.conclusion) || seen.has(c.name)) return [];
+    seen.add(c.name);
+    const annotations = (c.annotations?.nodes ?? [])
+      .flatMap((a): PrCheckAnnotation[] =>
+        a ? [{ path: a.path, line: a.location?.start?.line ?? null, message: clip(a.message, 1000) ?? '', title: clip(a.title, 200), level: (a.annotationLevel?.toLowerCase() ?? 'failure') as PrCheckAnnotation['level'] }] : [],
+      )
+      .sort((a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level]);
+    const title = clip(c.title, 300);
+    // El resumen y el texto largo van juntos; si solo repiten el título, sobran.
+    const summary = clip([c.summary, c.text].filter((x) => x?.trim()).join('\n\n'), MAX_SUMMARY);
+    return [
+      {
+        name: c.name,
+        title,
+        summary: summary && summary !== title ? summary : null,
+        url: c.detailsUrl,
+        annotations: annotations.slice(0, MAX_ANNOTATIONS),
+        annotationsTotal: Math.max(c.annotations?.totalCount ?? 0, annotations.length),
+      },
+    ];
+  });
 }
 
 const FAILED_CONCLUSIONS = new Set(['FAILURE', 'TIMED_OUT', 'CANCELLED', 'ACTION_REQUIRED', 'STARTUP_FAILURE']);
@@ -171,5 +242,17 @@ export class GithubClient {
     if (!ids.length) return [];
     const data = await this.query<{ nodes: (RawPr | null)[] }>(BY_IDS, { ids });
     return data.nodes.flatMap((p) => (p && p.id ? [normalizePr(p, me)] : []));
+  }
+
+  /** Lo que publican en GitHub los checks en rojo del último commit de una PR. */
+  async checkFailures(prId: string): Promise<{ checks: PrChecksState | null; failures: PrCheckFailure[] }> {
+    const data = await this.query<{ node: { commits: { nodes: { commit: { statusCheckRollup: { state: string; contexts: { nodes: (RawFailureContext | null)[] } } | null } }[] } } | null }>(
+      FAILURES,
+      { id: prId },
+    );
+    const rollup = data.node?.commits.nodes[0]?.commit.statusCheckRollup;
+    if (!rollup) return { checks: null, failures: [] };
+    const checks: PrChecksState = rollup.state === 'SUCCESS' ? 'success' : rollup.state === 'FAILURE' || rollup.state === 'ERROR' ? 'failure' : 'pending';
+    return { checks, failures: failuresOf(rollup.contexts.nodes.flatMap((n) => (n ? [n] : []))) };
   }
 }

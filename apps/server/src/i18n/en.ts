@@ -80,6 +80,12 @@ export const en: Messages = {
   'github.ssoWarning': 'There are PRs from an organization with SSO that the token cannot see. In GitHub: Settings > Developer settings > tokens > Configure SSO > Authorize.',
 
   // Your PR alerts (stored in the database and shown as notifications)
+  'prs.notFound': 'That PR is not one of yours known to the app.',
+  'prs.fix.intro': 'PR {{repo}} #{{number}} ({{url}}, branch {{branch}}) has failing checks on GitHub. This is what they say:',
+  'prs.fix.more': 'and {{count}} more (on GitHub)',
+  'prs.fix.outro': 'Fix it on branch {{branch}} and tell me what you changed.',
+  'prs.fix.whereRepo': 'This PR is not linked to any task in the app: ask me which folder the repo is in before touching anything.',
+  'prs.fix.noFailures': 'The PR no longer has failing checks on GitHub.',
   'prs.alert.ciFailed': 'CI failing',
   'prs.alert.failing': 'Failing {{checks}}',
   'prs.alert.changesRequested': 'Changes requested',

@@ -35,6 +35,8 @@ import type {
   NoteUpdate,
   OpencodeSkillStatus,
   PrAlert,
+  PrFailures,
+  PrFixResult,
   PrWatchStatus,
   PullRequestInfo,
   Reminder,
@@ -153,6 +155,8 @@ export const api = {
   checkPrs: () => request<PrWatchStatus>('POST', '/api/prs/check'),
   listPrAlerts: () => request<PrAlert[]>('GET', '/api/pr-alerts'),
   getTaskPrs: (key: string) => request<PullRequestInfo[]>('GET', `/api/tasks/${encodeURIComponent(key)}/prs`),
+  prFailures: (id: string) => request<PrFailures>('GET', `/api/prs/${encodeURIComponent(id)}/failures`),
+  fixPr: (id: string) => request<PrFixResult>('POST', `/api/prs/${encodeURIComponent(id)}/fix`),
 
   aiOptions: (refresh = false) => request<AiOptions>('GET', `/api/ai/options${refresh ? '?refresh=1' : ''}`),
   aiSettings: () => request<AiSettings>('GET', '/api/ai/settings'),
@@ -228,6 +232,7 @@ export const queryKeys = {
   prStatus: ['prs', 'status'] as const,
   prAlerts: ['prs', 'alerts'] as const,
   taskPrs: (key: string) => ['prs', 'task', key] as const,
+  prFailures: (id: string) => ['prs', 'failures', id] as const,
   /** Invalidar `repos` refresca la lista y las fichas. */
   repos: ['repos'] as const,
   repoList: ['repos', 'list'] as const,

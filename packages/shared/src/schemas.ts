@@ -624,6 +624,8 @@ export interface PullRequestInfo {
 export interface PrAlert {
   id: number;
   kind: PrAlertKind;
+  /** Id de la PR en GitHub. */
+  prId: string;
   repo: string;
   number: number;
   url: string;
@@ -633,6 +635,42 @@ export interface PrAlert {
   detail: string | null;
   createdAt: string;
 }
+
+/** Una línea que un check marca en el código (Checkstyle, el compilador...). */
+export interface PrCheckAnnotation {
+  path: string;
+  line: number | null;
+  message: string;
+  title: string | null;
+  level: 'failure' | 'warning' | 'notice';
+}
+
+/** Un check en rojo con lo que publica en GitHub. */
+export interface PrCheckFailure {
+  name: string;
+  /** Título que da el check ("3 errores de Checkstyle"); en un estado clásico, su descripción. */
+  title: string | null;
+  /** Resumen o texto del check (markdown, recortado). */
+  summary: string | null;
+  url: string | null;
+  annotations: PrCheckAnnotation[];
+  /** Cuántas anotaciones tiene en total (puede haber más de las que se enseñan). */
+  annotationsTotal: number;
+}
+
+/** Los checks en rojo de una PR, leídos de GitHub en el momento. */
+export interface PrFailures {
+  prId: string;
+  repo: string;
+  number: number;
+  url: string;
+  taskKey: string | null;
+  checks: PrChecksState | null;
+  failures: PrCheckFailure[];
+}
+
+/** Dónde se mandaron los fallos con "Arreglar con opencode". */
+export type PrFixResult = { target: 'task'; taskKey: string } | { target: 'chat'; conversationId: string };
 
 export interface PrWatchStatus {
   configured: boolean;

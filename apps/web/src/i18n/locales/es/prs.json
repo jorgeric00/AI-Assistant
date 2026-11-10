@@ -31,5 +31,20 @@
     "fromGithub": "De GitHub",
     "fromGithubChecked": "De GitHub · comprobado {{when}}",
     "empty": "Aún no hay PR con {{taskKey}} en la rama o el título."
+  },
+  "failures": {
+    "title": "Checks en rojo",
+    "show": "Ver fallos",
+    "hide": "Ocultar fallos",
+    "loading": "Leyendo los fallos en GitHub…",
+    "none": "GitHub ya no tiene checks en rojo en esta PR.",
+    "viewOnGithub": "Ver en GitHub ↗",
+    "more_one": "y {{count}} más en GitHub ↗",
+    "more_other": "y {{count}} más en GitHub ↗",
+    "noDetail": "Este check no publica más detalle en GitHub.",
+    "fix": "Arreglar con opencode",
+    "fixing": "Enviando a opencode…",
+    "fixHint": "Abre la sesión de la tarea y le pasa estos fallos para que los corrija. Verás lo que hace y te pedirá permiso como siempre.",
+    "fixHintChat": "Abre una conversación en el Chat con estos fallos. Como la PR no va con ninguna tarea, te preguntará dónde está el repo."
   }
 }
