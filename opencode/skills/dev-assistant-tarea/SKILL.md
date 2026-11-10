@@ -21,6 +21,9 @@ en este orden, y para en cada punto marcado con **Pregunta al usuario** hasta qu
 - Si la rama base avanza y al traerla hay conflictos, **pregunta al usuario** antes de mezclar.
 - En JIRA solo haces lo que dice este flujo: pasar a "In Progress" al crear la rama y, tras la validación,
   a "In Review" con un comentario. Nada más sin que el usuario lo pida.
+- Contesta **siempre** al usuario en el idioma del sistema: el que indica `TAREA.md` en «Idioma del usuario» o, si no
+  lo indica, el del sistema operativo (configuración regional, `LANG`). Aunque el ticket, el código o esta skill
+  estén en otro idioma. Los commits, las PR y los comentarios de JIRA siguen el formato que se indica abajo.
 
 ## Carpeta de la tarea
 

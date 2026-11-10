@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { AiSettingsUpdate, Language } from '@dev-assistant/shared';
+import type { AiSettingsUpdate, Language, McpServer, McpState } from '@dev-assistant/shared';
 import { CircleCheck, DatabaseBackup, Download, RefreshCw } from 'lucide-react';
 import { Trans, useTranslation } from 'react-i18next';
 import { api, queryKeys } from '../api';
@@ -18,6 +18,7 @@ export function AjustesPage() {
       <div className="flex max-w-[640px] flex-col gap-4">
         <LanguageCard />
         <AiCard />
+        <McpCard />
         <OpencodeSkillCard />
         <AutostartCard />
         <BackupsCard />
@@ -121,6 +122,85 @@ function AiCard() {
         </div>
       )}
     </Card>
+  );
+}
+
+const MCP_DOT: Record<McpState, string> = { connected: 'bg-success', failed: 'bg-danger', needs_auth: 'bg-accent', disabled: 'bg-ink-faint', unknown: 'bg-ink-faint' };
+const MCP_TEXT: Record<McpState, string> = { connected: 'text-success', failed: 'text-danger', needs_auth: 'text-accent', disabled: 'text-ink-muted', unknown: 'text-ink-muted' };
+const code = <code className="font-mono text-code break-all" />;
+
+/** Qué MCP ve el opencode de la app y si arrancan: para saber por qué no tiene una herramienta que sí tiene en la terminal. */
+function McpCard() {
+  const { t } = useTranslation(['settings', 'common']);
+  const status = useQuery({ queryKey: queryKeys.aiMcp, queryFn: api.aiMcp });
+  const m = status.data;
+  const version = m?.version ?? '?';
+  return (
+    <Card
+      title={t('mcp.title')}
+      action={
+        <button type="button" onClick={() => void status.refetch()} disabled={status.isFetching} className={secondaryButtonClass}>
+          <RefreshCw size={16} strokeWidth={2} aria-hidden />
+          {status.isFetching ? t('mcp.checking') : t('mcp.check')}
+        </button>
+      }
+    >
+      {status.isError ? (
+        <p className="m-0 text-danger">{status.error.message}</p>
+      ) : !m ? (
+        <p className="m-0 text-ink-muted">{t('common:status.loading')}</p>
+      ) : !m.available ? (
+        <p role="alert" className="m-0 text-danger">
+          {t('mcp.unavailable', { error: m.error ?? '' })}
+        </p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <span className="text-small text-ink-muted">
+            {m.url ? (
+              <Trans t={t} i18nKey="mcp.external" values={{ url: m.url, version }} components={{ code }} />
+            ) : m.binary ? (
+              <Trans t={t} i18nKey="mcp.binary" values={{ binary: m.binary, version }} components={{ code }} />
+            ) : (
+              <Trans t={t} i18nKey="mcp.binaryUnknown" values={{ version }} components={{ code }} />
+            )}
+          </span>
+          {m.servers.length ? (
+            <ul className="m-0 flex list-none flex-col p-0">
+              {m.servers.map((s) => (
+                <McpRow key={s.name} server={s} />
+              ))}
+            </ul>
+          ) : (
+            <p className="m-0 text-ink-muted">{t('mcp.none')}</p>
+          )}
+          <p className="m-0 border-t border-line pt-3 text-small text-ink-faint">
+            {m.configDir ? <Trans t={t} i18nKey="mcp.footer" values={{ dir: m.configDir }} components={{ code }} /> : t('mcp.footerNoDir')}
+          </p>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function McpRow({ server: s }: { server: McpServer }) {
+  const { t } = useTranslation('settings');
+  return (
+    <li className="flex gap-3 border-t border-line py-2.5">
+      <span aria-hidden className={`mt-[7px] size-2 shrink-0 rounded-full ${MCP_DOT[s.state]}`} />
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <span className="font-mono text-code font-medium break-all">{s.name}</span>
+          <span className={`text-small ${MCP_TEXT[s.state]}`}>{t(`mcp.state.${s.state}`)}</span>
+        </div>
+        {s.error && <span className="font-mono text-small break-words whitespace-pre-wrap text-ink-muted">{s.error}</span>}
+        {s.state === 'failed' && <span className="text-small text-ink-muted">{t('mcp.failedHint')}</span>}
+        {s.state === 'needs_auth' && (
+          <span className="text-small text-ink-muted">
+            <Trans t={t} i18nKey="mcp.authHint" values={{ name: s.name }} components={{ code }} />
+          </span>
+        )}
+      </div>
+    </li>
   );
 }
 

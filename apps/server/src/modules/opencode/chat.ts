@@ -7,7 +7,7 @@ import type { Db } from '../../db/client.js';
 import { settings } from '../../db/schema.js';
 import { LlmUnavailableError } from '../../integrations/opencode/connection.js';
 import { t } from '../../i18n/index.js';
-import { openPrompt, type DevSessionService } from '../tasks/session.js';
+import type { DevSessionService } from '../tasks/session.js';
 import type { AiSettingsStore } from './ai-settings.js';
 import type { OpencodeChat } from './chat-core.js';
 
@@ -50,7 +50,7 @@ export class TaskChatService {
       model: stored ? stored.model : defaults.sessionModel,
       agent: stored?.agent ?? defaults.sessionAgent,
       contextPercent: null,
-      starterPrompt: openPrompt(key),
+      starterPrompt: this.sessions.prompt(key),
       ...extra,
     };
   }

@@ -11,21 +11,22 @@ import { ReposRepository } from '../repos/repository.js';
 import { parsePlanHeader } from './dev-files.js';
 import { language, t } from '../../i18n/index.js';
 import type { TasksRepository } from './repository.js';
+import { SKILL_NAME, installSkill, skillPath, skillStatus } from '../opencode/skill.js';
 
 /** Abre una terminal con opencode en la carpeta de la tarea; false si no sabe hacerlo en este sistema. */
 export type TerminalLauncher = (folder: string, key: string, prompt: string) => Promise<boolean>;
 
-const SKILL = 'dev-assistant-tarea';
 
-export function openPrompt(key: string): string {
+export function openPrompt(key: string, skillPath: string): string {
   // Sin comillas ni caracteres especiales: viaja dentro de una línea de cmd.exe. La skill y TAREA.md van en
-  // castellano; en otro idioma se pide además que opencode conteste en él.
-  const base = `Desarrolla la tarea ${key} con la skill ${SKILL}. Lee primero TAREA.md`;
+  // castellano; en otro idioma se pide además que opencode conteste en él. Se da la ruta de la skill por si
+  // opencode no la encuentra entre las suyas.
+  const base = `Desarrolla la tarea ${key} con la skill ${SKILL_NAME}, que está en ${skillPath}. Lee primero TAREA.md`;
   return language() === 'es' ? base : `${base}. ${t('ai.answerLanguage')}`;
 }
 
-export function openCommand(folder: string, key: string): string {
-  return `cd "${folder}"; opencode --prompt "${openPrompt(key)}"`;
+export function openCommand(folder: string, prompt: string): string {
+  return `cd "${folder}"; opencode --prompt "${prompt}"`;
 }
 
 /** En Windows, una ventana nueva de la terminal por defecto con opencode ya en marcha. */
@@ -66,8 +67,14 @@ export class DevSessionService {
     private readonly devAssistantHome: string,
     private readonly git: GitRunner = runGit,
     private readonly launcher: TerminalLauncher = windowsLauncher,
+    private readonly skillsDir: string | null = null,
   ) {
     this.repos = new ReposRepository(db);
+  }
+
+  /** Lo que se le dice a opencode al empezar: la tarea, la ruta de la skill y que lea TAREA.md. */
+  prompt(key: string): string {
+    return openPrompt(key, this.skillsDir ? skillPath(this.skillsDir) : SKILL_NAME);
   }
 
   folder(key: string) {
@@ -111,13 +118,15 @@ export class DevSessionService {
         };
       }),
     );
-    return { folder, branch: header.branch, reposConfirmed: header.repos.length > 0, repos, command: openCommand(folder, key), canOpen: process.platform === 'win32' };
+    return { folder, branch: header.branch, reposConfirmed: header.repos.length > 0, repos, command: openCommand(folder, this.prompt(key)), canOpen: process.platform === 'win32' };
   }
 
   /** Crea la carpeta de la tarea y deja TAREA.md al día (el contexto que lee opencode al empezar). */
   async prepare(key: string): Promise<string> {
     const folder = this.folder(key);
     await mkdir(folder, { recursive: true });
+    // La skill es de la app: si falta o está desfasada, se instala para que opencode la tenga al empezar.
+    if (this.skillsDir && !(await skillStatus(this.skillsDir)).upToDate) await installSkill(this.skillsDir);
     const candidates = this.candidates(key);
     const others = this.repos.list().filter((r) => !candidates.some((c) => c.id === r.id));
     const details = (list: typeof candidates) => list.map((r) => this.repos.get(r.id)).filter((r): r is Omit<RepoDetail, 'pathOk'> => !!r);
@@ -128,8 +137,8 @@ export class DevSessionService {
   /** Deja TAREA.md al día y abre opencode en la carpeta de la tarea. */
   async open(key: string): Promise<SessionOpenResult> {
     const folder = await this.prepare(key);
-    const opened = await this.launcher(folder, key, openPrompt(key));
-    return { opened, command: openCommand(folder, key) };
+    const opened = await this.launcher(folder, key, this.prompt(key));
+    return { opened, command: openCommand(folder, this.prompt(key)) };
   }
 }
 
@@ -157,7 +166,8 @@ export function taskContext(key: string, task: TaskDetail | null, candidates: Om
   if (others.length) parts.push('## Otros repositorios dados de alta', others.map(repoLine).join('\n'));
   parts.push(
     '## Cómo trabajar',
-    `Sigue la skill ${SKILL}. En la cabecera de PLAN.md escribe la línea "Repos:" con los nombres de esta lista, separados por comas, y añade una línea "PR: <url>" por cada PR que crees: la app las lee para enseñar el estado de la sesión.`,
+    `Idioma del usuario: ${language() === 'es' ? 'castellano' : 'inglés (English)'}. Contéstale siempre en ese idioma.`,
+    `Sigue la skill ${SKILL_NAME}. En la cabecera de PLAN.md escribe la línea "Repos:" con los nombres de esta lista, separados por comas, y añade una línea "PR: <url>" por cada PR que crees: la app las lee para enseñar el estado de la sesión.`,
   );
   return `${parts.filter(Boolean).join('\n\n')}\n`;
 }

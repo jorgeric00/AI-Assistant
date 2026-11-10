@@ -770,6 +770,31 @@ export interface AiOptions {
   agents: AiAgentOption[];
 }
 
+/** Estado de un servidor MCP en opencode. `needs_auth`: falta iniciar sesión (`opencode mcp auth <nombre>`). */
+export type McpState = 'connected' | 'failed' | 'needs_auth' | 'disabled' | 'unknown';
+
+export interface McpServer {
+  name: string;
+  state: McpState;
+  /** Error que da opencode al arrancarlo (solo si `failed`). */
+  error: string | null;
+}
+
+/** Herramientas MCP que ve el opencode de la app (Ajustes > Inteligencia artificial). */
+export interface McpOverview {
+  available: boolean;
+  error: string | null;
+  /** Versión de opencode. */
+  version: string | null;
+  /** Ejecutable de opencode que arranca la app; null si se usa OPENCODE_URL o no se encuentra. */
+  binary: string | null;
+  /** OPENCODE_URL, si se usa un opencode ya arrancado. */
+  url: string | null;
+  /** Carpeta de configuración global que lee opencode. */
+  configDir: string | null;
+  servers: McpServer[];
+}
+
 /** `null` = el predeterminado de opencode. */
 export const AiSettings = z.object({
   /** Modelo de Pregunta, Redactar con IA y resúmenes. */

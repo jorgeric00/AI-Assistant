@@ -5,6 +5,7 @@ import { t } from '../../i18n/index.js';
 import type { AiOptionsService, AiSettingsStore } from './ai-settings.js';
 import type { TaskChatService } from './chat.js';
 import type { GeneralChatService } from './general-chat.js';
+import type { McpService } from './mcp.js';
 
 const KeyParams = z.object({ key: JiraKey });
 const PermissionParams = KeyParams.extend({ id: z.string().min(1).max(200) });
@@ -15,10 +16,11 @@ const OptionsQuery = z.object({ refresh: z.enum(['1']).optional() });
 /** Modelos y modos de opencode (Ajustes), el chat de cada tarea con opencode y el chat general. */
 export async function opencodeAiRoutes(
   app: FastifyInstance,
-  { aiSettings, aiOptions, chat, general }: { aiSettings: AiSettingsStore; aiOptions: AiOptionsService; chat: TaskChatService; general: GeneralChatService },
+  { aiSettings, aiOptions, chat, general, mcp }: { aiSettings: AiSettingsStore; aiOptions: AiOptionsService; chat: TaskChatService; general: GeneralChatService; mcp: McpService },
 ) {
   app.get('/api/ai/options', async (req) => aiOptions.options(OptionsQuery.parse(req.query).refresh === '1'));
   app.get('/api/ai/settings', async () => aiSettings.get());
+  app.get('/api/ai/mcp', async () => mcp.overview());
   app.put('/api/ai/settings', async (req) => aiSettings.update(AiSettingsUpdate.parse(req.body)));
 
   app.get('/api/tasks/:key/chat', async (req) => chat.get(KeyParams.parse(req.params).key));

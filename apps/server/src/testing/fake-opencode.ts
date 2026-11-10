@@ -39,6 +39,10 @@ export async function fakeOpencode() {
           default: { copilot: 'gpt-5' },
         });
       if (call.path === '/config') return send(200, { model: 'copilot/gpt-5' });
+      if (call.path === '/mcp')
+        return send(200, { jira: { status: 'failed', error: 'MCP error -32000: Connection closed' }, github: { status: 'connected' }, sonar: { status: 'needs_client_registration' }, viejo: { status: 'disabled' } });
+      if (call.path === '/global/health') return send(200, { healthy: true, version: '1.18.34' });
+      if (call.path === '/path') return send(200, { home: '/home/u', config: '/home/u/.config/opencode' });
       if (call.path === '/agent')
         return send(200, [
           { name: 'build', description: 'Hace cambios', mode: 'primary' },

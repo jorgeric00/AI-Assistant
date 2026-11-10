@@ -16,6 +16,8 @@ export interface OpencodeConnectionOptions {
 export interface OpencodeConnection {
   /** Cliente y URL del servidor; arranca opencode si aún no lo está. */
   connect(): Promise<{ client: OpencodeClient; baseUrl: string }>;
+  /** URL de OPENCODE_URL si se usa un opencode ya arrancado; null si lo arranca la app. */
+  readonly externalUrl: string | null;
   /** Cierra y olvida la conexión: el siguiente intento vuelve a conectar (o a arrancar opencode). */
   reset(): void;
   close(): void;
@@ -39,6 +41,7 @@ export function createOpencodeConnection({ url, port = 0 }: OpencodeConnectionOp
 
   return {
     connect,
+    externalUrl: url ? url.replace(/\/+$/, '') : null,
     reset() {
       void connection?.then((c) => c.close()).catch(() => {});
       connection = undefined;
