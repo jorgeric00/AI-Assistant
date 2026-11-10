@@ -37,5 +37,19 @@
     "copying": "Copiando…",
     "runNow": "Hacer copia ahora",
     "savedIn": "Se guardan en {{dir}}"
+  },
+  "ai": {
+    "title": "Inteligencia artificial",
+    "connected_one": "opencode conectado · {{count}} modelo disponible",
+    "connected_other": "opencode conectado · {{count}} modelos disponibles",
+    "reload": "Recargar modelos",
+    "reloading": "Recargando…",
+    "appModel": "Modelo de la app",
+    "appModelHint": "Se usa en Pregunta, Redactar con IA y los resúmenes. Ahí el modelo solo devuelve texto, no toca ficheros.",
+    "sessionModel": "Modelo inicial de las sesiones de desarrollo",
+    "sessionAgent": "Modo inicial de las sesiones de desarrollo",
+    "sessionHint": "Dentro de cada sesión puedes cambiar el modelo y el modo cuando quieras.",
+    "footer": "Los modelos y los modos se leen de tu configuración de opencode. Los cambios se guardan al momento.",
+    "unavailable": "No se pueden leer los modelos de opencode: {{error}}"
   }
 }

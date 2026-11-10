@@ -674,3 +674,122 @@ export interface LanguageSetting {
 
 export const LanguageUpdate = z.object({ language: z.enum(LANGUAGES) });
 export type LanguageUpdate = z.infer<typeof LanguageUpdate>;
+
+// ── IA: modelos y modos de opencode (Ajustes > Inteligencia artificial) ─────
+
+/** Un modelo se nombra como en opencode: "proveedor/modelo". */
+const ModelRef = z.string().trim().regex(/^[^/\s]+\/\S+$/, 'Modelo no válido').max(200);
+
+export interface AiModelOption {
+  /** "proveedor/modelo". */
+  id: string;
+  name: string;
+}
+
+export interface AiProviderOption {
+  id: string;
+  name: string;
+  models: AiModelOption[];
+}
+
+export interface AiAgentOption {
+  /** Nombre del agente en opencode ("build", "plan" o uno propio). */
+  name: string;
+  description: string | null;
+}
+
+/** Lo que ofrece el opencode del usuario; `available` es false si no se pudo hablar con él. */
+export interface AiOptions {
+  available: boolean;
+  error: string | null;
+  providers: AiProviderOption[];
+  /** El modelo por defecto de la configuración de opencode ("model"), si lo tiene. */
+  defaultModel: string | null;
+  agents: AiAgentOption[];
+}
+
+/** `null` = el predeterminado de opencode. */
+export const AiSettings = z.object({
+  /** Modelo de Pregunta, Redactar con IA y resúmenes. */
+  appModel: ModelRef.nullable(),
+  /** Modelo y modo con los que empieza cada sesión de desarrollo. */
+  sessionModel: ModelRef.nullable(),
+  sessionAgent: z.string().trim().min(1).max(60),
+});
+export type AiSettings = z.infer<typeof AiSettings>;
+export const AiSettingsUpdate = AiSettings.partial();
+export type AiSettingsUpdate = z.infer<typeof AiSettingsUpdate>;
+
+// ── Sesión con opencode dentro de la app (chat de la tarea) ─────────────────
+
+export const CHAT_TOOL_STATUSES = ['pending', 'running', 'completed', 'error'] as const;
+export type ChatToolStatus = (typeof CHAT_TOOL_STATUSES)[number];
+
+export type ChatPart =
+  | { type: 'text'; id: string; text: string }
+  | {
+      type: 'tool';
+      id: string;
+      /** Herramienta de opencode: bash, read, edit, write, grep... o una de un MCP. */
+      tool: string;
+      status: ChatToolStatus;
+      /** Lo que hace, en corto: el comando, el fichero, el patrón... */
+      detail: string;
+      /** Salida o error (recortado). */
+      output: string | null;
+      seconds: number | null;
+    };
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  /** Modo (agente) y modelo con los que se envió o se generó. */
+  agent: string | null;
+  model: string | null;
+  createdAt: string;
+  error: string | null;
+  parts: ChatPart[];
+}
+
+export interface ChatPermission {
+  id: string;
+  /** Qué pide: bash, edit, webfetch... */
+  permission: string;
+  /** Lo concreto: el comando, el fichero... */
+  detail: string;
+  /** El cambio que quiere hacer en un fichero, si lo da opencode. */
+  diff: string | null;
+  /** A qué se extiende "Permitir siempre" (patrones de opencode). */
+  always: string[];
+}
+
+export interface TaskChat {
+  /** false si no se pudo hablar con opencode (`error` dice por qué). */
+  available: boolean;
+  error: string | null;
+  /** Hay una sesión de opencode creada para la tarea. */
+  started: boolean;
+  /** opencode está trabajando (o esperando un permiso). */
+  busy: boolean;
+  messages: ChatMessage[];
+  permissions: ChatPermission[];
+  /** Selección actual de la sesión (la última usada o la de Ajustes). */
+  model: string | null;
+  agent: string;
+  /** Porcentaje de la ventana de contexto usado, si se conoce. */
+  contextPercent: number | null;
+  /** Mensaje con el que se empieza la tarea. */
+  starterPrompt: string;
+}
+
+export const ChatSendInput = z.object({
+  text: z.string().trim().min(1, 'Escribe un mensaje').max(20_000),
+  model: ModelRef.nullable().optional(),
+  agent: z.string().trim().min(1).max(60).optional(),
+});
+export type ChatSendInput = z.infer<typeof ChatSendInput>;
+
+export const CHAT_PERMISSION_REPLIES = ['once', 'always', 'reject'] as const;
+export type ChatPermissionReply = (typeof CHAT_PERMISSION_REPLIES)[number];
+export const ChatPermissionReplyInput = z.object({ reply: z.enum(CHAT_PERMISSION_REPLIES) });
+export type ChatPermissionReplyInput = z.infer<typeof ChatPermissionReplyInput>;

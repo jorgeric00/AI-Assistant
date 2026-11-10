@@ -1,4 +1,10 @@
 import type {
+  AiOptions,
+  AiSettings,
+  AiSettingsUpdate,
+  ChatPermissionReply,
+  ChatSendInput,
+  TaskChat,
   AskSourceType,
   JiraCreateDraft,
   JiraCreateDraftInput,
@@ -146,6 +152,15 @@ export const api = {
   listPrAlerts: () => request<PrAlert[]>('GET', '/api/pr-alerts'),
   getTaskPrs: (key: string) => request<PullRequestInfo[]>('GET', `/api/tasks/${encodeURIComponent(key)}/prs`),
 
+  aiOptions: (refresh = false) => request<AiOptions>('GET', `/api/ai/options${refresh ? '?refresh=1' : ''}`),
+  aiSettings: () => request<AiSettings>('GET', '/api/ai/settings'),
+  updateAiSettings: (change: AiSettingsUpdate) => request<AiSettings>('PUT', '/api/ai/settings', change),
+  taskChat: (key: string) => request<TaskChat>('GET', `/api/tasks/${encodeURIComponent(key)}/chat`),
+  sendTaskChat: (key: string, input: ChatSendInput) => request<TaskChat>('POST', `/api/tasks/${encodeURIComponent(key)}/chat/messages`, input),
+  abortTaskChat: (key: string) => request<TaskChat>('POST', `/api/tasks/${encodeURIComponent(key)}/chat/abort`),
+  resetTaskChat: (key: string) => request<TaskChat>('POST', `/api/tasks/${encodeURIComponent(key)}/chat/reset`),
+  replyTaskPermission: (key: string, id: string, reply: ChatPermissionReply) =>
+    request<TaskChat>('POST', `/api/tasks/${encodeURIComponent(key)}/chat/permissions/${encodeURIComponent(id)}`, { reply }),
   opencodeSkill: () => request<OpencodeSkillStatus>('GET', '/api/opencode/skill'),
   installOpencodeSkill: () => request<OpencodeSkillStatus>('POST', '/api/opencode/skill/install'),
 
@@ -186,6 +201,9 @@ export const queryKeys = {
   jiraCreateForm: (project: string, typeId: string) => ['jira-create', 'form', project, typeId] as const,
   jiraEpics: (project: string, q: string) => ['jira-create', 'epics', project, q] as const,
   jiraSprints: (project: string) => ['jira-create', 'sprints', project] as const,
+  taskChat: (key: string) => ['tasks', 'chat', key] as const,
+  aiOptions: ['ai', 'options'] as const,
+  aiSettings: ['ai', 'settings'] as const,
   opencodeSkill: ['opencode-skill'] as const,
   language: ['settings', 'language'] as const,
   autostart: ['system', 'autostart'] as const,

@@ -7,7 +7,7 @@ El diseño completo está en `diseno-arquitectura.md`, en la carpeta `arquitectu
 
 ## Requisitos
 
-- Node.js 22+
+- Node.js 22.14 o superior (con una versión anterior, la base de datos hace que el servidor se cierre al arrancar)
 - pnpm 10 (`corepack enable`, o sin instalar nada: `npx pnpm@10.28.0 …`)
 - opencode instalado y configurado (con los MCP de JIRA y GitHub)
 
