@@ -148,7 +148,7 @@
         "bash": "opencode asks permission to run a command",
         "edit": "opencode asks permission to change a file",
         "webfetch": "opencode asks permission to fetch a web page",
-        "external_directory": "opencode asks permission to leave the task folder",
+        "external_directory": "opencode asks for permission to work outside its folder",
         "other": "opencode asks permission to use {{permission}}",
         "allow": "Allow",
         "allowAlways": "Always allow",

@@ -148,7 +148,7 @@
         "bash": "opencode pide permiso para ejecutar un comando",
         "edit": "opencode pide permiso para modificar un fichero",
         "webfetch": "opencode pide permiso para consultar una web",
-        "external_directory": "opencode pide permiso para salir de la carpeta de la tarea",
+        "external_directory": "opencode pide permiso para trabajar fuera de su carpeta",
         "other": "opencode pide permiso para usar {{permission}}",
         "allow": "Permitir",
         "allowAlways": "Permitir siempre",

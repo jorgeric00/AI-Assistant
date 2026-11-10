@@ -97,7 +97,7 @@ function CiFailedDetail({ alert: a }: { alert: PrAlert }) {
         ))}
       </ul>
       <div className="flex flex-wrap gap-4 text-small">
-        <a href={a.taskKey ? `#/tareas/${a.taskKey}/detalle` : a.url} {...(a.taskKey ? {} : { target: '_blank', rel: 'noreferrer' })}>
+        <a className="text-info" href={a.taskKey ? `#/tareas/${a.taskKey}/detalle` : a.url} {...(a.taskKey ? {} : { target: '_blank', rel: 'noreferrer' })}>
           {t('failures.show')}
         </a>
         <button type="button" className="cursor-pointer border-0 bg-transparent p-0 text-info hover:underline disabled:cursor-not-allowed disabled:text-ink-faint" disabled={fix.isPending} onClick={() => fix.mutate()}>
