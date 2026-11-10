@@ -21,6 +21,9 @@ en este orden, y para en cada punto marcado con **Pregunta al usuario** hasta qu
 - Si la rama base avanza y al traerla hay conflictos, **pregunta al usuario** antes de mezclar.
 - En JIRA solo haces lo que dice este flujo: pasar a "In Progress" al crear la rama y, tras la validación,
   a "In Review" con un comentario. Nada más sin que el usuario lo pida.
+- Contesta **siempre** al usuario en el idioma del sistema: el que indica `TAREA.md` en «Idioma del usuario» o, si no
+  lo indica, el del sistema operativo (configuración regional, `LANG`). Aunque el ticket, el código o esta skill
+  estén en otro idioma. Los commits, las PR y los comentarios de JIRA siguen el formato que se indica abajo.
 
 ## Carpeta de la tarea
 
@@ -69,11 +72,17 @@ la ficha de cada uno (convenciones, comandos de tests y arquitectura). Léelo an
 
 8. Implementa el paso en la rama.
 9. Escribe o ajusta los tests del paso.
+   Si la tarea cambia una librería de la que depende otro repositorio de la tarea, enlázala con la versión
+   SNAPSHOT que ya tiene la librería en su rama base (la de su `pom.xml` o `build.gradle`). Por ejemplo, si
+   `lib-wmsrfidcommons` está en `6.21.0-SNAPSHOT` (última release `6.20.0`), `lib-wmsrfid` debe usar `6.21.0-SNAPSHOT`.
+   No inventes versiones (nada de `6.26.0+PR583-SNAPSHOT`) ni cambies la versión de la librería. Si no está claro
+   cuál toca, **pregunta al usuario**.
 10. Comprobaciones locales: ejecuta los tests, el formateador y el linter del repo, y revisa que el cambio no
     incluya secretos. Si algo falla, corrígelo y vuelve a probar. Si tras dos intentos sigue fallando,
     para y explica al usuario qué falla.
 11. **Pregunta al usuario** si hace el commit: enséñale los ficheros cambiados y el mensaje propuesto,
-    `<CLAVE>: <explicación breve en español>` (p. ej. `SGARFIDIN-1024: revisar dependencias vulnerables`).
+    con el mismo formato que el título de la PR: `[<CLAVE>] <explicación breve en español>`
+    (p. ej. `[SGARFIDIN-1024] Revisar dependencias vulnerables`).
     Haz el commit solo cuando lo confirme.
 12. Marca el paso como hecho en `PLAN.md`.
 13. **Pregunta al usuario** si hace push, con un resumen de lo que se sube. Haz `git push` (con `-u origin <rama>`

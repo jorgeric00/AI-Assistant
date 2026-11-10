@@ -1,5 +1,6 @@
 import type {
   AiOptions,
+  McpOverview,
   AiSettings,
   AiSettingsUpdate,
   ChatPermissionReply,
@@ -166,6 +167,7 @@ export const api = {
 
   aiOptions: (refresh = false) => request<AiOptions>('GET', `/api/ai/options${refresh ? '?refresh=1' : ''}`),
   aiSettings: () => request<AiSettings>('GET', '/api/ai/settings'),
+  aiMcp: () => request<McpOverview>('GET', '/api/ai/mcp'),
   updateAiSettings: (change: AiSettingsUpdate) => request<AiSettings>('PUT', '/api/ai/settings', change),
   taskChat: (key: string) => request<TaskChat>('GET', `/api/tasks/${encodeURIComponent(key)}/chat`),
   sendTaskChat: (key: string, input: ChatSendInput) => request<TaskChat>('POST', `/api/tasks/${encodeURIComponent(key)}/chat/messages`, input),
@@ -229,6 +231,7 @@ export const queryKeys = {
   conversation: (id: string | null) => ['chats', id ?? 'new'] as const,
   aiOptions: ['ai', 'options'] as const,
   aiSettings: ['ai', 'settings'] as const,
+  aiMcp: ['ai', 'mcp'] as const,
   opencodeSkill: ['opencode-skill'] as const,
   language: ['settings', 'language'] as const,
   autostart: ['system', 'autostart'] as const,

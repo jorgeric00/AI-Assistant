@@ -86,6 +86,11 @@ class HttpError extends Error {
 export class OpencodeApi {
   constructor(private readonly connection: OpencodeConnection) {}
 
+  /** URL de OPENCODE_URL; null si la app arranca su propio opencode. */
+  get externalUrl(): string | null {
+    return this.connection.externalUrl;
+  }
+
   private async call<T>(method: string, path: string, { directory, body }: { directory?: string; body?: unknown } = {}): Promise<T> {
     const { baseUrl } = await this.connection.connect();
     const url = `${baseUrl}${path}${directory ? `?directory=${encodeURIComponent(directory)}` : ''}`;
@@ -121,6 +126,20 @@ export class OpencodeApi {
 
   config() {
     return this.request<{ model?: string }>('GET', '/config');
+  }
+
+  /** Estado de cada servidor MCP de la configuración de opencode. */
+  mcp(directory?: string) {
+    return this.request<Record<string, { status: string; error?: string }>>('GET', '/mcp', { directory });
+  }
+
+  health() {
+    return this.request<{ healthy: boolean; version?: string }>('GET', '/global/health');
+  }
+
+  /** Carpetas que usa opencode (la de configuración, entre otras). */
+  paths() {
+    return this.request<{ config?: string; home?: string }>('GET', '/path');
   }
 
   agents() {

@@ -19,6 +19,7 @@ import { AiOptionsService, AiSettingsStore } from './modules/opencode/ai-setting
 import { TaskChatService } from './modules/opencode/chat.js';
 import { OpencodeChat } from './modules/opencode/chat-core.js';
 import { GeneralChatService } from './modules/opencode/general-chat.js';
+import { McpService } from './modules/opencode/mcp.js';
 import { opencodeAiRoutes } from './modules/opencode/routes.js';
 import { remindersRoutes } from './modules/reminders/routes.js';
 import { reposRoutes } from './modules/repos/routes.js';
@@ -124,7 +125,7 @@ export async function buildApp(db: Db, opts: BuildAppOptions = {}) {
   await app.register(journalRoutes, { db, diaryFeed });
   await app.register(aiRoutes, { db, llm: opts.llm ?? noLlm, diaryFeed, devAssistantHome });
   const tasksRepo = new TasksRepository(db);
-  const sessions = new DevSessionService(db, tasksRepo, devAssistantHome, opts.git, opts.terminalLauncher);
+  const sessions = new DevSessionService(db, tasksRepo, devAssistantHome, opts.git, opts.terminalLauncher, opts.opencodeSkillsDir ?? config.opencodeSkillsDir);
   await app.register(tasksRoutes, {
     db,
     jiraSync: opts.jiraSync ?? new JiraSync(db, tasksRepo, null, ''),
@@ -146,7 +147,7 @@ export async function buildApp(db: Db, opts: BuildAppOptions = {}) {
   const opencodeChat = new OpencodeChat(opts.opencode ?? null, aiOptions);
   const taskChat = new TaskChatService(db, opencodeChat, sessions, aiSettings);
   const generalChat = new GeneralChatService(db, opencodeChat, aiSettings, devAssistantHome);
-  await app.register(opencodeAiRoutes, { aiSettings, aiOptions, chat: taskChat, general: generalChat });
+  await app.register(opencodeAiRoutes, { aiSettings, aiOptions, chat: taskChat, general: generalChat, mcp: new McpService(opts.opencode ?? null) });
   const prWatcher = opts.prWatcher ?? new PrWatcher(db, null);
   await app.register(prsRoutes, { prWatcher, prFix: new PrFixService(prWatcher, taskChat, generalChat) });
   await app.register(opencodeSkillRoutes, { skillsDir: opts.opencodeSkillsDir ?? config.opencodeSkillsDir });

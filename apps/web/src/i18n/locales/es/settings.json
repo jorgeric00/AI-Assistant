@@ -51,5 +51,26 @@
     "sessionHint": "Dentro de cada sesión puedes cambiar el modelo y el modo cuando quieras.",
     "footer": "Los modelos y los modos se leen de tu configuración de opencode. Los cambios se guardan al momento.",
     "unavailable": "No se pueden leer los modelos de opencode: {{error}}"
+  },
+  "mcp": {
+    "title": "Herramientas MCP",
+    "check": "Comprobar",
+    "checking": "Comprobando…",
+    "binary": "Las que ve el opencode que usa la app: <code>opencode {{version}}</code> en <code>{{binary}}</code>",
+    "binaryUnknown": "Las que ve el opencode que usa la app: <code>opencode {{version}}</code>. No se encuentra el comando opencode en el PATH de la app.",
+    "external": "Las que ve el opencode de <code>{{url}}</code> (OPENCODE_URL), versión {{version}}",
+    "unavailable": "No se puede leer el estado de los MCP: {{error}}",
+    "none": "opencode no tiene ningún MCP configurado.",
+    "state": {
+      "connected": "Conectado",
+      "failed": "No arranca",
+      "needs_auth": "Falta iniciar sesión",
+      "disabled": "Desactivado en tu configuración",
+      "unknown": "Estado desconocido"
+    },
+    "failedHint": "Si en tu terminal sí funciona, lo normal es que le falte una variable de entorno a la app: arráncala desde una terminal donde esa variable esté exportada.",
+    "authHint": "Ejecuta <code>opencode mcp auth {{name}}</code> en una terminal y vuelve a comprobar.",
+    "footer": "Se leen de tu configuración de opencode (<code>{{dir}}</code>). Si aquí no sale un MCP que sí ves desde la terminal, la app está usando otro opencode u otra configuración.",
+    "footerNoDir": "Se leen de tu configuración de opencode. Si aquí no sale un MCP que sí ves desde la terminal, la app está usando otro opencode u otra configuración."
   }
 }

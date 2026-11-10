@@ -145,5 +145,10 @@
     "defaultNow": "opencode's default (now {{name}})",
     "label": "Model",
     "modeLabel": "Mode"
+  },
+  "mcpWarning": {
+    "text_one": "opencode can't use the MCP {{names}}.",
+    "text_other": "opencode can't use the MCPs {{names}}.",
+    "link": "See Settings"
   }
 }

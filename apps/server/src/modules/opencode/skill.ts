@@ -18,16 +18,19 @@ async function read(path: string): Promise<string | null> {
   }
 }
 
+/** Ruta absoluta del SKILL.md instalado en la carpeta global de skills de opencode. */
+export const skillPath = (skillsDir: string) => join(skillsDir, SKILL_NAME, 'SKILL.md');
+
 const normalize = (text: string) => text.replace(/\r\n/g, '\n');
 
 export async function skillStatus(skillsDir: string): Promise<OpencodeSkillStatus> {
-  const path = join(skillsDir, SKILL_NAME, 'SKILL.md');
+  const path = skillPath(skillsDir);
   const [installed, source] = await Promise.all([read(path), readFile(SOURCE, 'utf8')]);
   return { installed: installed !== null, upToDate: installed !== null && normalize(installed) === normalize(source), path };
 }
 
 export async function installSkill(skillsDir: string): Promise<OpencodeSkillStatus> {
-  const path = join(skillsDir, SKILL_NAME, 'SKILL.md');
+  const path = skillPath(skillsDir);
   await mkdir(dirname(path), { recursive: true });
   await writeFile(path, await readFile(SOURCE, 'utf8'));
   return skillStatus(skillsDir);

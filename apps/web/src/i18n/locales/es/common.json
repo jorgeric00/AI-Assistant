@@ -145,5 +145,10 @@
     "defaultNow": "El predeterminado de opencode (ahora {{name}})",
     "label": "Modelo",
     "modeLabel": "Modo"
+  },
+  "mcpWarning": {
+    "text_one": "opencode no tiene disponible el MCP {{names}}.",
+    "text_other": "opencode no tiene disponibles los MCP {{names}}.",
+    "link": "Ver en Ajustes"
   }
 }

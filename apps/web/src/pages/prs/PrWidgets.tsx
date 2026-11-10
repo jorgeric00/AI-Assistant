@@ -72,6 +72,7 @@ export function AlertRow({ alert: a, compact = false }: { alert: PrAlert; compac
             </>
           )}
         </span>
+        {!compact && <span className="break-words text-ink">{a.prTitle}</span>}
         {a.kind === 'ci_failed' && !compact ? <CiFailedDetail alert={a} /> : a.detail && <span className="text-small text-ink-muted">{a.detail}</span>}
       </div>
       <span className="shrink-0 text-small text-ink-faint">{daysAgo(a.createdAt) === 0 ? hhmm(a.createdAt) : shortDay(a.createdAt)}</span>

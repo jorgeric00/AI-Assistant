@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import type { AiOptions, AiSettings, ConversationList, GeneralChat, TaskChat } from '@dev-assistant/shared';
+import type { AiOptions, McpOverview, AiSettings, ConversationList, GeneralChat, TaskChat } from '@dev-assistant/shared';
 import { buildApp } from '../../app.js';
 import { openDatabase } from '../../db/client.js';
 import { OpencodeApi } from '../../integrations/opencode/api.js';
@@ -27,6 +27,34 @@ let ctx: Awaited<ReturnType<typeof setup>>;
 afterEach(async () => {
   await ctx?.app.close();
   ctx?.oc.close();
+});
+
+describe('herramientas MCP de opencode', () => {
+  it('lista cada MCP con su estado, el error si no arranca, la versión y la carpeta de configuración', async () => {
+    ctx = await setup();
+    const { body } = await ctx.call<McpOverview>('GET', '/api/ai/mcp');
+    expect(body).toEqual({
+      available: true,
+      error: null,
+      version: '1.18.34',
+      binary: null,
+      url: ctx.oc.url.replace(/\/+$/, ''),
+      configDir: '/home/u/.config/opencode',
+      servers: [
+        { name: 'github', state: 'connected', error: null },
+        { name: 'jira', state: 'failed', error: 'MCP error -32000: Connection closed' },
+        { name: 'sonar', state: 'needs_auth', error: null },
+        { name: 'viejo', state: 'disabled', error: null },
+      ],
+    });
+  });
+
+  it('sin opencode lo dice', async () => {
+    ctx = await setup({ withOpencode: false });
+    const { body } = await ctx.call<McpOverview>('GET', '/api/ai/mcp');
+    expect(body.available).toBe(false);
+    expect(body.servers).toEqual([]);
+  });
 });
 
 describe('modelos y modos de opencode', () => {

@@ -23,8 +23,10 @@ function clone(name: string) {
 async function setup() {
   const home = mkdtempSync(join(tmpdir(), 'da-home-'));
   const launched: { folder: string; key: string; prompt: string }[] = [];
+  const skills = join(home, 'skills');
   const app = await buildApp(openDatabase(':memory:').db, {
     devAssistantHome: home,
+    opencodeSkillsDir: skills,
     terminalLauncher: async (folder, key, prompt) => {
       launched.push({ folder, key, prompt });
       return true;
@@ -33,7 +35,7 @@ async function setup() {
   const call = async <T>(method: 'GET' | 'POST' | 'PATCH', url: string, payload?: object) => (await app.inject({ method, url, payload })).json<T>();
   const addRepo = (name: string, localPath: string, extra: object = {}) =>
     call<RepoDetail>('POST', '/api/repos', { name, localPath, defaultBranch: 'develop', jiraProjectKeys: ['SGAR'], ...extra });
-  return { home, app, call, addRepo, launched };
+  return { home, skills, app, call, addRepo, launched };
 }
 
 let ctx: Awaited<ReturnType<typeof setup>>;
@@ -97,12 +99,15 @@ describe('sesión de desarrollo', () => {
     const res = await ctx.call<SessionOpenResult>('POST', '/api/tasks/SGAR-7/session/open');
     const folder = join(ctx.home, 'worktrees', 'SGAR-7');
     expect(res.opened).toBe(true);
-    expect(ctx.launched).toEqual([{ folder, key: 'SGAR-7', prompt: 'Desarrolla la tarea SGAR-7 con la skill dev-assistant-tarea. Lee primero TAREA.md' }]);
+    expect(ctx.launched).toEqual([{ folder, key: 'SGAR-7', prompt: `Desarrolla la tarea SGAR-7 con la skill dev-assistant-tarea, que está en ${join(ctx.skills, 'dev-assistant-tarea', 'SKILL.md')}. Lee primero TAREA.md` }]);
+    // La skill se instala al empezar si falta, en la ruta que se le da a opencode.
+    expect(readFileSync(join(ctx.skills, 'dev-assistant-tarea', 'SKILL.md'), 'utf8')).toContain('name: dev-assistant-tarea');
 
     const context = readFileSync(join(folder, 'TAREA.md'), 'utf8');
     expect(context).toContain(`- **checkout-web**: \`${web.dir}\` · rama base \`develop\``);
     expect(context).toContain('#### Tests\n- `pnpm test`');
     expect(context).toContain('## Otros repositorios dados de alta\n\n- **otro**');
+    expect(context).toContain('Idioma del usuario: castellano. Contéstale siempre en ese idioma.');
   });
 });
 

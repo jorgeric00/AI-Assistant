@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api, queryKeys } from '../../api';
 import { ChatPanel, smallButton } from '../../components/ChatPanel';
+import { McpWarning } from '../../components/McpWarning';
 import { primaryButtonClass } from '../../components/fields';
 
 /** Chat con opencode en la carpeta de la tarea: se elige modelo y modo en cada mensaje y se responden sus permisos. */
@@ -23,43 +24,46 @@ export function SesionChat({ taskKey, session }: { taskKey: string; session: Dev
   const reset = useMutation({ mutationFn: () => api.resetTaskChat(taskKey), onSuccess: setChat });
 
   return (
-    <ChatPanel
-      titleId="chat-titulo"
-      title={t('session.chat.title')}
-      actions={
-        <>
-          <button type="button" className={smallButton} disabled={!chat.data?.started || reset.isPending} onClick={() => reset.mutate()}>
-            {t('session.chat.newSession')}
-          </button>
-          <TerminalButton taskKey={taskKey} session={session} />
-        </>
-      }
-      data={chat.data}
-      loadError={chat.error}
-      extraError={reset.error}
-      options={options.data}
-      actionsApi={{
-        send: (input) => api.sendTaskChat(taskKey, input),
-        abort: () => api.abortTaskChat(taskKey),
-        reply: (id, answer) => api.replyTaskPermission(taskKey, id, answer),
-      }}
-      onData={setChat}
-      // Al terminar un turno, opencode puede haber cambiado el plan, el historial y los repos.
-      onIdle={() => {
-        void queryClient.invalidateQueries({ queryKey: queryKeys.taskSession(taskKey) });
-        void queryClient.invalidateQueries({ queryKey: queryKeys.taskDev(taskKey) });
-      }}
-      empty={(submit, disabled) => (
-        <div className="flex flex-col items-start gap-2.5">
-          <p className="m-0 font-medium">{t('session.chat.emptyTitle')}</p>
-          <p className="m-0 text-ink-muted">{t('session.chat.emptyBody')}</p>
-          <button type="button" className={primaryButtonClass} disabled={disabled} onClick={() => chat.data && submit(chat.data.starterPrompt)}>
-            {t('session.chat.start')}
-          </button>
-        </div>
-      )}
-      help={t('session.chat.help')}
-    />
+    <div className="flex flex-col gap-3">
+      <McpWarning />
+      <ChatPanel
+        titleId="chat-titulo"
+        title={t('session.chat.title')}
+        actions={
+          <>
+            <button type="button" className={smallButton} disabled={!chat.data?.started || reset.isPending} onClick={() => reset.mutate()}>
+              {t('session.chat.newSession')}
+            </button>
+            <TerminalButton taskKey={taskKey} session={session} />
+          </>
+        }
+        data={chat.data}
+        loadError={chat.error}
+        extraError={reset.error}
+        options={options.data}
+        actionsApi={{
+          send: (input) => api.sendTaskChat(taskKey, input),
+          abort: () => api.abortTaskChat(taskKey),
+          reply: (id, answer) => api.replyTaskPermission(taskKey, id, answer),
+        }}
+        onData={setChat}
+        // Al terminar un turno, opencode puede haber cambiado el plan, el historial y los repos.
+        onIdle={() => {
+          void queryClient.invalidateQueries({ queryKey: queryKeys.taskSession(taskKey) });
+          void queryClient.invalidateQueries({ queryKey: queryKeys.taskDev(taskKey) });
+        }}
+        empty={(submit, disabled) => (
+          <div className="flex flex-col items-start gap-2.5">
+            <p className="m-0 font-medium">{t('session.chat.emptyTitle')}</p>
+            <p className="m-0 text-ink-muted">{t('session.chat.emptyBody')}</p>
+            <button type="button" className={primaryButtonClass} disabled={disabled} onClick={() => chat.data && submit(chat.data.starterPrompt)}>
+              {t('session.chat.start')}
+            </button>
+          </div>
+        )}
+        help={t('session.chat.help')}
+      />
+    </div>
   );
 }
 
