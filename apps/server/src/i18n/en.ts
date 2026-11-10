@@ -24,6 +24,10 @@ export const en: Messages = {
   'ai.emptyAnswer': 'The model did not return any answer.',
   'ai.opencodeFailed': 'Error talking to opencode: {{message}}',
   'chat.aborted': 'Stopped.',
+  'chat.general.untitled': 'New conversation',
+  'chat.general.notFound': 'That conversation no longer exists.',
+  'chat.general.instructions':
+    '# AI-Assistant general chat\n\nThis folder is only where the app\'s general chat starts: do not save anything here.\n\n- If the user asks you to create or save a file and does not say where, ask which folder before writing it. There is no default folder.\n- Once you have saved a file, give its full (absolute) path.\n- Answer in English.\n',
   'ai.ask.noMatches': "I didn't find anything in the app related to the question.",
   'ai.ask.notInNotes': "I don't have that in the app",
   'ai.daily.nothingToSummarize': 'There are no journal entries since the last working day and no reminders for today. Write down what you did and generate it again.',

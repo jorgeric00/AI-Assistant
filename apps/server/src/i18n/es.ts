@@ -23,6 +23,10 @@ export const es = {
   'ai.emptyAnswer': 'El modelo no devolvió ninguna respuesta.',
   'ai.opencodeFailed': 'Fallo al hablar con opencode: {{message}}',
   'chat.aborted': 'Parado.',
+  'chat.general.untitled': 'Conversación nueva',
+  'chat.general.notFound': 'Esa conversación ya no existe.',
+  'chat.general.instructions':
+    '# Chat general de AI-Assistant\n\nEsta carpeta es solo el sitio desde el que arranca el chat general de la app: no guardes nada aquí.\n\n- Si el usuario te pide crear o guardar un fichero y no dice dónde, pregúntale en qué carpeta antes de escribirlo. No hay una carpeta por defecto.\n- Cuando hayas guardado un fichero, di su ruta completa (absoluta).\n- Contesta en castellano.\n',
   'ai.ask.noMatches': 'No he encontrado nada en la app relacionado con la pregunta.',
   'ai.ask.notInNotes': 'No lo tengo en la app',
   'ai.daily.nothingToSummarize': 'No hay entradas en el diario desde el último día laborable ni recordatorios para hoy. Apunta qué hiciste y vuelve a generarlo.',

@@ -763,11 +763,12 @@ export interface ChatPermission {
   always: string[];
 }
 
-export interface TaskChat {
+/** Estado de un chat con opencode en la app (el de una tarea o uno del chat general). */
+export interface ChatState {
   /** false si no se pudo hablar con opencode (`error` dice por qué). */
   available: boolean;
   error: string | null;
-  /** Hay una sesión de opencode creada para la tarea. */
+  /** Hay una sesión de opencode creada. */
   started: boolean;
   /** opencode está trabajando (o esperando un permiso). */
   busy: boolean;
@@ -778,9 +779,35 @@ export interface TaskChat {
   agent: string;
   /** Porcentaje de la ventana de contexto usado, si se conoce. */
   contextPercent: number | null;
+}
+
+export interface TaskChat extends ChatState {
   /** Mensaje con el que se empieza la tarea. */
   starterPrompt: string;
 }
+
+// ── Chat general con opencode (sin tarea) ────────────────────────────────────
+
+export interface Conversation {
+  /** Id de la sesión de opencode. */
+  id: string;
+  title: string;
+  updatedAt: string;
+}
+
+export interface ConversationList {
+  available: boolean;
+  error: string | null;
+  conversations: Conversation[];
+}
+
+export interface GeneralChat extends ChatState {
+  /** null = conversación nueva, aún sin mensajes. */
+  id: string | null;
+  title: string | null;
+}
+
+export const ConversationId = z.string().regex(/^[A-Za-z0-9_-]{1,100}$/);
 
 export const ChatSendInput = z.object({
   text: z.string().trim().min(1, 'Escribe un mensaje').max(20_000),

@@ -60,6 +60,13 @@ export interface OcPermission {
   always?: string[];
   metadata?: Record<string, unknown>;
 }
+export interface OcSession {
+  id: string;
+  title?: string;
+  parentID?: string;
+  directory?: string;
+  time?: { created?: number; updated?: number };
+}
 export interface OcPromptBody {
   parts: { type: 'text'; text: string }[];
   model?: { providerID: string; modelID: string };
@@ -120,8 +127,25 @@ export class OpencodeApi {
     return this.request<OcAgent[]>('GET', '/agent');
   }
 
-  createSession(directory: string, title: string) {
-    return this.request<{ id: string }>('POST', '/session', { directory, body: { title } });
+  /** Sin título, opencode pone uno a partir del primer mensaje. */
+  createSession(directory: string, title?: string) {
+    return this.request<{ id: string }>('POST', '/session', { directory, body: title ? { title } : {} });
+  }
+
+  /** Sesiones de opencode en esa carpeta (o en su proyecto). */
+  async sessions(directory: string): Promise<OcSession[]> {
+    return (await this.request<OcSession[]>('GET', '/session', { directory })) ?? [];
+  }
+
+  async deleteSession(sessionId: string, directory: string): Promise<void> {
+    try {
+      await this.call<unknown>('DELETE', `/session/${sessionId}`, { directory });
+    } catch (err) {
+      // Si ya no existe, no hay nada que borrar.
+      if (err instanceof HttpError && (err.status === 404 || err.status === 400)) return;
+      if (err instanceof HttpError) throw new LlmUnavailableError(t('ai.opencodeFailed', { message: `${err.status} ${err.message}` }));
+      throw err;
+    }
   }
 
   /** null si la sesión ya no existe en opencode (la borraron desde la terminal, cambió la base de datos...). */

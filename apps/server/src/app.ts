@@ -17,6 +17,8 @@ import { opencodeSkillRoutes } from './modules/opencode/skill.js';
 import type { OpencodeApi } from './integrations/opencode/api.js';
 import { AiOptionsService, AiSettingsStore } from './modules/opencode/ai-settings.js';
 import { TaskChatService } from './modules/opencode/chat.js';
+import { OpencodeChat } from './modules/opencode/chat-core.js';
+import { GeneralChatService } from './modules/opencode/general-chat.js';
 import { opencodeAiRoutes } from './modules/opencode/routes.js';
 import { remindersRoutes } from './modules/reminders/routes.js';
 import { reposRoutes } from './modules/repos/routes.js';
@@ -141,7 +143,13 @@ export async function buildApp(db: Db, opts: BuildAppOptions = {}) {
   await app.register(reposRoutes, { db, llm: opts.llm ?? noLlm, git: opts.git });
   const aiSettings = new AiSettingsStore(db);
   const aiOptions = new AiOptionsService(opts.opencode ?? null);
-  await app.register(opencodeAiRoutes, { aiSettings, aiOptions, chat: new TaskChatService(db, opts.opencode ?? null, sessions, aiSettings, aiOptions) });
+  const opencodeChat = new OpencodeChat(opts.opencode ?? null, aiOptions);
+  await app.register(opencodeAiRoutes, {
+    aiSettings,
+    aiOptions,
+    chat: new TaskChatService(db, opencodeChat, sessions, aiSettings),
+    general: new GeneralChatService(db, opencodeChat, aiSettings, devAssistantHome),
+  });
   await app.register(opencodeSkillRoutes, { skillsDir: opts.opencodeSkillsDir ?? config.opencodeSkillsDir });
   return app;
 }

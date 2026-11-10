@@ -1,0 +1,17 @@
+{
+  "title": "Chat",
+  "intro": "Habla con opencode sin abrir una tarea. Tiene todas las herramientas de tu opencode (sus MCP incluidos).",
+  "list": {
+    "title": "Conversaciones",
+    "new": "Nueva conversación",
+    "empty": "Aún no hay conversaciones.",
+    "unavailable": "No se pudo leer la lista de opencode: {{error}}"
+  },
+  "newTitle": "Conversación nueva",
+  "delete": "Borrar conversación",
+  "confirmDelete": "¿Borrar «{{title}}»? Se borra también en opencode.",
+  "emptyTitle": "Pregúntale lo que quieras",
+  "emptyBody": "Dudas, análisis de Grafana o Prometheus, consultas a JIRA, GitHub o SonarQube... Si le pides un fichero, te pregunta dónde guardarlo.",
+  "help": "Si le pides un fichero y no le has dicho dónde, te pregunta la carpeta y al terminar te da la ruta completa.",
+  "notFound": "Esa conversación ya no existe."
+}

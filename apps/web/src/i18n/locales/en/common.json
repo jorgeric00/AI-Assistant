@@ -35,6 +35,7 @@
   },
   "sections": {
     "hoy": "Today",
+    "chat": "Chat",
     "documentacion": "Documentation",
     "notas": "Notes",
     "enlaces": "Links",

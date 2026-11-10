@@ -5,6 +5,8 @@ import type {
   ChatPermissionReply,
   ChatSendInput,
   TaskChat,
+  ConversationList,
+  GeneralChat,
   AskSourceType,
   JiraCreateDraft,
   JiraCreateDraftInput,
@@ -161,6 +163,17 @@ export const api = {
   resetTaskChat: (key: string) => request<TaskChat>('POST', `/api/tasks/${encodeURIComponent(key)}/chat/reset`),
   replyTaskPermission: (key: string, id: string, reply: ChatPermissionReply) =>
     request<TaskChat>('POST', `/api/tasks/${encodeURIComponent(key)}/chat/permissions/${encodeURIComponent(id)}`, { reply }),
+
+  // Chat general con opencode
+  conversations: () => request<ConversationList>('GET', '/api/chats'),
+  newConversation: () => request<GeneralChat>('GET', '/api/chats/new'),
+  conversation: (id: string) => request<GeneralChat>('GET', `/api/chats/${encodeURIComponent(id)}`),
+  startConversation: (input: ChatSendInput) => request<GeneralChat>('POST', '/api/chats', input),
+  sendConversation: (id: string, input: ChatSendInput) => request<GeneralChat>('POST', `/api/chats/${encodeURIComponent(id)}/messages`, input),
+  abortConversation: (id: string) => request<GeneralChat>('POST', `/api/chats/${encodeURIComponent(id)}/abort`),
+  replyConversationPermission: (id: string, permissionId: string, reply: ChatPermissionReply) =>
+    request<GeneralChat>('POST', `/api/chats/${encodeURIComponent(id)}/permissions/${encodeURIComponent(permissionId)}`, { reply }),
+  deleteConversation: (id: string) => request<void>('DELETE', `/api/chats/${encodeURIComponent(id)}`),
   opencodeSkill: () => request<OpencodeSkillStatus>('GET', '/api/opencode/skill'),
   installOpencodeSkill: () => request<OpencodeSkillStatus>('POST', '/api/opencode/skill/install'),
 
@@ -202,6 +215,8 @@ export const queryKeys = {
   jiraEpics: (project: string, q: string) => ['jira-create', 'epics', project, q] as const,
   jiraSprints: (project: string) => ['jira-create', 'sprints', project] as const,
   taskChat: (key: string) => ['tasks', 'chat', key] as const,
+  conversations: ['chats'] as const,
+  conversation: (id: string | null) => ['chats', id ?? 'new'] as const,
   aiOptions: ['ai', 'options'] as const,
   aiSettings: ['ai', 'settings'] as const,
   opencodeSkill: ['opencode-skill'] as const,

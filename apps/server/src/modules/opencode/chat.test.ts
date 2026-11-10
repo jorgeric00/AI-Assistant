@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import type { AiOptions, AiSettings, TaskChat } from '@dev-assistant/shared';
+import type { AiOptions, AiSettings, ConversationList, GeneralChat, TaskChat } from '@dev-assistant/shared';
 import { buildApp } from '../../app.js';
 import { openDatabase } from '../../db/client.js';
 import { OpencodeApi } from '../../integrations/opencode/api.js';
@@ -23,6 +23,7 @@ async function fakeOpencode() {
   const calls: Call[] = [];
   const state = {
     sessions: new Set<string>(),
+    titles: {} as Record<string, string>,
     messages: [] as object[],
     status: {} as Record<string, { type: string }>,
     permissions: [] as object[],
@@ -59,6 +60,15 @@ async function fakeOpencode() {
         state.sessions.add(id);
         return send(200, { id });
       }
+      if (call.path === '/session' && call.method === 'GET')
+        return send(
+          200,
+          [...state.sessions].map((id) => ({ id, title: state.titles[id] ?? 'New session - 2026-11-10T10:00:00.000Z', time: { updated: 1_700_000_000_000 + Number(id.slice(4)) } })),
+        );
+      if (call.method === 'DELETE' && /^\/session\/[^/]+$/.test(call.path)) {
+        state.sessions.delete(call.path.slice('/session/'.length));
+        return send(200, true);
+      }
       if (call.path === '/session/status') return send(200, state.status);
       if (call.path === '/permission') return send(200, state.permissions);
       if (call.path.startsWith('/permission/')) return send(200, true);
@@ -84,9 +94,9 @@ async function setup(opts: { withOpencode?: boolean } = {}) {
   const connection = createOpencodeConnection({ url: oc.url });
   const { db } = openDatabase(':memory:');
   const app = await buildApp(db, { devAssistantHome: home, opencode: opts.withOpencode === false ? null : new OpencodeApi(connection) });
-  const call = async <T>(method: 'GET' | 'POST' | 'PUT', url: string, payload?: object) => {
+  const call = async <T>(method: 'GET' | 'POST' | 'PUT' | 'DELETE', url: string, payload?: object) => {
     const res = await app.inject({ method, url, payload });
-    return { status: res.statusCode, body: res.json<T>() };
+    return { status: res.statusCode, body: (res.body ? res.json() : undefined) as T };
   };
   return { oc, home, app, call, connection, folder: join(home, 'worktrees', 'ABC-1') };
 }
@@ -269,5 +279,83 @@ describe('sesión con opencode en la app', () => {
     ctx = await setup({ withOpencode: false });
     expect((await ctx.call<TaskChat>('GET', '/api/tasks/ABC-1/chat')).body).toMatchObject({ available: false, started: false });
     expect((await ctx.call('POST', '/api/tasks/ABC-1/chat/messages', { text: 'Hola' })).status).toBe(503);
+  });
+});
+
+describe('chat general con opencode', () => {
+  it('la primera vez enseña una conversación nueva con el modelo y el modo de Ajustes, sin llamar a opencode', async () => {
+    ctx = await setup();
+    await ctx.call('PUT', '/api/ai/settings', { sessionModel: 'copilot/gpt-5', sessionAgent: 'plan' });
+    expect((await ctx.call<GeneralChat>('GET', '/api/chats/new')).body).toMatchObject({ id: null, started: false, model: 'copilot/gpt-5', agent: 'plan' });
+    expect(ctx.oc.calls).toEqual([]);
+  });
+
+  it('el primer mensaje crea la conversación en la carpeta del chat, con instrucciones para no guardar ahí sin preguntar', async () => {
+    ctx = await setup();
+    const folder = join(ctx.home, 'chat');
+    const { body } = await ctx.call<GeneralChat>('POST', '/api/chats', { text: 'Analiza la latencia\n de checkout', model: 'copilot/gpt-5', agent: 'plan' });
+    expect(body).toMatchObject({ id: 'ses_1', started: true, busy: true, title: 'Analiza la latencia de checkout', model: 'copilot/gpt-5', agent: 'plan' });
+    const create = ctx.oc.calls.find((c) => c.path === '/session' && c.method === 'POST')!;
+    expect(create.directory).toBe(folder);
+    // Sin título: lo pone opencode a partir del primer mensaje.
+    expect(create.body).toEqual({});
+    expect(readFileSync(join(folder, 'AGENTS.md'), 'utf8')).toContain('pregúntale en qué carpeta');
+    const prompt = ctx.oc.calls.find((c) => c.path === '/session/ses_1/prompt_async')!;
+    expect(prompt.directory).toBe(folder);
+    expect(prompt.body).toMatchObject({ model: { providerID: 'copilot', modelID: 'gpt-5' }, agent: 'plan', tools: { question: false } });
+  });
+
+  it('lista las conversaciones de la app con el título de opencode, la más reciente primero, y no las de otras sesiones', async () => {
+    ctx = await setup();
+    ctx.oc.state.sessions.add('ses_99');
+    await ctx.call('POST', '/api/chats', { text: 'Primera' });
+    await ctx.call('POST', '/api/chats', { text: 'Segunda' });
+    ctx.oc.state.titles.ses_1 = 'Latencia de checkout-api';
+    const { body } = await ctx.call<ConversationList>('GET', '/api/chats');
+    expect(body.available).toBe(true);
+    expect(body.conversations.map((c) => [c.id, c.title])).toEqual([
+      ['ses_2', 'Segunda'],
+      ['ses_1', 'Latencia de checkout-api'],
+    ]);
+  });
+
+  it('sigue la conversación con el modelo y el modo de cada mensaje, y solo enseña sus permisos', async () => {
+    ctx = await setup();
+    await ctx.call('POST', '/api/chats', { text: 'Hola' });
+    const { body } = await ctx.call<GeneralChat>('POST', '/api/chats/ses_1/messages', { text: 'Sigue', agent: 'plan' });
+    expect(body).toMatchObject({ id: 'ses_1', agent: 'plan', busy: true });
+    ctx.oc.state.status = { ses_1: { type: 'busy' }, ses_7: { type: 'busy' } };
+    ctx.oc.state.permissions = [
+      { id: 'per_1', sessionID: 'ses_1', permission: 'external_directory', patterns: ['/home/jorge/analisis/*'] },
+      { id: 'per_2', sessionID: 'ses_7', permission: 'bash', patterns: ['ls'] },
+    ];
+    const chat = (await ctx.call<GeneralChat>('GET', '/api/chats/ses_1')).body;
+    expect(chat.permissions.map((p) => p.id)).toEqual(['per_1']);
+    expect(chat.permissions[0]!.detail).toBe('/home/jorge/analisis/*');
+  });
+
+  it('borra la conversación de la app y de opencode; una que no es del chat da 404', async () => {
+    ctx = await setup();
+    await ctx.call('POST', '/api/chats', { text: 'Hola' });
+    expect((await ctx.call('DELETE', '/api/chats/ses_1')).status).toBe(204);
+    expect(ctx.oc.state.sessions.has('ses_1')).toBe(false);
+    expect((await ctx.call<ConversationList>('GET', '/api/chats')).body.conversations).toEqual([]);
+    expect((await ctx.call('GET', '/api/chats/ses_1')).status).toBe(404);
+    ctx.oc.state.sessions.add('ses_50');
+    expect((await ctx.call('POST', '/api/chats/ses_50/messages', { text: 'x' })).status).toBe(404);
+  });
+
+  it('si la borraron en opencode, desaparece de la lista', async () => {
+    ctx = await setup();
+    await ctx.call('POST', '/api/chats', { text: 'Hola' });
+    ctx.oc.state.sessions.delete('ses_1');
+    expect((await ctx.call('GET', '/api/chats/ses_1')).status).toBe(404);
+    expect((await ctx.call<ConversationList>('GET', '/api/chats')).body.conversations).toEqual([]);
+  });
+
+  it('sin opencode no se puede empezar y lo dice', async () => {
+    ctx = await setup({ withOpencode: false });
+    expect((await ctx.call<ConversationList>('GET', '/api/chats')).body).toMatchObject({ available: false, conversations: [] });
+    expect((await ctx.call('POST', '/api/chats', { text: 'Hola' })).status).toBe(503);
   });
 });
