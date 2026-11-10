@@ -1,4 +1,4 @@
-// Sesión de desarrollo: Jorge habla con opencode en su terminal y la app enseña cómo va la tarea.
+// Sesión de desarrollo: el usuario habla con opencode (en la app o en su terminal) y la app enseña cómo va la tarea.
 // La app no toca el código: lee PLAN.md (rama, repos y PR que anota opencode) y el estado de cada
 // clon con git, y al abrir opencode le deja en TAREA.md los repos dados de alta y sus fichas (R17).
 import { spawn } from 'node:child_process';
@@ -114,14 +114,20 @@ export class DevSessionService {
     return { folder, branch: header.branch, reposConfirmed: header.repos.length > 0, repos, command: openCommand(folder, key), canOpen: process.platform === 'win32' };
   }
 
-  /** Deja TAREA.md al día y abre opencode en la carpeta de la tarea. */
-  async open(key: string): Promise<SessionOpenResult> {
+  /** Crea la carpeta de la tarea y deja TAREA.md al día (el contexto que lee opencode al empezar). */
+  async prepare(key: string): Promise<string> {
     const folder = this.folder(key);
     await mkdir(folder, { recursive: true });
     const candidates = this.candidates(key);
     const others = this.repos.list().filter((r) => !candidates.some((c) => c.id === r.id));
     const details = (list: typeof candidates) => list.map((r) => this.repos.get(r.id)).filter((r): r is Omit<RepoDetail, 'pathOk'> => !!r);
     await writeFile(join(folder, 'TAREA.md'), taskContext(key, this.tasks.get(key), details(candidates), details(others)), 'utf8');
+    return folder;
+  }
+
+  /** Deja TAREA.md al día y abre opencode en la carpeta de la tarea. */
+  async open(key: string): Promise<SessionOpenResult> {
+    const folder = await this.prepare(key);
     const opened = await this.launcher(folder, key, openPrompt(key));
     return { opened, command: openCommand(folder, key) };
   }

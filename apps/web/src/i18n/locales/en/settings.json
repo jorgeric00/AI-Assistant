@@ -37,5 +37,19 @@
     "copying": "Backing up…",
     "runNow": "Back up now",
     "savedIn": "Saved in {{dir}}"
+  },
+  "ai": {
+    "title": "Artificial intelligence",
+    "connected_one": "opencode connected · {{count}} model available",
+    "connected_other": "opencode connected · {{count}} models available",
+    "reload": "Reload models",
+    "reloading": "Reloading…",
+    "appModel": "App model",
+    "appModelHint": "Used by Ask, Draft with AI and the summaries. There the model only returns text; it does not touch files.",
+    "sessionModel": "Starting model for development sessions",
+    "sessionAgent": "Starting mode for development sessions",
+    "sessionHint": "Inside each session you can change the model and the mode whenever you like.",
+    "footer": "Models and modes are read from your opencode configuration. Changes are saved right away.",
+    "unavailable": "Could not read the models from opencode: {{error}}"
   }
 }

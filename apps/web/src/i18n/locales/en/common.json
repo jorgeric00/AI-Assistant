@@ -137,5 +137,11 @@
     "notCited": "not cited",
     "hint": "It answers only with what is in the app and cites where it got it from.",
     "close": "<kbd>Esc</kbd> close"
+  },
+  "model": {
+    "default": "opencode's default",
+    "defaultNow": "opencode's default (now {{name}})",
+    "label": "Model",
+    "modeLabel": "Mode"
   }
 }

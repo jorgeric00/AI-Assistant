@@ -1,17 +1,18 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import type { DevPlan, DevSession, SessionRepo, TaskDetail } from '@dev-assistant/shared';
-import { AlertTriangle, Check, Circle, Copy, ExternalLink, SquareTerminal } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { AlertTriangle, Check, Circle, ExternalLink } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { api, queryKeys } from '../../api';
-import { primaryButtonClass, secondaryButtonClass } from '../../components/fields';
+import { secondaryButtonClass } from '../../components/fields';
 import { ActualizarJiraButton } from './ActualizarJira';
+import { SesionChat } from './SesionChat';
 import { HistoryCard, PlanCard } from './TareaDetallePage';
 
 const card = 'flex min-w-0 flex-col gap-3 rounded-lg border border-line bg-surface p-4';
 const caption = 'text-small text-ink-muted';
 
-/** Página "Sesión de desarrollo" (`#/tareas/:clave/sesion`): opencode trabaja en la terminal y aquí se ve cómo va. */
+/** Página "Sesión de desarrollo" (`#/tareas/:clave/sesion`): se habla con opencode aquí (o en la terminal) y se ve cómo va la tarea. */
 export function SesionPage({ taskKey }: { taskKey: string }) {
   const { t } = useTranslation(['tasks', 'common']);
   const task = useQuery({ queryKey: queryKeys.task(taskKey), queryFn: () => api.getTask(taskKey), retry: false });
@@ -37,11 +38,11 @@ export function SesionPage({ taskKey }: { taskKey: string }) {
 
       <div className="flex flex-wrap items-start gap-4">
         <div className="flex min-w-0 flex-[999_1_560px] flex-col gap-4">
-          <OpencodeCard taskKey={taskKey} session={session.data ?? null} />
+          <SesionChat taskKey={taskKey} session={session.data ?? null} />
           <ReposCard session={session.data ?? null} error={session.error?.message ?? null} />
-          <PlanCard plan={dev.data?.plan ?? null} loading={dev.isPending} />
         </div>
-        <div className="flex min-w-0 flex-[1_1_320px] flex-col">
+        <div className="flex min-w-0 flex-[1_1_320px] flex-col gap-4">
+          <PlanCard plan={dev.data?.plan ?? null} loading={dev.isPending} />
           <HistoryCard history={dev.data?.history ?? []} loading={dev.isPending} />
         </div>
       </div>
@@ -106,57 +107,6 @@ function Steps({ session, plan }: { session: DevSession | null; plan: DevPlan | 
         </li>
       ))}
     </ol>
-  );
-}
-
-function OpencodeCard({ taskKey, session }: { taskKey: string; session: DevSession | null }) {
-  const { t } = useTranslation(['tasks', 'common']);
-  const [copied, setCopied] = useState(false);
-  const open = useMutation({ mutationFn: () => api.openTaskSession(taskKey) });
-  const command = open.data?.command ?? session?.command ?? '';
-  const copy = async () => {
-    await navigator.clipboard.writeText(command);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <section aria-labelledby="opencode-titulo" className={`${card} border-accent`}>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="opencode-titulo" className="m-0 text-heading font-semibold">
-          {t('session.opencodeTitle')}
-        </h2>
-        {open.data?.opened && (
-          <span className="flex items-center gap-1.5 text-small text-success">
-            <Circle size={12} strokeWidth={2} aria-hidden />
-            {t('session.opened')}
-          </span>
-        )}
-      </div>
-      <p className="m-0 text-ink-muted">
-        {t('session.opencodeIntro')}
-      </p>
-      <div className="flex flex-wrap items-center gap-2">
-        <button type="button" className={primaryButtonClass} disabled={open.isPending} onClick={() => open.mutate()}>
-          <SquareTerminal size={16} strokeWidth={1.5} aria-hidden />
-          {open.isPending ? t('session.opening') : t('session.openOpencode')}
-        </button>
-        <button type="button" className={secondaryButtonClass} disabled={!command} onClick={copy}>
-          <Copy size={16} strokeWidth={1.5} aria-hidden />
-          {copied ? t('session.copied') : t('session.copyCommand')}
-        </button>
-        {session && <code className="min-w-0 truncate font-mono text-code text-ink-faint">{session.folder}</code>}
-      </div>
-      <p role="status" className="m-0 text-small text-ink-muted empty:hidden">
-        {open.isError
-          ? open.error.message
-          : open.data && !open.data.opened
-            ? t('session.cannotOpen')
-            : open.data?.opened
-              ? t('session.openedWindow')
-              : ''}
-      </p>
-    </section>
   );
 }
 

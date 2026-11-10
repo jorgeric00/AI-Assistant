@@ -1,7 +1,9 @@
 // Acceso al modelo de IA a través de opencode (diseño, sección 6.2): toda la IA pasa por
 // opencode con los modelos de Copilot que el usuario ya tiene configurados.
-import { createOpencodeClient, createOpencodeServer, type OpencodeClient } from '@opencode-ai/sdk';
 import { t } from '../../i18n/index.js';
+import { LlmUnavailableError, createOpencodeConnection, isConnectionError, type OpencodeConnection, type OpencodeConnectionOptions } from './connection.js';
+
+export { LlmUnavailableError };
 
 export interface LlmRequest {
   /** Instrucciones de sistema (rol, formato, reglas). */
@@ -16,9 +18,6 @@ export interface LlmRequest {
 export interface Llm {
   complete(request: LlmRequest): Promise<string>;
 }
-
-/** Error que se muestra tal cual al usuario (opencode no arranca, el modelo falla...). */
-export class LlmUnavailableError extends Error {}
 
 // Las respuestas de la app solo necesitan texto: sin herramientas, el modelo no puede tocar
 // ficheros ni ejecutar nada aunque se lo pidan las notas.
@@ -38,41 +37,33 @@ const NO_TOOLS: Record<string, boolean> = {
   todoread: false,
 };
 
-interface OpencodeLlmOptions {
-  /** URL de un `opencode serve` ya arrancado. Si falta, la app lo arranca la primera vez que hace falta. */
-  url?: string;
-  /** Puerto para el `opencode serve` propio; 0 = uno libre cualquiera. */
-  port?: number;
+/** "proveedor/modelo" → lo que espera opencode; null si no es un modelo. */
+export function parseModel(ref: string | null | undefined): { providerID: string; modelID: string } | undefined {
+  const cut = ref?.indexOf('/') ?? -1;
+  if (!ref || cut <= 0 || cut === ref.length - 1) return undefined;
+  return { providerID: ref.slice(0, cut), modelID: ref.slice(cut + 1) };
 }
 
-export function createOpencodeLlm({ url, port = 0 }: OpencodeLlmOptions = {}): Llm & { close(): void } {
-  let connection: Promise<{ client: OpencodeClient; close(): void }> | undefined;
+interface OpencodeLlmOptions extends OpencodeConnectionOptions {
+  /** Conexión compartida con el resto de la app; si falta, se crea una propia con `url` y `port`. */
+  connection?: OpencodeConnection;
+  /** Modelo elegido en Ajustes ("proveedor/modelo"); sin él, el predeterminado de opencode. */
+  model?: () => string | null;
+}
 
-  const connect = () => {
-    connection ??= (async () => {
-      if (url) return { client: createOpencodeClient({ baseUrl: url }), close() {} };
-      const server = await createOpencodeServer({ hostname: '127.0.0.1', port, timeout: 20_000 });
-      return { client: createOpencodeClient({ baseUrl: server.url }), close: () => server.close() };
-    })().catch((err: unknown) => {
-      connection = undefined; // el siguiente intento vuelve a probar
-      const detail = err instanceof Error ? (err.message.split('\n')[0] ?? '') : String(err);
-      throw new LlmUnavailableError(
-        url ? t('ai.connectFailed', { url, detail }) : t('ai.startFailed', { detail }),
-      );
-    });
-    return connection;
-  };
+export function createOpencodeLlm({ connection, model, ...own }: OpencodeLlmOptions = {}): Llm & { close(): void } {
+  const conn = connection ?? createOpencodeConnection(own);
 
   return {
     async complete({ system, user, title }) {
-      const { client } = await connect();
+      const { client } = await conn.connect();
       let sessionId: string | undefined;
       try {
         const session = await client.session.create({ body: { title }, throwOnError: true });
         sessionId = session.data.id;
         const result = await client.session.prompt({
           path: { id: sessionId },
-          body: { system, tools: NO_TOOLS, parts: [{ type: 'text', text: user }] },
+          body: { system, tools: NO_TOOLS, model: parseModel(model?.()), parts: [{ type: 'text', text: user }] },
           throwOnError: true,
         });
         const { info, parts } = result.data;
@@ -88,14 +79,14 @@ export function createOpencodeLlm({ url, port = 0 }: OpencodeLlmOptions = {}): L
         return text;
       } catch (err) {
         if (err instanceof LlmUnavailableError) throw err;
-        connection = undefined;
+        if (isConnectionError(err)) conn.reset();
         throw new LlmUnavailableError(t('ai.opencodeFailed', { message: err instanceof Error ? err.message : String(err) }));
       } finally {
         if (sessionId) void client.session.delete({ path: { id: sessionId } }).catch(() => {});
       }
     },
     close() {
-      void connection?.then((c) => c.close()).catch(() => {});
+      if (!connection) conn.close();
     },
   };
 }

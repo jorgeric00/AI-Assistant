@@ -7,7 +7,10 @@ import { JiraClient } from './integrations/jira/client.js';
 import { PrWatcher } from './modules/prs/watcher.js';
 import { AUTOSTART_ENV, Autostart, REPO_ROOT, openInBrowser } from './modules/system/autostart.js';
 import { Backups } from './modules/system/backup.js';
+import { OpencodeApi } from './integrations/opencode/api.js';
+import { createOpencodeConnection } from './integrations/opencode/connection.js';
 import { createOpencodeLlm } from './integrations/opencode/llm.js';
+import { AiSettingsStore } from './modules/opencode/ai-settings.js';
 import { RemindersRepository } from './modules/reminders/repository.js';
 import { startReminderScheduler } from './modules/reminders/scheduler.js';
 import { desktopNotifier, notifyDesktop } from './modules/reminders/system-notifier.js';
@@ -17,14 +20,17 @@ import { TasksRepository } from './modules/tasks/repository.js';
 const config = loadConfig();
 const { db, sqlite } = openDatabase(config.databasePath);
 // opencode arranca solo la primera vez que se usa la IA (o se usa el que indique OPENCODE_URL).
-const llm = createOpencodeLlm({ url: config.opencodeUrl });
+const opencode = createOpencodeConnection({ url: config.opencodeUrl });
+const aiSettings = new AiSettingsStore(db);
+// La IA de la app usa el modelo elegido en Ajustes (o el predeterminado de opencode).
+const llm = createOpencodeLlm({ connection: opencode, model: () => aiSettings.get().appModel });
 const jiraClient = config.jira ? new JiraClient(config.jira) : null;
 const jiraSync = new JiraSync(db, new TasksRepository(db), jiraClient, config.jira?.jql ?? '');
 const prWatcher = new PrWatcher(db, config.github ? new GithubClient(config.github) : null, notifyDesktop);
 const autostart = new Autostart(db, { platform: process.platform, appData: process.env.APPDATA, repoRoot: REPO_ROOT, logFile: join(config.devAssistantHome, 'logs', 'app.log') });
 const backups = new Backups(sqlite, join(config.devAssistantHome, 'copias'));
-const app = await buildApp(db, { logger: true, llm, jiraSync, jiraClient, prWatcher, autostart, backups });
-app.addHook('onClose', async () => llm.close());
+const app = await buildApp(db, { logger: true, llm, opencode: new OpencodeApi(opencode), jiraSync, jiraClient, prWatcher, autostart, backups });
+app.addHook('onClose', async () => opencode.close());
 await app.listen({ host: config.host, port: config.port });
 
 // Recordatorios: aviso en la app y notificación del sistema (Teams queda pospuesto).

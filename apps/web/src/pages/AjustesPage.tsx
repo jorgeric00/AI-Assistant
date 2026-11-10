@@ -1,14 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { Language } from '@dev-assistant/shared';
-import { CircleCheck, DatabaseBackup, Download } from 'lucide-react';
+import type { AiSettingsUpdate, Language } from '@dev-assistant/shared';
+import { CircleCheck, DatabaseBackup, Download, RefreshCw } from 'lucide-react';
 import { Trans, useTranslation } from 'react-i18next';
 import { api, queryKeys } from '../api';
 import { Card } from '../components/Card';
+import { ModeToggle, ModelSelect } from '../components/ModelPicker';
 import { inputClass, primaryButtonClass, secondaryButtonClass } from '../components/fields';
 import { dayAndTime } from '../dates';
 import { useLanguage } from '../i18n/useLanguage';
 
-/** Sección "Ajustes": idioma, skill de opencode, arranque automático y copias de seguridad. */
+/** Sección "Ajustes": idioma, inteligencia artificial, skill de opencode, arranque automático y copias de seguridad. */
 export function AjustesPage() {
   const { t } = useTranslation(['settings', 'common']);
   return (
@@ -16,6 +17,7 @@ export function AjustesPage() {
       <h1 className="m-0 text-display font-semibold">{t('page.title')}</h1>
       <div className="flex max-w-[640px] flex-col gap-4">
         <LanguageCard />
+        <AiCard />
         <OpencodeSkillCard />
         <AutostartCard />
         <BackupsCard />
@@ -47,6 +49,77 @@ function LanguageCard() {
           </option>
         ))}
       </select>
+    </Card>
+  );
+}
+
+/** Qué modelo usa la IA de la app y con qué modelo y modo empiezan las sesiones de desarrollo. */
+function AiCard() {
+  const { t } = useTranslation(['settings', 'common']);
+  const queryClient = useQueryClient();
+  const options = useQuery({ queryKey: queryKeys.aiOptions, queryFn: () => api.aiOptions() });
+  const settings = useQuery({ queryKey: queryKeys.aiSettings, queryFn: api.aiSettings });
+  const reload = useMutation({ mutationFn: () => api.aiOptions(true), onSuccess: (data) => queryClient.setQueryData(queryKeys.aiOptions, data) });
+  const update = useMutation({
+    mutationFn: (change: AiSettingsUpdate) => api.updateAiSettings(change),
+    onSuccess: (data) => queryClient.setQueryData(queryKeys.aiSettings, data),
+  });
+  const o = options.data;
+  const s = settings.data;
+  const count = o?.providers.reduce((n, p) => n + p.models.length, 0) ?? 0;
+  const field = 'flex flex-col gap-1.5';
+  return (
+    <Card
+      title={t('ai.title')}
+      action={
+        <button type="button" onClick={() => reload.mutate()} disabled={reload.isPending} className={secondaryButtonClass}>
+          <RefreshCw size={16} strokeWidth={2} aria-hidden />
+          {reload.isPending ? t('ai.reloading') : t('ai.reload')}
+        </button>
+      }
+    >
+      {options.isError || settings.isError ? (
+        <p className="m-0 text-danger">{(options.error ?? settings.error)?.message}</p>
+      ) : !o || !s ? (
+        <p className="m-0 text-ink-muted">{t('common:status.loading')}</p>
+      ) : (
+        <div className="flex flex-col gap-4">
+          {o.available ? (
+            <span className="flex items-center gap-2 text-small text-ink-muted">
+              <CircleCheck size={14} className="text-success" aria-hidden />
+              {t('ai.connected', { count })}
+            </span>
+          ) : (
+            <p role="alert" className="m-0 text-danger">
+              {t('ai.unavailable', { error: o.error ?? '' })}
+            </p>
+          )}
+          <div className={field}>
+            <label htmlFor="ajustes-ia-app" className="font-medium">
+              {t('ai.appModel')}
+            </label>
+            <ModelSelect id="ajustes-ia-app" value={s.appModel} onChange={(appModel) => update.mutate({ appModel })} options={o} disabled={update.isPending} className="w-full" />
+            <span className="text-small text-ink-muted">{t('ai.appModelHint')}</span>
+          </div>
+          <div className={field}>
+            <label htmlFor="ajustes-ia-sesion" className="font-medium">
+              {t('ai.sessionModel')}
+            </label>
+            <ModelSelect id="ajustes-ia-sesion" value={s.sessionModel} onChange={(sessionModel) => update.mutate({ sessionModel })} options={o} disabled={update.isPending} className="w-full" />
+          </div>
+          <div className={field}>
+            <span id="ajustes-ia-modo" className="font-medium">
+              {t('ai.sessionAgent')}
+            </span>
+            <div className="self-start">
+              <ModeToggle labelledBy="ajustes-ia-modo" value={s.sessionAgent} onChange={(sessionAgent) => update.mutate({ sessionAgent })} options={o} disabled={update.isPending} />
+            </div>
+            <span className="text-small text-ink-muted">{t('ai.sessionHint')}</span>
+          </div>
+          {update.isError && <p className="m-0 text-danger">{update.error.message}</p>}
+          <p className="m-0 border-t border-line pt-3 text-small text-ink-faint">{t('ai.footer')}</p>
+        </div>
+      )}
     </Card>
   );
 }

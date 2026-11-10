@@ -14,6 +14,10 @@ import { journalRoutes } from './modules/journal/routes.js';
 import { notesRoutes, type NotesRoutesOptions } from './modules/notes/routes.js';
 import type { GitRunner } from './modules/repos/git.js';
 import { opencodeSkillRoutes } from './modules/opencode/skill.js';
+import type { OpencodeApi } from './integrations/opencode/api.js';
+import { AiOptionsService, AiSettingsStore } from './modules/opencode/ai-settings.js';
+import { TaskChatService } from './modules/opencode/chat.js';
+import { opencodeAiRoutes } from './modules/opencode/routes.js';
 import { remindersRoutes } from './modules/reminders/routes.js';
 import { reposRoutes } from './modules/repos/routes.js';
 import { JiraSync } from './modules/tasks/jira-sync.js';
@@ -37,6 +41,8 @@ export interface BuildAppOptions {
   fetchTitle?: NotesRoutesOptions['fetchTitle'];
   /** Modelo de IA (opencode). Sin él, las funciones con IA responden que no está disponible. */
   llm?: Llm;
+  /** API de opencode para las sesiones de desarrollo en la app y la lista de modelos. Sin ella, dicen que no está disponible. */
+  opencode?: OpencodeApi | null;
   /** Sincronización con JIRA. Sin ella, la sección de tareas indica que falta configurar JIRA. */
   jiraSync?: JiraSync;
   prWatcher?: PrWatcher;
@@ -115,13 +121,14 @@ export async function buildApp(db: Db, opts: BuildAppOptions = {}) {
   await app.register(journalRoutes, { db, diaryFeed });
   await app.register(aiRoutes, { db, llm: opts.llm ?? noLlm, diaryFeed, devAssistantHome });
   const tasksRepo = new TasksRepository(db);
+  const sessions = new DevSessionService(db, tasksRepo, devAssistantHome, opts.git, opts.terminalLauncher);
   await app.register(tasksRoutes, {
     db,
     jiraSync: opts.jiraSync ?? new JiraSync(db, tasksRepo, null, ''),
     jiraUpdates: new JiraUpdateService(db, tasksRepo, opts.jiraClient ?? null, opts.llm ?? noLlm, devAssistantHome),
     jiraCreate: new JiraCreateService(db, tasksRepo, opts.jiraClient ?? null, opts.llm ?? noLlm),
     devAssistantHome,
-    sessions: new DevSessionService(db, tasksRepo, devAssistantHome, opts.git, opts.terminalLauncher),
+    sessions,
   });
   await app.register(systemRoutes, {
     autostart:
@@ -132,6 +139,9 @@ export async function buildApp(db: Db, opts: BuildAppOptions = {}) {
   await app.register(webRoutes, { dist: opts.webDist });
   await app.register(prsRoutes, { prWatcher: opts.prWatcher ?? new PrWatcher(db, null) });
   await app.register(reposRoutes, { db, llm: opts.llm ?? noLlm, git: opts.git });
+  const aiSettings = new AiSettingsStore(db);
+  const aiOptions = new AiOptionsService(opts.opencode ?? null);
+  await app.register(opencodeAiRoutes, { aiSettings, aiOptions, chat: new TaskChatService(db, opts.opencode ?? null, sessions, aiSettings, aiOptions) });
   await app.register(opencodeSkillRoutes, { skillsDir: opts.opencodeSkillsDir ?? config.opencodeSkillsDir });
   return app;
 }

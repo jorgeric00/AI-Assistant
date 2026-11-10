@@ -137,5 +137,11 @@
     "notCited": "no citado",
     "hint": "Responde solo con lo que hay en la app y cita de dónde lo saca.",
     "close": "<kbd>Esc</kbd> cerrar"
+  },
+  "model": {
+    "default": "El predeterminado de opencode",
+    "defaultNow": "El predeterminado de opencode (ahora {{name}})",
+    "label": "Modelo",
+    "modeLabel": "Modo"
   }
 }

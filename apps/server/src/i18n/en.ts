@@ -23,6 +23,7 @@ export const en: Messages = {
   'ai.modelError': 'The model returned an error: {{message}}',
   'ai.emptyAnswer': 'The model did not return any answer.',
   'ai.opencodeFailed': 'Error talking to opencode: {{message}}',
+  'chat.aborted': 'Stopped.',
   'ai.ask.noMatches': "I didn't find anything in the app related to the question.",
   'ai.ask.notInNotes': "I don't have that in the app",
   'ai.daily.nothingToSummarize': 'There are no journal entries since the last working day and no reminders for today. Write down what you did and generate it again.',

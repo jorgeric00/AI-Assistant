@@ -22,6 +22,7 @@ export const es = {
   'ai.modelError': 'El modelo devolvió un error: {{message}}',
   'ai.emptyAnswer': 'El modelo no devolvió ninguna respuesta.',
   'ai.opencodeFailed': 'Fallo al hablar con opencode: {{message}}',
+  'chat.aborted': 'Parado.',
   'ai.ask.noMatches': 'No he encontrado nada en la app relacionado con la pregunta.',
   'ai.ask.notInNotes': 'No lo tengo en la app',
   'ai.daily.nothingToSummarize': 'No hay entradas en el diario desde el último día laborable ni recordatorios para hoy. Apunta qué hiciste y vuelve a generarlo.',

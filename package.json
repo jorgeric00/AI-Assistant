@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "packageManager": "pnpm@10.28.0",
-  "engines": { "node": ">=22" },
+  "engines": { "node": ">=22.14" },
   "scripts": {
     "dev": "pnpm --parallel -r dev",
     "start": "pnpm --filter @dev-assistant/web build && pnpm --filter @dev-assistant/server start",
