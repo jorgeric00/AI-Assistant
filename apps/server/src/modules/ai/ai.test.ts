@@ -58,7 +58,8 @@ describe('resumen para la daily', () => {
     expect(summary).toMatchObject({ date: '2026-10-12', since: '2026-10-09', contentMd: expect.stringContaining('## Ayer') });
 
     const prompt = calls[0]!.user;
-    expect(prompt).toContain('Terminé el login');
+    expect(prompt).toContain('- (a mano) Terminé el login');
+    expect(calls[0]!.system).toContain('va en su propia viñeta');
     expect(prompt).toContain('Empiezo con la revisión');
     expect(prompt).toContain('11:00 Revisar PR de Ana');
     expect(prompt).not.toContain('jueves');
