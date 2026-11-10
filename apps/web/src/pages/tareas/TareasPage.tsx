@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import type { Task, TaskDetail } from '@dev-assistant/shared';
 import { ExternalLink, FileText, Link2, RefreshCw } from 'lucide-react';
-import { useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { api, queryKeys } from '../../api';
 import { noteHref } from '../../sections';
@@ -12,6 +11,8 @@ import { NuevaTareaButton } from './NuevaTarea';
 import { SesionPage } from './SesionPage';
 import { TareaDetallePage } from './TareaDetallePage';
 import { useJiraSync, useTaskList } from './useTasks';
+import { inputClass } from '../../components/fields';
+import { useRemembered } from '../../useRemembered';
 
 /** Sección "Tareas de JIRA": `#/tareas`, `#/tareas/:clave` (ficha a la derecha), `#/tareas/:clave/detalle` y `#/tareas/:clave/sesion`. */
 export function TareasPage({ params }: { params: string[] }) {
@@ -23,11 +24,19 @@ export function TareasPage({ params }: { params: string[] }) {
 
 function TaskBrowser({ selectedKey }: { selectedKey?: string }) {
   const { t } = useTranslation(['tasks', 'common']);
-  const [showDone, setShowDone] = useState(false);
+  const [showDone, setShowDone] = useRemembered('tasks.showDone', false);
+  const [query, setQuery] = useRemembered('tasks.query', '');
+  const [statusFilter, setStatusFilter] = useRemembered('tasks.status', '');
   const { status, sync } = useJiraSync();
   const tasks = useTaskList(showDone);
 
-  const list = tasks.data ?? [];
+  const all = tasks.data ?? [];
+  const statuses = [...new Set(all.map((task) => task.status))].sort((a, b) => a.localeCompare(b));
+  // Un estado guardado que ya no tiene ninguna tarea no filtra.
+  const statusValue = statuses.includes(statusFilter) ? statusFilter : '';
+  const q = query.trim().toLowerCase();
+  const list = all.filter((task) => (!statusValue || task.status === statusValue) && (!q || task.key.toLowerCase().includes(q) || task.summary.toLowerCase().includes(q)));
+  const filtered = list.length !== all.length;
   const current = selectedKey ?? list[0]?.key;
   const configured = status.data?.configured;
   const lastSyncedAt = status.data?.lastSyncedAt;
@@ -74,6 +83,32 @@ function TaskBrowser({ selectedKey }: { selectedKey?: string }) {
         <p className="m-0 text-danger">{t('tasksPage.loadError')}</p>
       ) : tasks.isPending ? (
         <p className="m-0 text-ink-muted">{t('common:status.loading')}</p>
+      ) : all.length > 0 && (
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex min-w-0 flex-[1_1_320px] flex-col gap-1.5">
+            <label htmlFor="tareas-buscar" className="text-small text-ink-muted">
+              {t('tasksPage.searchLabel')}
+            </label>
+            <input id="tareas-buscar" type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('tasksPage.searchPlaceholder')} className={inputClass} />
+          </div>
+          <div className="flex min-w-0 flex-[0_1_240px] flex-col gap-1.5">
+            <label htmlFor="tareas-estado" className="text-small text-ink-muted">
+              {t('tasksPage.statusLabel')}
+            </label>
+            <select id="tareas-estado" value={statusValue} onChange={(e) => setStatusFilter(e.target.value)} className={inputClass}>
+              <option value="">{t('tasksPage.allStatuses')}</option>
+              {statuses.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </div>
+          {filtered && <span className="pb-2.5 text-small text-ink-muted">{t('tasksPage.count', { shown: list.length, total: all.length })}</span>}
+        </div>
+      )}
+      {tasks.isError || tasks.isPending ? null : all.length > 0 && list.length === 0 ? (
+        <p className="m-0 py-2 text-ink-muted">{t('tasksPage.noMatch')}</p>
       ) : list.length === 0 ? (
         configured && (
           <p className="m-0 py-2 text-ink-muted">

@@ -39,7 +39,13 @@
     "jiraReturnedNone": "JIRA no devolvió ninguna tarea asignada a ti.",
     "noAssigned": "No tienes tareas asignadas.",
     "noPending": "No tienes tareas pendientes.",
-    "pressSync": "Pulsa \"Sincronizar\" para traer tus tareas."
+    "pressSync": "Pulsa \"Sincronizar\" para traer tus tareas.",
+    "searchLabel": "Buscar",
+    "searchPlaceholder": "Clave o título (ABC-142, IBAN...)",
+    "statusLabel": "Estado",
+    "allStatuses": "Todos los estados",
+    "count": "{{shown}} de {{total}} tareas",
+    "noMatch": "Ninguna tarea coincide con el filtro."
   },
   "notConfigured": {
     "title": "Conecta JIRA",

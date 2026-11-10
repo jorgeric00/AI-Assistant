@@ -39,7 +39,13 @@
     "jiraReturnedNone": "JIRA returned no tasks assigned to you.",
     "noAssigned": "You have no assigned tasks.",
     "noPending": "You have no pending tasks.",
-    "pressSync": "Press \"Sync\" to fetch your tasks."
+    "pressSync": "Press \"Sync\" to fetch your tasks.",
+    "searchLabel": "Search",
+    "searchPlaceholder": "Key or title (ABC-142, IBAN...)",
+    "statusLabel": "Status",
+    "allStatuses": "All statuses",
+    "count": "{{shown}} of {{total}} tasks",
+    "noMatch": "No task matches the filter."
   },
   "notConfigured": {
     "title": "Connect JIRA",
