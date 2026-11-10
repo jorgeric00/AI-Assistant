@@ -646,6 +646,8 @@ export interface PrAlert {
   taskKey: string | null;
   /** "CI en rojo", "2 comentarios nuevos"... */
   title: string;
+  /** Título de la PR. */
+  prTitle: string;
   detail: string | null;
   createdAt: string;
 }

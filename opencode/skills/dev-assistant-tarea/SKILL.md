@@ -69,6 +69,11 @@ la ficha de cada uno (convenciones, comandos de tests y arquitectura). Léelo an
 
 8. Implementa el paso en la rama.
 9. Escribe o ajusta los tests del paso.
+   Si la tarea cambia una librería de la que depende otro repositorio de la tarea, enlázala con la versión
+   SNAPSHOT que ya tiene la librería en su rama base (la de su `pom.xml` o `build.gradle`). Por ejemplo, si
+   `lib-wmsrfidcommons` está en `6.21.0-SNAPSHOT` (última release `6.20.0`), `lib-wmsrfid` debe usar `6.21.0-SNAPSHOT`.
+   No inventes versiones (nada de `6.26.0+PR583-SNAPSHOT`) ni cambies la versión de la librería. Si no está claro
+   cuál toca, **pregunta al usuario**.
 10. Comprobaciones locales: ejecuta los tests, el formateador y el linter del repo, y revisa que el cambio no
     incluya secretos. Si algo falla, corrígelo y vuelve a probar. Si tras dos intentos sigue fallando,
     para y explica al usuario qué falla.

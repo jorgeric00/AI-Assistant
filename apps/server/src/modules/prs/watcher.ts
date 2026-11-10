@@ -188,7 +188,7 @@ export class PrWatcher {
       .orderBy(desc(prAlerts.createdAt), desc(prAlerts.id))
       .limit(limit)
       .all()
-      .map(({ a, pr }) => ({ id: a.id, kind: a.kind, prId: pr.id, repo: pr.repo, number: pr.number, url: pr.url, taskKey: pr.taskKey, title: a.title, detail: a.detail, createdAt: a.createdAt }));
+      .map(({ a, pr }) => ({ id: a.id, kind: a.kind, prId: pr.id, repo: pr.repo, number: pr.number, url: pr.url, taskKey: pr.taskKey, title: a.title, prTitle: pr.title, detail: a.detail, createdAt: a.createdAt }));
   }
 
   /** PR de una tarea (abiertas y ya mergeadas o cerradas), la más reciente primero. */
@@ -243,7 +243,7 @@ export class PrWatcher {
       .orderBy(desc(prAlerts.createdAt), desc(prAlerts.id))
       .limit(30)
       .all()
-      .map((a) => ({ id: a.id, kind: a.kind, prId, repo: pr.repo, number: pr.number, url: pr.url, taskKey: pr.taskKey, title: a.title, detail: a.detail, createdAt: a.createdAt }));
+      .map((a) => ({ id: a.id, kind: a.kind, prId, repo: pr.repo, number: pr.number, url: pr.url, taskKey: pr.taskKey, title: a.title, prTitle: pr.title, detail: a.detail, createdAt: a.createdAt }));
     return { ...pr, alerts };
   }
 
