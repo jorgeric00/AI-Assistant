@@ -1,4 +1,4 @@
-import { Bell, Book, BookOpen, FileText, GitBranch, Link2, MessageSquare, SlidersHorizontal, SquareCheck, Sun, type LucideIcon } from 'lucide-react';
+import { Bell, Book, BookOpen, FileText, GitBranch, GitPullRequest, Link2, MessageSquare, SlidersHorizontal, SquareCheck, Sun, type LucideIcon } from 'lucide-react';
 import type { NoteKind } from '@dev-assistant/shared';
 
 // Secciones del menú lateral (diseño "AI-Assistant · Pantallas").
@@ -12,6 +12,7 @@ export const SECTIONS = [
   { id: 'recordatorios', icon: Bell },
   { id: 'diario', icon: Book },
   { id: 'tareas', icon: SquareCheck },
+  { id: 'prs', icon: GitPullRequest },
   { id: 'repositorios', icon: GitBranch },
   { id: 'ajustes', icon: SlidersHorizontal },
 ] as const satisfies readonly { id: string; icon: LucideIcon; shortcut?: string }[];

@@ -36,6 +36,9 @@ import type {
   OpencodeSkillStatus,
   PrAlert,
   PrFailures,
+  PrDetail,
+  PrList,
+  PrListFilter,
   PrFixResult,
   PrWatchStatus,
   PullRequestInfo,
@@ -155,6 +158,9 @@ export const api = {
   checkPrs: () => request<PrWatchStatus>('POST', '/api/prs/check'),
   listPrAlerts: () => request<PrAlert[]>('GET', '/api/pr-alerts'),
   getTaskPrs: (key: string) => request<PullRequestInfo[]>('GET', `/api/tasks/${encodeURIComponent(key)}/prs`),
+  listPrs: (state: PrListFilter) => request<PrList>('GET', `/api/prs?state=${state}`),
+  getPr: (id: string) => request<PrDetail>('GET', `/api/prs/${encodeURIComponent(id)}`),
+  watchPr: (id: string, watched: boolean) => request<PullRequestInfo>('PUT', `/api/prs/${encodeURIComponent(id)}/watch`, { watched }),
   prFailures: (id: string) => request<PrFailures>('GET', `/api/prs/${encodeURIComponent(id)}/failures`),
   fixPr: (id: string) => request<PrFixResult>('POST', `/api/prs/${encodeURIComponent(id)}/fix`),
 
@@ -233,6 +239,8 @@ export const queryKeys = {
   prAlerts: ['prs', 'alerts'] as const,
   taskPrs: (key: string) => ['prs', 'task', key] as const,
   prFailures: (id: string) => ['prs', 'failures', id] as const,
+  prList: (state: string) => ['prs', 'list', state] as const,
+  pr: (id: string) => ['prs', 'detail', id] as const,
   /** Invalidar `repos` refresca la lista y las fichas. */
   repos: ['repos'] as const,
   repoList: ['repos', 'list'] as const,

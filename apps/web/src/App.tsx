@@ -9,6 +9,7 @@ import { ReminderAlerts } from './components/ReminderAlerts';
 import { Sidebar } from './components/Sidebar';
 import { HoyPage } from './pages/HoyPage';
 import { ChatPage } from './pages/chat/ChatPage';
+import { PrsPage } from './pages/prs/PrsPage';
 import { PendingPage } from './pages/PendingPage';
 import { DiarioPage } from './pages/diario/DiarioPage';
 import { DocumentacionPage } from './pages/documentacion/DocumentacionPage';
@@ -94,6 +95,8 @@ export function App() {
             <DiarioPage params={params} />
           ) : section === 'tareas' ? (
             <TareasPage params={params} />
+          ) : section === 'prs' ? (
+            <PrsPage params={params} />
           ) : section === 'repositorios' ? (
             <RepositoriosPage params={params} />
           ) : section === 'ajustes' ? (

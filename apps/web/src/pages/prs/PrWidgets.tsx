@@ -9,7 +9,7 @@ import { EmptyState } from '../../components/Card';
 import { daysAgo, hhmm, shortDay, timeAgo } from '../../dates';
 import { PrFailuresPanel, useFixPr, usePrFailures } from './PrFailures';
 
-const ALERT_STYLE: Record<PrAlertKind, { icon: LucideIcon; color: string }> = {
+export const ALERT_STYLE: Record<PrAlertKind, { icon: LucideIcon; color: string }> = {
   ci_failed: { icon: CircleX, color: 'text-danger' },
   changes_requested: { icon: MessageSquare, color: 'text-accent' },
   comments: { icon: MessageSquare, color: 'text-ink-muted' },
@@ -17,7 +17,7 @@ const ALERT_STYLE: Record<PrAlertKind, { icon: LucideIcon; color: string }> = {
   merged: { icon: GitMerge, color: 'text-info' },
 };
 
-const repoName = (repo: string) => repo.split('/').pop() ?? repo;
+export const repoName = (repo: string) => repo.split('/').pop() ?? repo;
 
 /** Lista de la tarjeta "Avisos de tus PR" de Hoy (diseño aprobado: icono, qué pasó, PR, tarea y hora). */
 export function PrAlertsList() {
@@ -49,7 +49,8 @@ export function PrAlertsList() {
   );
 }
 
-function AlertRow({ alert: a }: { alert: PrAlert }) {
+/** `compact`: sin los fallos de los checks (en la página de la PR ya se ven arriba). */
+export function AlertRow({ alert: a, compact = false }: { alert: PrAlert; compact?: boolean }) {
   const { t } = useTranslation('prs');
   const { icon: Icon, color } = ALERT_STYLE[a.kind];
   const strong = a.kind === 'ci_failed' ? 'text-danger' : '';
@@ -71,7 +72,7 @@ function AlertRow({ alert: a }: { alert: PrAlert }) {
             </>
           )}
         </span>
-        {a.kind === 'ci_failed' ? <CiFailedDetail alert={a} /> : a.detail && <span className="text-small text-ink-muted">{a.detail}</span>}
+        {a.kind === 'ci_failed' && !compact ? <CiFailedDetail alert={a} /> : a.detail && <span className="text-small text-ink-muted">{a.detail}</span>}
       </div>
       <span className="shrink-0 text-small text-ink-faint">{daysAgo(a.createdAt) === 0 ? hhmm(a.createdAt) : shortDay(a.createdAt)}</span>
     </li>
@@ -109,7 +110,7 @@ function CiFailedDetail({ alert: a }: { alert: PrAlert }) {
   );
 }
 
-function stateLabel(pr: PullRequestInfo, t: TFunction<'prs'>) {
+export function stateLabel(pr: PullRequestInfo, t: TFunction<'prs'>) {
   if (pr.state === 'merged') return t('state.merged');
   if (pr.state === 'closed') return t('state.closed');
   if (pr.isDraft) return t('state.draft');
@@ -117,7 +118,7 @@ function stateLabel(pr: PullRequestInfo, t: TFunction<'prs'>) {
   return t('state.ready');
 }
 
-function Checks({ pr }: { pr: PullRequestInfo }) {
+export function Checks({ pr }: { pr: PullRequestInfo }) {
   const { t } = useTranslation('prs');
   if (pr.checks === 'failure') {
     const n = pr.failingChecks.length;
@@ -145,7 +146,7 @@ function Checks({ pr }: { pr: PullRequestInfo }) {
   return <span className="text-small text-ink-faint">{t('checks.none')}</span>;
 }
 
-function Reviews({ pr }: { pr: PullRequestInfo }) {
+export function Reviews({ pr }: { pr: PullRequestInfo }) {
   const { t } = useTranslation('prs');
   const comments = pr.comments ? t('reviews.comments', { count: pr.comments }) : '';
   const [text, color] = pr.changesRequestedBy.length

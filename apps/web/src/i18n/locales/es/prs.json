@@ -46,5 +46,51 @@
     "fixing": "Enviando a opencode…",
     "fixHint": "Abre la sesión de la tarea y le pasa estos fallos para que los corrija. Verás lo que hace y te pedirá permiso como siempre.",
     "fixHintChat": "Abre una conversación en el Chat con estos fallos. Como la PR no va con ninguna tarea, te preguntará dónde está el repo."
+  },
+  "page": {
+    "title": "Pull requests",
+    "subtitle": "Tus PR en GitHub",
+    "subtitleChecked": "Tus PR en GitHub · comprobado {{when}}",
+    "checkNow": "Comprobar ahora",
+    "checking": "Comprobando…",
+    "filterLabel": "Estado",
+    "filter": {
+      "open": "Abiertas",
+      "merged": "Mergeadas",
+      "closed": "Cerradas",
+      "all": "Todas"
+    },
+    "searchLabel": "Buscar PR",
+    "searchPlaceholder": "Repo, número o clave de JIRA",
+    "noTask": "sin tarea",
+    "empty": {
+      "open": "No tienes PR abiertas.",
+      "merged": "No hay PR mergeadas.",
+      "closed": "No hay PR cerradas.",
+      "all": "No hay PR."
+    },
+    "noMatch": "Ninguna PR coincide.",
+    "help": "Las abiertas se observan siempre al aparecer. Si dejas de observar una, no genera avisos en Hoy ni notificaciones y se ocultan los que ya tenía; puedes volver a observarla cuando quieras. Mergeadas y cerradas se leen de GitHub al elegir el filtro.",
+    "watching": "Observando",
+    "notWatching": "Sin observar",
+    "watchTitle": "Si no la observas, no sale en Avisos de tus PR de Hoy ni en notificaciones",
+    "watchHelpOn": "Sus cambios salen en Avisos de tus PR de Hoy y como notificación.",
+    "watchHelpOff": "No sale en Hoy ni en notificaciones. Sigues viendo aquí su estado.",
+    "breadcrumb": "Ruta",
+    "branch": "Rama",
+    "task": "Tarea",
+    "updated": "Actualizada {{when}}",
+    "checksTitle": "Checks",
+    "checksCount": "{{failing}} en rojo · {{passing}} en verde",
+    "checksPending": "{{count}} en curso",
+    "noChecks": "Esta PR no tiene checks.",
+    "reviewsTitle": "Revisiones",
+    "approved": "Aprobada",
+    "changes": "Cambios pedidos",
+    "commentsLink": "Verlos en GitHub ↗",
+    "noReviews": "Nadie la ha revisado todavía.",
+    "alertsTitle": "Avisos de esta PR",
+    "noAlerts": "Sin avisos.",
+    "notFound": "Esa PR no está entre las tuyas que conoce la app."
   }
 }

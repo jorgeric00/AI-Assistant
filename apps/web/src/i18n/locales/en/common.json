@@ -42,6 +42,7 @@
     "recordatorios": "Reminders",
     "diario": "Journal",
     "tareas": "JIRA tasks",
+    "prs": "Pull requests",
     "repositorios": "Repositories",
     "ajustes": "Settings"
   },
