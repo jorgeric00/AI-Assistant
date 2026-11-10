@@ -62,6 +62,8 @@ const FAILURES = `query($id: ID!) { node(id: $id) { ... on PullRequest {
   } } } } } }
 } } }`;
 
+const CLOSED_PRS = `query { viewer { login pullRequests(states: [MERGED, CLOSED], first: 50, orderBy: { field: UPDATED_AT, direction: DESC }) { nodes { ${PR_FIELDS} } } } }`;
+
 const OPEN_PRS = `query { viewer { login pullRequests(states: OPEN, first: 50, orderBy: { field: UPDATED_AT, direction: DESC }) { nodes { ${PR_FIELDS} } } } }`;
 const BY_IDS = `query($ids: [ID!]!) { nodes(ids: $ids) { ... on PullRequest { ${PR_FIELDS} } } }`;
 
@@ -237,6 +239,13 @@ export class GithubClient {
     return { login, prs: data.viewer.pullRequests.nodes.flatMap((p) => (p ? [normalizePr(p, login)] : [])) };
   }
 
+  /** Tus últimas 50 PR mergeadas o cerradas. */
+  async myClosedPrs(): Promise<{ login: string; prs: GhPullRequest[] }> {
+    const data = await this.query<{ viewer: { login: string; pullRequests: { nodes: (RawPr | null)[] } } }>(CLOSED_PRS);
+    const login = data.viewer.login;
+    return { login, prs: data.viewer.pullRequests.nodes.flatMap((p) => (p ? [normalizePr(p, login)] : [])) };
+  }
+
   /** PR concretas por id (para saber si una que ya no está abierta se mergeó o se cerró). */
   async prsByIds(ids: string[], me: string): Promise<GhPullRequest[]> {
     if (!ids.length) return [];
@@ -245,14 +254,25 @@ export class GithubClient {
   }
 
   /** Lo que publican en GitHub los checks en rojo del último commit de una PR. */
-  async checkFailures(prId: string): Promise<{ checks: PrChecksState | null; failures: PrCheckFailure[] }> {
+  async checkFailures(prId: string): Promise<{ checks: PrChecksState | null; failures: PrCheckFailure[]; passing: string[]; pending: string[] }> {
     const data = await this.query<{ node: { commits: { nodes: { commit: { statusCheckRollup: { state: string; contexts: { nodes: (RawFailureContext | null)[] } } | null } }[] } } | null }>(
       FAILURES,
       { id: prId },
     );
     const rollup = data.node?.commits.nodes[0]?.commit.statusCheckRollup;
-    if (!rollup) return { checks: null, failures: [] };
+    if (!rollup) return { checks: null, failures: [], passing: [], pending: [] };
     const checks: PrChecksState = rollup.state === 'SUCCESS' ? 'success' : rollup.state === 'FAILURE' || rollup.state === 'ERROR' ? 'failure' : 'pending';
-    return { checks, failures: failuresOf(rollup.contexts.nodes.flatMap((n) => (n ? [n] : []))) };
+    const contexts = rollup.contexts.nodes.flatMap((n) => (n ? [n] : []));
+    const failures = failuresOf(contexts);
+    const failed = new Set(failures.map((f) => f.name));
+    const passing = new Set<string>();
+    const pending = new Set<string>();
+    for (const c of contexts) {
+      const name = c.__typename === 'CheckRun' ? c.name : c.context;
+      if (failed.has(name)) continue;
+      const done = c.__typename === 'CheckRun' ? c.conclusion !== null : c.state !== 'PENDING' && c.state !== 'EXPECTED';
+      (done ? passing : pending).add(name);
+    }
+    return { checks, failures, passing: [...passing], pending: [...pending] };
   }
 }

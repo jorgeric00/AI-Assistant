@@ -50,6 +50,13 @@
       "when": 1791320963961,
       "tag": "0006_pr_alerts",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1794307084583,
+      "tag": "0007_pr_watched",
+      "breakpoints": true
     }
   ]
 }

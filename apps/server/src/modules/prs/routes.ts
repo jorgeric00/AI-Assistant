@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { JiraKey } from '@dev-assistant/shared';
+import { JiraKey, PR_LIST_FILTERS, PrWatchInput } from '@dev-assistant/shared';
 import { z } from 'zod';
 import { GithubError } from '../../integrations/github/client.js';
 import { t } from '../../i18n/index.js';
@@ -23,6 +23,13 @@ export async function prsRoutes(app: FastifyInstance, { prWatcher, prFix }: { pr
   });
 
   app.get('/api/pr-alerts', async () => prWatcher.alerts());
+
+  app.get('/api/prs', async (req) => prWatcher.list(z.object({ state: z.enum(PR_LIST_FILTERS).default('open') }).parse(req.query).state));
+  app.get('/api/prs/:id', async (req, reply) => prWatcher.detail(PrParams.parse(req.params).id) ?? reply.code(404).send({ error: t('prs.notFound') }));
+  app.put('/api/prs/:id/watch', async (req, reply) => {
+    const { id } = PrParams.parse(req.params);
+    return prWatcher.setWatched(id, PrWatchInput.parse(req.body).watched) ?? reply.code(404).send({ error: t('prs.notFound') });
+  });
 
   app.get('/api/tasks/:key/prs', async (req) => prWatcher.forTask(z.object({ key: JiraKey }).parse(req.params).key));
 

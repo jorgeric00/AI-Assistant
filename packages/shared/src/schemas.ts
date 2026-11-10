@@ -619,7 +619,21 @@ export interface PullRequestInfo {
   changesRequestedBy: string[];
   comments: number;
   updatedAt: string;
+  /** false = no avisa en Hoy ni con notificaciones. */
+  watched: boolean;
 }
+
+export const PR_LIST_FILTERS = ['open', 'merged', 'closed', 'all'] as const;
+export type PrListFilter = (typeof PR_LIST_FILTERS)[number];
+
+export interface PrList {
+  prs: PullRequestInfo[];
+  /** Si no se pudo leer de GitHub (las mergeadas y cerradas se piden al momento). */
+  error: string | null;
+}
+
+export const PrWatchInput = z.object({ watched: z.boolean() });
+export type PrWatchInput = z.infer<typeof PrWatchInput>;
 
 export interface PrAlert {
   id: number;
@@ -667,6 +681,14 @@ export interface PrFailures {
   taskKey: string | null;
   checks: PrChecksState | null;
   failures: PrCheckFailure[];
+  /** Nombres de los checks en verde y de los que aún no han terminado. */
+  passing: string[];
+  pending: string[];
+}
+
+/** Página de una PR: lo último que se vio en GitHub y sus avisos. */
+export interface PrDetail extends PullRequestInfo {
+  alerts: PrAlert[];
 }
 
 /** Dónde se mandaron los fallos con "Arreglar con opencode". */

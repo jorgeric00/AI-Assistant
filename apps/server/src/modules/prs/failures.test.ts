@@ -66,6 +66,7 @@ describe('fallos de los checks', () => {
     expect(sent.variables).toEqual({ id: 'PR_9' });
     expect(result.checks).toBe('failure');
     expect(result.failures).toHaveLength(1);
+    expect(result.passing).toEqual([]);
   });
 });
 
@@ -94,7 +95,7 @@ async function setup() {
     warnings: [],
     myOpenPrs: async () => ({ login: 'jorge', prs: state.open }),
     prsByIds: async () => [],
-    checkFailures: async () => ({ checks: 'failure', failures: failuresOf(state.failures as never) }),
+    checkFailures: async () => ({ checks: 'failure', failures: failuresOf(state.failures as never), passing: ['build / test'], pending: [] }),
   } as unknown as GithubClient;
   const watcher = new PrWatcher(db, client);
   await watcher.check();

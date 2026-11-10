@@ -2,8 +2,8 @@
 // anterior. Lo que cambia (CI en rojo, comentarios o revisiones de otros, cambios pedidos, aprobada,
 // mergeada) queda como aviso en la app (tarjeta de Hoy) y sale como notificación del sistema.
 import type { FastifyBaseLogger } from 'fastify';
-import { desc, eq, gte } from 'drizzle-orm';
-import type { PrAlert, PrAlertKind, PrFailures, PrWatchStatus, PullRequestInfo } from '@dev-assistant/shared';
+import { and, desc, eq, gte, inArray } from 'drizzle-orm';
+import type { PrAlert, PrAlertKind, PrDetail, PrFailures, PrList, PrListFilter, PrWatchStatus, PullRequestInfo } from '@dev-assistant/shared';
 import type { Db } from '../../db/client.js';
 import { prAlerts, pullRequests, settings } from '../../db/schema.js';
 import { GithubError, type GhPullRequest, type GithubClient } from '../../integrations/github/client.js';
@@ -70,6 +70,28 @@ export function diffPr(prev: PrRow, pr: GhPullRequest): { alerts: NewAlert[]; cu
   return { alerts, cursor };
 }
 
+/** Lo que se guarda de una PR (sin `watched`, que solo cambia el usuario). */
+function rowValues(pr: GhPullRequest, now: string, cursor: string | null) {
+  return {
+    repo: pr.repo,
+    number: pr.number,
+    title: pr.title,
+    url: pr.url,
+    state: pr.state,
+    isDraft: pr.isDraft,
+    headRef: pr.headRef,
+    taskKey: taskKeyOf(pr.headRef, pr.title),
+    checks: pr.checks,
+    failingChecks: pr.failingChecks,
+    ...reviewState(pr),
+    activityCursor: cursor,
+    updatedAt: pr.updatedAt,
+    lastSeenAt: now,
+  };
+}
+
+const toInfo = ({ activityCursor: _c, lastSeenAt: _l, ...pr }: PrRow): PullRequestInfo => pr;
+
 function latestActivity(pr: GhPullRequest): string | null {
   const times = [...pr.reviews.map((r) => r.at), ...pr.comments.map((c) => c.at)].sort((a, b) => Date.parse(a) - Date.parse(b));
   return times.at(-1) ?? null;
@@ -129,29 +151,15 @@ export class PrWatcher {
             ({ alerts, cursor } = diffPr(prev, pr));
             if (pr.state === 'merged' && prev.state !== 'merged') alerts.push({ kind: 'merged', title: t('prs.alert.merged'), detail: null });
           }
-          const values = {
-            repo: pr.repo,
-            number: pr.number,
-            title: pr.title,
-            url: pr.url,
-            state: pr.state,
-            isDraft: pr.isDraft,
-            headRef: pr.headRef,
-            taskKey: taskKeyOf(pr.headRef, pr.title),
-            checks: pr.checks,
-            failingChecks: pr.failingChecks,
-            ...reviewState(pr),
-            activityCursor: cursor,
-            updatedAt: pr.updatedAt,
-            lastSeenAt: now,
-          };
+          const values = rowValues(pr, now, cursor);
           tx.insert(pullRequests)
             .values({ id: pr.id, ...values })
             .onConflictDoUpdate({ target: pullRequests.id, set: values })
             .run();
           for (const alert of alerts) {
             tx.insert(prAlerts).values({ prId: pr.id, ...alert, createdAt: now }).run();
-            fired.push({ pr, alert });
+            // Sin observar: el aviso queda guardado (por si se vuelve a observar) pero no se notifica.
+            if (prev?.watched !== false) fired.push({ pr, alert });
           }
         }
         const status: StoredStatus = { user: login, lastCheckedAt: now };
@@ -176,7 +184,7 @@ export class PrWatcher {
       .select({ a: prAlerts, pr: pullRequests })
       .from(prAlerts)
       .innerJoin(pullRequests, eq(pullRequests.id, prAlerts.prId))
-      .where(gte(prAlerts.createdAt, since))
+      .where(and(gte(prAlerts.createdAt, since), eq(pullRequests.watched, true)))
       .orderBy(desc(prAlerts.createdAt), desc(prAlerts.id))
       .limit(limit)
       .all()
@@ -191,15 +199,65 @@ export class PrWatcher {
       .where(eq(pullRequests.taskKey, key))
       .orderBy(desc(pullRequests.updatedAt))
       .all()
-      .map(({ activityCursor: _c, lastSeenAt: _l, ...pr }) => pr);
+      .map(toInfo);
+  }
+
+  /** Tus PR: las abiertas que ya conoce la app; las mergeadas y cerradas se piden a GitHub al momento. */
+  async list(filter: PrListFilter): Promise<PrList> {
+    let error: string | null = null;
+    if (filter !== 'open' && this.client) {
+      try {
+        const { prs } = await this.client.myClosedPrs();
+        const now = new Date().toISOString();
+        this.db.transaction((tx) => {
+          for (const pr of prs) {
+            const prev = tx.select().from(pullRequests).where(eq(pullRequests.id, pr.id)).get();
+            const values = rowValues(pr, now, prev ? prev.activityCursor : latestActivity(pr));
+            tx.insert(pullRequests).values({ id: pr.id, ...values }).onConflictDoUpdate({ target: pullRequests.id, set: values }).run();
+          }
+        });
+      } catch (err) {
+        if (!(err instanceof GithubError)) throw err;
+        error = err.message;
+      }
+    }
+    const states = filter === 'all' ? (['open', 'merged', 'closed'] as const) : ([filter] as const);
+    const prs = this.db
+      .select()
+      .from(pullRequests)
+      .where(inArray(pullRequests.state, [...states]))
+      .orderBy(desc(pullRequests.updatedAt))
+      .all()
+      .map(toInfo);
+    return { prs, error };
+  }
+
+  /** La PR con sus avisos (también los de cuando no se observaba). null si la app no la conoce. */
+  detail(prId: string): PrDetail | null {
+    const pr = this.pr(prId);
+    if (!pr) return null;
+    const alerts = this.db
+      .select()
+      .from(prAlerts)
+      .where(eq(prAlerts.prId, prId))
+      .orderBy(desc(prAlerts.createdAt), desc(prAlerts.id))
+      .limit(30)
+      .all()
+      .map((a) => ({ id: a.id, kind: a.kind, prId, repo: pr.repo, number: pr.number, url: pr.url, taskKey: pr.taskKey, title: a.title, detail: a.detail, createdAt: a.createdAt }));
+    return { ...pr, alerts };
+  }
+
+  /** Observar o no la PR. null si la app no la conoce. */
+  setWatched(prId: string, watched: boolean): PullRequestInfo | null {
+    if (!this.pr(prId)) return null;
+    this.db.update(pullRequests).set({ watched }).where(eq(pullRequests.id, prId)).run();
+    return this.pr(prId);
   }
 
   /** null si la PR no es una de las tuyas que conoce la app. */
   pr(prId: string): PullRequestInfo | null {
     const row = this.db.select().from(pullRequests).where(eq(pullRequests.id, prId)).get();
-    if (!row) return null;
-    const { activityCursor: _c, lastSeenAt: _l, ...pr } = row;
-    return pr;
+    return row ? toInfo(row) : null;
   }
 
   /** Los checks en rojo de la PR tal como están ahora en GitHub. null si la PR no es una de las tuyas. */
@@ -207,8 +265,8 @@ export class PrWatcher {
     if (!this.client) throw new GithubError(t('github.notConfigured'));
     const pr = this.pr(prId);
     if (!pr) return null;
-    const { checks, failures } = await this.client.checkFailures(prId);
-    return { prId, repo: pr.repo, number: pr.number, url: pr.url, taskKey: pr.taskKey, checks, failures };
+    const { checks, failures, passing, pending } = await this.client.checkFailures(prId);
+    return { prId, repo: pr.repo, number: pr.number, url: pr.url, taskKey: pr.taskKey, checks, failures, passing, pending };
   }
 
   /** Comprueba al arrancar y cada 10 minutos. Sin GITHUB_TOKEN no hace nada. */
