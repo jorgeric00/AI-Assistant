@@ -138,7 +138,7 @@ export function taskContext(key: string, task: TaskDetail | null, candidates: Om
     'Fichero generado por AI-Assistant al abrir la sesión. No lo edites: se reescribe cada vez.',
     task?.url ? `Ticket: ${task.url}` : '',
     '## Repositorios dados de alta para este proyecto de JIRA',
-    candidates.length ? candidates.map(repoLine).join('\n') : 'Ninguno. Propón a Jorge los repos que haga falta tocar.',
+    candidates.length ? candidates.map(repoLine).join('\n') : 'Ninguno. Propón al usuario los repos que haga falta tocar.',
   ];
   for (const r of candidates) {
     const p = r.profile;
