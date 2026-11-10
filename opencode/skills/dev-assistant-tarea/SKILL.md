@@ -44,6 +44,8 @@ la ficha de cada uno (convenciones, comandos de tests y arquitectura). Léelo an
 ## 1. Arranque
 
 1. Lee el ticket con el MCP de JIRA: resumen, descripción, criterios de aceptación y tipo de incidencia.
+   Si el ticket no tiene descripción (o solo repite el título) y el usuario aún no te ha dicho qué hay que hacer
+   (en esta conversación o en `PLAN.md`), **pregunta al usuario** qué se debe hacer antes de seguir. No te lo inventes.
 2. Propón qué repositorios toca la tarea (empieza por los de `TAREA.md`), con su ruta local y su rama base.
    **Pregunta al usuario** si son esos.
 3. Analiza el ticket y el código afectado. Si el repo tiene `AGENTS.md`, `CONTRIBUTING.md` o similar, síguelos.
