@@ -73,7 +73,8 @@ la ficha de cada uno (convenciones, comandos de tests y arquitectura). Léelo an
     incluya secretos. Si algo falla, corrígelo y vuelve a probar. Si tras dos intentos sigue fallando,
     para y explica al usuario qué falla.
 11. **Pregunta al usuario** si hace el commit: enséñale los ficheros cambiados y el mensaje propuesto,
-    `<CLAVE>: <explicación breve en español>` (p. ej. `SGARFIDIN-1024: revisar dependencias vulnerables`).
+    con el mismo formato que el título de la PR: `[<CLAVE>] <explicación breve en español>`
+    (p. ej. `[SGARFIDIN-1024] Revisar dependencias vulnerables`).
     Haz el commit solo cuando lo confirme.
 12. Marca el paso como hecho en `PLAN.md`.
 13. **Pregunta al usuario** si hace push, con un resumen de lo que se sube. Haz `git push` (con `-u origin <rama>`
