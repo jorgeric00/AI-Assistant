@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import type { PrAlert, PullRequestInfo } from '@dev-assistant/shared';
+import type { PrAlert, PrDetail, PrList, PullRequestInfo } from '@dev-assistant/shared';
 import { buildApp } from '../../app.js';
 import { openDatabase } from '../../db/client.js';
 import { GithubClient, normalizePr, type GhPullRequest } from '../../integrations/github/client.js';
@@ -24,11 +24,12 @@ const base = (over: Partial<GhPullRequest> = {}): GhPullRequest => ({
 
 /** Cliente falso: devuelve en cada consulta lo que diga `open`, y `byId` para las que ya no están abiertas. */
 function fakeClient() {
-  const state = { open: [] as GhPullRequest[], byId: new Map<string, GhPullRequest>() };
+  const state = { open: [] as GhPullRequest[], closed: [] as GhPullRequest[], byId: new Map<string, GhPullRequest>() };
   const client = {
     warnings: [] as string[],
     myOpenPrs: async () => ({ login: 'jorge', prs: state.open }),
     prsByIds: async (ids: string[]) => ids.flatMap((id) => state.byId.get(id) ?? []),
+    myClosedPrs: async () => ({ login: 'jorge', prs: state.closed }),
   } as unknown as GithubClient;
   return { client, state };
 }
@@ -42,7 +43,8 @@ async function setup() {
   });
   const app = await buildApp(db, { prWatcher: watcher });
   const get = async <T>(url: string) => (await app.inject({ method: 'GET', url })).json<T>();
-  return { app, gh, watcher, notified, get };
+  const put = async (url: string, payload: object) => app.inject({ method: 'PUT', url, payload });
+  return { app, gh, watcher, notified, get, put };
 }
 
 let ctx: Awaited<ReturnType<typeof setup>>;
@@ -159,5 +161,35 @@ describe('GitHub', () => {
       new Response(JSON.stringify({ errors: [{ message: 'Resource protected by organization SAML enforcement.' }] }), { status: 200 }),
     );
     await expect(client.myOpenPrs()).rejects.toThrow(/SSO/);
+  });
+});
+
+describe('sección Pull requests', () => {
+  it('por defecto lista las abiertas; las mergeadas y cerradas las pide a GitHub', async () => {
+    ctx = await setup();
+    ctx.gh.state.open = [base()];
+    await ctx.watcher.check();
+    ctx.gh.state.closed = [base({ id: 'PR_9', number: 198, state: 'merged', headRef: 'feature/ABC-120-x', updatedAt: '2026-10-01T10:00:00Z' })];
+    const open = await ctx.get<PrList>('/api/prs');
+    expect(open.prs.map((p) => [p.number, p.watched])).toEqual([[212, true]]);
+    expect((await ctx.get<PrList>('/api/prs?state=merged')).prs.map((p) => [p.number, p.taskKey])).toEqual([[198, 'ABC-120']]);
+    expect((await ctx.get<PrList>('/api/prs?state=all')).prs.map((p) => p.number)).toEqual([212, 198]);
+    expect((await ctx.get<PrList>('/api/prs?state=closed')).prs).toEqual([]);
+  });
+
+  it('sin observar, la PR no avisa en Hoy ni notifica, y al volver a observarla salen sus avisos', async () => {
+    ctx = await setup();
+    ctx.gh.state.open = [base()];
+    await ctx.watcher.check();
+    expect((await ctx.put('/api/prs/PR_1/watch', { watched: false })).json<PullRequestInfo>().watched).toBe(false);
+    ctx.gh.state.open = [base({ checks: 'failure', failingChecks: ['lint'] })];
+    await ctx.watcher.check();
+    expect(await ctx.get<PrAlert[]>('/api/pr-alerts')).toEqual([]);
+    expect(ctx.notified).toEqual([]);
+    // En su página sí se ven.
+    expect((await ctx.get<PrDetail>('/api/prs/PR_1')).alerts.map((a) => a.kind)).toEqual(['ci_failed']);
+    await ctx.put('/api/prs/PR_1/watch', { watched: true });
+    expect((await ctx.get<PrAlert[]>('/api/pr-alerts')).map((a) => a.kind)).toEqual(['ci_failed']);
+    expect((await ctx.put('/api/prs/PR_404/watch', { watched: true })).statusCode).toBe(404);
   });
 });

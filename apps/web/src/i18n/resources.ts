@@ -9,6 +9,7 @@ import diary_es from './locales/es/diary.json';
 import tasks_es from './locales/es/tasks.json';
 import repos_es from './locales/es/repos.json';
 import settings_es from './locales/es/settings.json';
+import chat_es from './locales/es/chat.json';
 import common_en from './locales/en/common.json';
 import hoy_en from './locales/en/hoy.json';
 import prs_en from './locales/en/prs.json';
@@ -18,8 +19,9 @@ import diary_en from './locales/en/diary.json';
 import tasks_en from './locales/en/tasks.json';
 import repos_en from './locales/en/repos.json';
 import settings_en from './locales/en/settings.json';
+import chat_en from './locales/en/chat.json';
 
-export const NAMESPACES = ['common', 'hoy', 'prs', 'notes', 'reminders', 'diary', 'tasks', 'repos', 'settings'] as const;
+export const NAMESPACES = ['common', 'hoy', 'prs', 'notes', 'reminders', 'diary', 'tasks', 'repos', 'settings', 'chat'] as const;
 
 export const resources = {
   es: {
@@ -32,6 +34,7 @@ export const resources = {
     tasks: tasks_es,
     repos: repos_es,
     settings: settings_es,
+    chat: chat_es,
   },
   en: {
     common: common_en,
@@ -43,5 +46,6 @@ export const resources = {
     tasks: tasks_en,
     repos: repos_en,
     settings: settings_en,
+    chat: chat_en,
   },
 } as const;

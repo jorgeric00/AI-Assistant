@@ -279,6 +279,8 @@ export const pullRequests = sqliteTable('pull_requests', {
   activityCursor: text('activity_cursor'),
   updatedAt: text('updated_at').notNull(),
   lastSeenAt: text('last_seen_at').notNull(),
+  /** false = no avisa en Hoy ni con notificaciones. */
+  watched: integer('watched', { mode: 'boolean' }).notNull().default(true),
 }, (t) => [index('pull_requests_task_idx').on(t.taskKey)]);
 
 export const prAlerts = sqliteTable('pr_alerts', {

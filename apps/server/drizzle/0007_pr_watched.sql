@@ -1,0 +1,1 @@
+ALTER TABLE `pull_requests` ADD `watched` integer DEFAULT true NOT NULL;

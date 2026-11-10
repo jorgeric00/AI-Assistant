@@ -1,0 +1,17 @@
+{
+  "title": "Chat",
+  "intro": "Talk to opencode without opening a task. It has all your opencode tools (MCP servers included).",
+  "list": {
+    "title": "Conversations",
+    "new": "New conversation",
+    "empty": "No conversations yet.",
+    "unavailable": "Could not read the list from opencode: {{error}}"
+  },
+  "newTitle": "New conversation",
+  "delete": "Delete conversation",
+  "confirmDelete": "Delete “{{title}}”? It is deleted in opencode too.",
+  "emptyTitle": "Ask it anything",
+  "emptyBody": "Questions, Grafana or Prometheus analysis, JIRA, GitHub or SonarQube queries... If you ask for a file, it asks where to save it.",
+  "help": "If you ask for a file without saying where, it asks for the folder and gives you the full path when done.",
+  "notFound": "That conversation no longer exists."
+}

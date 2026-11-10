@@ -35,12 +35,14 @@
   },
   "sections": {
     "hoy": "Hoy",
+    "chat": "Chat",
     "documentacion": "Documentación",
     "notas": "Notas",
     "enlaces": "Enlaces",
     "recordatorios": "Recordatorios",
     "diario": "Diario",
     "tareas": "Tareas de JIRA",
+    "prs": "Pull requests",
     "repositorios": "Repositorios",
     "ajustes": "Ajustes"
   },

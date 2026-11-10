@@ -39,7 +39,9 @@ export function Sidebar({ current, serverOk, onQuickCapture, onAsk }: Props) {
       </button>
 
       <ul className="flex flex-col gap-0.5">
-        {SECTIONS.map(({ id, icon: Icon }) => {
+        {SECTIONS.map((section) => {
+          const { id, icon: Icon } = section;
+          const shortcut = 'shortcut' in section ? section.shortcut : null;
           const active = id === current;
           return (
             <li key={id}>
@@ -51,7 +53,8 @@ export function Sidebar({ current, serverOk, onQuickCapture, onAsk }: Props) {
                 }`}
               >
                 <Icon size={20} strokeWidth={1.5} aria-hidden className={active ? 'text-accent' : undefined} />
-                {t(`sections.${id}`)}
+                <span className="grow">{t(`sections.${id}`)}</span>
+                {shortcut && <kbd className="font-mono text-small text-ink-faint">{shortcut}</kbd>}
               </a>
             </li>
           );

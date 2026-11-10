@@ -1,19 +1,21 @@
-import { Bell, Book, BookOpen, FileText, GitBranch, Link2, SlidersHorizontal, SquareCheck, Sun, type LucideIcon } from 'lucide-react';
+import { Bell, Book, BookOpen, FileText, GitBranch, GitPullRequest, Link2, MessageSquare, SlidersHorizontal, SquareCheck, Sun, type LucideIcon } from 'lucide-react';
 import type { NoteKind } from '@dev-assistant/shared';
 
 // Secciones del menú lateral (diseño "AI-Assistant · Pantallas").
 export const SECTIONS = [
 // El nombre visible de cada una se traduce al pintarla: t('common:sections.<id>').
   { id: 'hoy', icon: Sun },
+  { id: 'chat', icon: MessageSquare, shortcut: 'Alt+C' },
   { id: 'documentacion', icon: BookOpen },
   { id: 'notas', icon: FileText },
   { id: 'enlaces', icon: Link2 },
   { id: 'recordatorios', icon: Bell },
   { id: 'diario', icon: Book },
   { id: 'tareas', icon: SquareCheck },
+  { id: 'prs', icon: GitPullRequest },
   { id: 'repositorios', icon: GitBranch },
   { id: 'ajustes', icon: SlidersHorizontal },
-] as const satisfies readonly { id: string; icon: LucideIcon }[];
+] as const satisfies readonly { id: string; icon: LucideIcon; shortcut?: string }[];
 
 export type SectionId = (typeof SECTIONS)[number]['id'];
 

@@ -619,11 +619,27 @@ export interface PullRequestInfo {
   changesRequestedBy: string[];
   comments: number;
   updatedAt: string;
+  /** false = no avisa en Hoy ni con notificaciones. */
+  watched: boolean;
 }
+
+export const PR_LIST_FILTERS = ['open', 'merged', 'closed', 'all'] as const;
+export type PrListFilter = (typeof PR_LIST_FILTERS)[number];
+
+export interface PrList {
+  prs: PullRequestInfo[];
+  /** Si no se pudo leer de GitHub (las mergeadas y cerradas se piden al momento). */
+  error: string | null;
+}
+
+export const PrWatchInput = z.object({ watched: z.boolean() });
+export type PrWatchInput = z.infer<typeof PrWatchInput>;
 
 export interface PrAlert {
   id: number;
   kind: PrAlertKind;
+  /** Id de la PR en GitHub. */
+  prId: string;
   repo: string;
   number: number;
   url: string;
@@ -633,6 +649,50 @@ export interface PrAlert {
   detail: string | null;
   createdAt: string;
 }
+
+/** Una línea que un check marca en el código (Checkstyle, el compilador...). */
+export interface PrCheckAnnotation {
+  path: string;
+  line: number | null;
+  message: string;
+  title: string | null;
+  level: 'failure' | 'warning' | 'notice';
+}
+
+/** Un check en rojo con lo que publica en GitHub. */
+export interface PrCheckFailure {
+  name: string;
+  /** Título que da el check ("3 errores de Checkstyle"); en un estado clásico, su descripción. */
+  title: string | null;
+  /** Resumen o texto del check (markdown, recortado). */
+  summary: string | null;
+  url: string | null;
+  annotations: PrCheckAnnotation[];
+  /** Cuántas anotaciones tiene en total (puede haber más de las que se enseñan). */
+  annotationsTotal: number;
+}
+
+/** Los checks en rojo de una PR, leídos de GitHub en el momento. */
+export interface PrFailures {
+  prId: string;
+  repo: string;
+  number: number;
+  url: string;
+  taskKey: string | null;
+  checks: PrChecksState | null;
+  failures: PrCheckFailure[];
+  /** Nombres de los checks en verde y de los que aún no han terminado. */
+  passing: string[];
+  pending: string[];
+}
+
+/** Página de una PR: lo último que se vio en GitHub y sus avisos. */
+export interface PrDetail extends PullRequestInfo {
+  alerts: PrAlert[];
+}
+
+/** Dónde se mandaron los fallos con "Arreglar con opencode". */
+export type PrFixResult = { target: 'task'; taskKey: string } | { target: 'chat'; conversationId: string };
 
 export interface PrWatchStatus {
   configured: boolean;
@@ -763,11 +823,12 @@ export interface ChatPermission {
   always: string[];
 }
 
-export interface TaskChat {
+/** Estado de un chat con opencode en la app (el de una tarea o uno del chat general). */
+export interface ChatState {
   /** false si no se pudo hablar con opencode (`error` dice por qué). */
   available: boolean;
   error: string | null;
-  /** Hay una sesión de opencode creada para la tarea. */
+  /** Hay una sesión de opencode creada. */
   started: boolean;
   /** opencode está trabajando (o esperando un permiso). */
   busy: boolean;
@@ -778,9 +839,35 @@ export interface TaskChat {
   agent: string;
   /** Porcentaje de la ventana de contexto usado, si se conoce. */
   contextPercent: number | null;
+}
+
+export interface TaskChat extends ChatState {
   /** Mensaje con el que se empieza la tarea. */
   starterPrompt: string;
 }
+
+// ── Chat general con opencode (sin tarea) ────────────────────────────────────
+
+export interface Conversation {
+  /** Id de la sesión de opencode. */
+  id: string;
+  title: string;
+  updatedAt: string;
+}
+
+export interface ConversationList {
+  available: boolean;
+  error: string | null;
+  conversations: Conversation[];
+}
+
+export interface GeneralChat extends ChatState {
+  /** null = conversación nueva, aún sin mensajes. */
+  id: string | null;
+  title: string | null;
+}
+
+export const ConversationId = z.string().regex(/^[A-Za-z0-9_-]{1,100}$/);
 
 export const ChatSendInput = z.object({
   text: z.string().trim().min(1, 'Escribe un mensaje').max(20_000),

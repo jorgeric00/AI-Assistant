@@ -24,6 +24,10 @@ export const en: Messages = {
   'ai.emptyAnswer': 'The model did not return any answer.',
   'ai.opencodeFailed': 'Error talking to opencode: {{message}}',
   'chat.aborted': 'Stopped.',
+  'chat.general.untitled': 'New conversation',
+  'chat.general.notFound': 'That conversation no longer exists.',
+  'chat.general.instructions':
+    '# AI-Assistant general chat\n\nThis folder is only where the app\'s general chat starts: do not save anything here.\n\n- If the user asks you to create or save a file and does not say where, ask which folder before writing it. There is no default folder.\n- Once you have saved a file, give its full (absolute) path.\n- Answer in English.\n',
   'ai.ask.noMatches': "I didn't find anything in the app related to the question.",
   'ai.ask.notInNotes': "I don't have that in the app",
   'ai.daily.nothingToSummarize': 'There are no journal entries since the last working day and no reminders for today. Write down what you did and generate it again.',
@@ -76,6 +80,12 @@ export const en: Messages = {
   'github.ssoWarning': 'There are PRs from an organization with SSO that the token cannot see. In GitHub: Settings > Developer settings > tokens > Configure SSO > Authorize.',
 
   // Your PR alerts (stored in the database and shown as notifications)
+  'prs.notFound': 'That PR is not one of yours known to the app.',
+  'prs.fix.intro': 'PR {{repo}} #{{number}} ({{url}}, branch {{branch}}) has failing checks on GitHub. This is what they say:',
+  'prs.fix.more': 'and {{count}} more (on GitHub)',
+  'prs.fix.outro': 'Fix it on branch {{branch}} and tell me what you changed.',
+  'prs.fix.whereRepo': 'This PR is not linked to any task in the app: ask me which folder the repo is in before touching anything.',
+  'prs.fix.noFailures': 'The PR no longer has failing checks on GitHub.',
   'prs.alert.ciFailed': 'CI failing',
   'prs.alert.failing': 'Failing {{checks}}',
   'prs.alert.changesRequested': 'Changes requested',

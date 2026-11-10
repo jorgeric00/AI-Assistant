@@ -8,6 +8,8 @@ import { QuickCapture, type Saved } from './components/QuickCapture';
 import { ReminderAlerts } from './components/ReminderAlerts';
 import { Sidebar } from './components/Sidebar';
 import { HoyPage } from './pages/HoyPage';
+import { ChatPage } from './pages/chat/ChatPage';
+import { PrsPage } from './pages/prs/PrsPage';
 import { PendingPage } from './pages/PendingPage';
 import { DiarioPage } from './pages/diario/DiarioPage';
 import { DocumentacionPage } from './pages/documentacion/DocumentacionPage';
@@ -17,7 +19,7 @@ import { RecordatoriosPage } from './pages/recordatorios/RecordatoriosPage';
 import { AjustesPage } from './pages/AjustesPage';
 import { RepositoriosPage } from './pages/repositorios/RepositoriosPage';
 import { TareasPage } from './pages/tareas/TareasPage';
-import { routeFromHash, type Route } from './sections';
+import { navigate, routeFromHash, type Route } from './sections';
 import { useLanguage } from './i18n/useLanguage';
 
 function useHashRoute(): Route {
@@ -55,6 +57,9 @@ export function App() {
       } else if (e.altKey && e.key.toLowerCase() === 'p') {
         e.preventDefault();
         setAskOpen(true);
+      } else if (e.altKey && e.key.toLowerCase() === 'c') {
+        e.preventDefault();
+        navigate('chat');
       }
     };
     window.addEventListener('keydown', onKeyDown);
@@ -76,6 +81,8 @@ export function App() {
         <div className="mx-auto w-full max-w-[1120px]">
           {section === 'hoy' ? (
             <HoyPage />
+          ) : section === 'chat' ? (
+            <ChatPage params={params} />
           ) : section === 'documentacion' ? (
             <DocumentacionPage params={params} />
           ) : section === 'notas' ? (
@@ -88,6 +95,8 @@ export function App() {
             <DiarioPage params={params} />
           ) : section === 'tareas' ? (
             <TareasPage params={params} />
+          ) : section === 'prs' ? (
+            <PrsPage params={params} />
           ) : section === 'repositorios' ? (
             <RepositoriosPage params={params} />
           ) : section === 'ajustes' ? (

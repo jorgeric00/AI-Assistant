@@ -17,6 +17,8 @@ import { opencodeSkillRoutes } from './modules/opencode/skill.js';
 import type { OpencodeApi } from './integrations/opencode/api.js';
 import { AiOptionsService, AiSettingsStore } from './modules/opencode/ai-settings.js';
 import { TaskChatService } from './modules/opencode/chat.js';
+import { OpencodeChat } from './modules/opencode/chat-core.js';
+import { GeneralChatService } from './modules/opencode/general-chat.js';
 import { opencodeAiRoutes } from './modules/opencode/routes.js';
 import { remindersRoutes } from './modules/reminders/routes.js';
 import { reposRoutes } from './modules/repos/routes.js';
@@ -26,6 +28,7 @@ import { JiraUpdateService } from './modules/tasks/jira-update.js';
 import { TasksRepository } from './modules/tasks/repository.js';
 import { tasksRoutes } from './modules/tasks/routes.js';
 import { PrWatcher } from './modules/prs/watcher.js';
+import { PrFixService } from './modules/prs/fix.js';
 import { prsRoutes } from './modules/prs/routes.js';
 import { webRoutes } from './modules/system/web.js';
 import { Autostart, REPO_ROOT } from './modules/system/autostart.js';
@@ -137,11 +140,15 @@ export async function buildApp(db: Db, opts: BuildAppOptions = {}) {
     backups: opts.backups ?? new Backups(null, join(devAssistantHome, 'copias')),
   });
   await app.register(webRoutes, { dist: opts.webDist });
-  await app.register(prsRoutes, { prWatcher: opts.prWatcher ?? new PrWatcher(db, null) });
   await app.register(reposRoutes, { db, llm: opts.llm ?? noLlm, git: opts.git });
   const aiSettings = new AiSettingsStore(db);
   const aiOptions = new AiOptionsService(opts.opencode ?? null);
-  await app.register(opencodeAiRoutes, { aiSettings, aiOptions, chat: new TaskChatService(db, opts.opencode ?? null, sessions, aiSettings, aiOptions) });
+  const opencodeChat = new OpencodeChat(opts.opencode ?? null, aiOptions);
+  const taskChat = new TaskChatService(db, opencodeChat, sessions, aiSettings);
+  const generalChat = new GeneralChatService(db, opencodeChat, aiSettings, devAssistantHome);
+  await app.register(opencodeAiRoutes, { aiSettings, aiOptions, chat: taskChat, general: generalChat });
+  const prWatcher = opts.prWatcher ?? new PrWatcher(db, null);
+  await app.register(prsRoutes, { prWatcher, prFix: new PrFixService(prWatcher, taskChat, generalChat) });
   await app.register(opencodeSkillRoutes, { skillsDir: opts.opencodeSkillsDir ?? config.opencodeSkillsDir });
   return app;
 }
