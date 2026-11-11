@@ -122,6 +122,7 @@
       "title": "Sesión con opencode",
       "working": "Trabajando",
       "waitingPermission": "Esperando tu permiso",
+      "waitingAnswer": "Esperando tu respuesta",
       "newSession": "Nueva sesión",
       "openTerminal": "Abrir en terminal",
       "log": "Conversación",
@@ -161,6 +162,19 @@
         "deny": "Denegar",
         "alwaysHint": "Con «Permitir siempre» no volverá a preguntar por: {{patterns}}",
         "showDiff": "Ver el cambio"
+      },
+      "question": {
+        "title": "opencode te pregunta",
+        "multiple": "{{header}} · puedes marcar varias",
+        "recommended": "recomendada",
+        "other": "Otra respuesta…",
+        "send": "Responder",
+        "skip": "No contestar",
+        "missing_one": "Contesta la pregunta para responder.",
+        "missing_other": "Contesta las {{count}} preguntas para responder.",
+        "asking": "Te pregunta",
+        "answered": "Respondiste",
+        "skipped": "Sin contestar"
       },
       "inputLabel": "Mensaje para opencode",
       "placeholder": "Escribe a opencode. Intro envía, Mayús+Intro salta de línea.",

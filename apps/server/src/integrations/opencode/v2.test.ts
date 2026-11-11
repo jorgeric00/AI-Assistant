@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { OpencodeApi } from './api.js';
 import { createOpencodeConnection, type OpencodeConnection } from './connection.js';
 import { createOpencodeLlm } from './llm.js';
-import { toMessages, toPermission, toProviders } from './v2.js';
+import { toMessages, toPermission, toProviders, toQuestion } from './v2.js';
 
 describe('traducción de la API de opencode 2.x', () => {
   it('quita proveedores desactivados y modelos apagados', () => {
@@ -56,6 +56,9 @@ describe('traducción de la API de opencode 2.x', () => {
     ]);
     expect(failed[1]!.info.error).toEqual({ name: 'ProviderError', data: { message: 'sin cuota' } });
 
+    const dismissed = toMessages([{ id: 'a1', type: 'assistant', error: { type: 'aborted', message: 'Step interrupted' }, content: [] }]);
+    expect(dismissed[0]!.info.error).toEqual({ name: 'MessageAbortedError' });
+
     const stopped = toMessages([
       { id: 'u1', type: 'user', text: 'hola' },
       { id: 'i1', type: 'idle', outcome: 'interrupted' },
@@ -69,6 +72,49 @@ describe('traducción de la API de opencode 2.x', () => {
       patterns: ['ls *'],
       always: ['ls *'],
     });
+  });
+
+  it('las preguntas de opencode se ven con sus opciones y la recomendada marcada', () => {
+    const q = toQuestion({
+      id: 'frm_1',
+      sessionID: 'ses_1',
+      title: 'Questions',
+      metadata: { kind: 'question' },
+      fields: [
+        {
+          key: 'q0',
+          type: 'string',
+          title: 'Rama',
+          description: '¿En qué rama lo subo?',
+          custom: true,
+          options: [
+            { value: 'develop (Recommended)', label: 'develop (Recommended)', description: 'La de siempre' },
+            { value: 'main', label: 'main' },
+          ],
+        },
+        { key: 'q1', type: 'multiselect', title: 'Tests', description: '¿Qué tests paso?', custom: false, options: [{ value: 'e2e', label: 'e2e' }] },
+      ],
+    });
+    expect(q).toEqual({
+      id: 'frm_1',
+      sessionID: 'ses_1',
+      items: [
+        {
+          key: 'q0',
+          header: 'Rama',
+          question: '¿En qué rama lo subo?',
+          multiple: false,
+          custom: true,
+          options: [
+            { value: 'develop (Recommended)', label: 'develop', description: 'La de siempre', recommended: true },
+            { value: 'main', label: 'main', description: null, recommended: false },
+          ],
+        },
+        { key: 'q1', header: 'Tests', question: '¿Qué tests paso?', multiple: true, custom: false, options: [{ value: 'e2e', label: 'e2e', description: null, recommended: false }] },
+      ],
+    });
+    // Un formulario con campos que el chat no sabe enseñar no sale.
+    expect(toQuestion({ id: 'f', sessionID: 's', fields: [{ key: 'n', type: 'number' }] })).toBeNull();
   });
 });
 
@@ -86,6 +132,7 @@ function fakeV2() {
     'GET /api/permission/request': { data: [{ id: 'per_1', sessionID: 'ses_1', action: 'shell', resources: ['ls'] }] },
     'GET /api/mcp': { data: [{ name: 'jira', status: { status: 'failed', error: 'JIRA_PERSONAL_TOKEN is not set' } }] },
     'POST /api/experimental/generate': { data: { text: ' Resumen \n' } },
+    'GET /api/form': { data: [{ id: 'frm_1', sessionID: 'ses_1', title: 'Questions', fields: [{ key: 'q0', type: 'string', title: 'Rama', options: [{ value: 'main', label: 'main' }] }] }] },
   };
   const server: Server = createServer((req, res) => {
     let raw = '';
@@ -98,7 +145,7 @@ function fakeV2() {
         res.writeHead(200, { 'content-type': 'application/json' });
         return res.end(JSON.stringify(routes[key]));
       }
-      if (req.method === 'POST' && path.startsWith('/api/session/')) {
+      if ((req.method === 'POST' || req.method === 'DELETE') && path.startsWith('/api/session/')) {
         res.writeHead(204);
         return res.end();
       }
@@ -162,6 +209,16 @@ describe('OpencodeApi con opencode 2.x', () => {
     expect((await oc.permissions('/repo'))[0]).toMatchObject({ id: 'per_1', permission: 'bash' });
     await oc.replyPermission('per_1', 'once', '/repo');
     expect(fake!.calls.at(-1)).toMatchObject({ method: 'POST', url: '/api/session/ses_1/permission/per_1/reply', body: { decision: 'once' } });
+  });
+
+  it('lee las preguntas pendientes, las contesta en su sesión o las deja sin contestar', async () => {
+    const oc = await api();
+    const [question] = await oc.questions('/repo');
+    expect(question).toMatchObject({ id: 'frm_1', sessionID: 'ses_1', items: [{ key: 'q0', header: 'Rama' }] });
+    await oc.replyQuestion('ses_1', 'frm_1', { q0: 'main' });
+    expect(fake!.calls.at(-1)).toMatchObject({ method: 'POST', url: '/api/session/ses_1/form/frm_1/reply', body: { answer: { q0: 'main' } } });
+    await oc.dismissQuestion('ses_1', 'frm_1');
+    expect(fake!.calls.at(-1)).toMatchObject({ method: 'DELETE', url: '/api/session/ses_1/form/frm_1' });
   });
 
   it('la IA de la app usa la generación sin sesión', async () => {

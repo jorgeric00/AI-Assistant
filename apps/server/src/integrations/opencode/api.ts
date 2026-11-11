@@ -6,6 +6,7 @@ import { t } from '../../i18n/index.js';
 import { dirname } from 'node:path';
 import { LlmUnavailableError, isConnectionError, type OpencodeConnection } from './connection.js';
 import * as v2 from './v2.js';
+import type { ChatQuestion } from '@dev-assistant/shared';
 
 export interface OcModel {
   id: string;
@@ -70,6 +71,10 @@ export interface OcSession {
   directory?: string;
   time?: { created?: number; updated?: number };
 }
+export interface OcQuestion extends ChatQuestion {
+  sessionID: string;
+}
+
 export interface OcPromptBody {
   parts: { type: 'text'; text: string }[];
   model?: { providerID: string; modelID: string };
@@ -318,6 +323,27 @@ export class OpencodeApi {
     const pending = (await this.permissions(directory)).find((p) => p.id === permissionId);
     if (!pending) throw new LlmUnavailableError(t('ai.opencodeFailed', { message: `permission ${permissionId} not found` }));
     return this.request<unknown>('POST', `/api/session/${pending.sessionID}/permission/${permissionId}/reply`, { body: { decision: reply } });
+  }
+
+  /** Preguntas de opencode pendientes en esa carpeta. La 1.x no las da: la app le quita esa herramienta. */
+  async questions(directory: string): Promise<OcQuestion[]> {
+    if (!(await this.isV2())) return [];
+    try {
+      const { data } = await this.call<{ data: v2.V2Form[] }>('GET', '/api/form', { query: OpencodeApi.at(directory) });
+      return data.map(v2.toQuestion).filter((q): q is OcQuestion => !!q);
+    } catch (err) {
+      if (err instanceof HttpError) return [];
+      throw err;
+    }
+  }
+
+  async replyQuestion(sessionId: string, questionId: string, answer: Record<string, string | string[]>): Promise<void> {
+    await this.request<void>('POST', `/api/session/${sessionId}/form/${questionId}/reply`, { body: { answer } });
+  }
+
+  /** La deja sin contestar: opencode sigue sin la respuesta. */
+  async dismissQuestion(sessionId: string, questionId: string): Promise<void> {
+    await this.request<void>('DELETE', `/api/session/${sessionId}/form/${questionId}`);
   }
 
   /** 2.x: texto generado por el modelo sin herramientas ni sesión (lo que usa la IA de la app). */

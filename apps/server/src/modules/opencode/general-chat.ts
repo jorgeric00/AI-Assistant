@@ -4,7 +4,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { eq } from 'drizzle-orm';
-import type { ChatPermissionReply, ChatSendInput, ConversationList, GeneralChat } from '@dev-assistant/shared';
+import type { ChatPermissionReply, ChatQuestionReplyInput, ChatSendInput, ConversationList, GeneralChat } from '@dev-assistant/shared';
 import type { Db } from '../../db/client.js';
 import { settings } from '../../db/schema.js';
 import { LlmUnavailableError } from '../../integrations/opencode/connection.js';
@@ -71,6 +71,7 @@ export class GeneralChatService {
       busy: false,
       messages: [],
       permissions: [],
+      questions: [],
       model: defaults.sessionModel,
       agent: defaults.sessionAgent,
       contextPercent: null,
@@ -170,6 +171,12 @@ export class GeneralChatService {
   async replyPermission(id: string, permissionId: string, reply: ChatPermissionReply): Promise<GeneralChat | null> {
     if (!this.find(id)) return null;
     await this.chat.replyPermission(permissionId, reply, this.folder);
+    return this.get(id);
+  }
+
+  async replyQuestion(id: string, questionId: string, input: ChatQuestionReplyInput): Promise<GeneralChat | null> {
+    if (!this.find(id)) return null;
+    await this.chat.replyQuestion(questionId, input, this.folder);
     return this.get(id);
   }
 

@@ -1,6 +1,6 @@
 // opencode 2.x tiene otra API HTTP (/api/...). Aquí se traduce lo que devuelve a las formas de la 1.x que usa
 // el resto de la app, y se renombran las herramientas y permisos nuevos a los de siempre (shell → bash...).
-import type { OcAgent, OcMessage, OcPart, OcPermission, OcProvider, OcSession } from './api.js';
+import type { OcAgent, OcMessage, OcPart, OcPermission, OcProvider, OcQuestion, OcSession } from './api.js';
 
 export interface V2ModelRef {
   id: string;
@@ -132,7 +132,8 @@ function toPart(messageId: string, c: V2Content, i: number): OcPart | null {
   };
 }
 
-const errorOf = (e: V2Error) => ({ name: e.type, data: { message: e.message } });
+// «aborted» es un turno parado (con Parar, o al dejar una pregunta sin contestar): se ve como en la 1.x.
+const errorOf = (e: V2Error) => (e.type === 'aborted' ? { name: 'MessageAbortedError' } : { name: e.type, data: { message: e.message } });
 
 /** Mensajes de la 2.x (en orden, del más antiguo al más reciente) → mensajes de la 1.x. */
 export function toMessages(list: V2Message[]): OcMessage[] {
@@ -163,4 +164,58 @@ export function toMessages(list: V2Message[]): OcMessage[] {
     }
   }
   return out;
+}
+
+interface V2FormOption {
+  value: string;
+  label: string;
+  description?: string;
+}
+interface V2FormField {
+  key: string;
+  type: string;
+  title?: string;
+  description?: string;
+  hidden?: boolean;
+  options?: V2FormOption[];
+  custom?: boolean;
+}
+export interface V2Form {
+  id: string;
+  sessionID: string;
+  title?: string;
+  metadata?: Record<string, unknown>;
+  fields: V2FormField[];
+}
+
+const RECOMMENDED = /\s*\(recommended\)\s*$/i;
+
+/**
+ * Formulario de la 2.x (lo que crea su herramienta de preguntas) → preguntas para el chat. Solo se entienden
+ * los campos de texto (con o sin opciones) y los de varias opciones; null si trae otra cosa.
+ */
+export function toQuestion(form: V2Form): OcQuestion | null {
+  const fields = form.fields.filter((f) => !f.hidden);
+  if (!fields.length || fields.some((f) => f.type !== 'string' && f.type !== 'multiselect')) return null;
+  return {
+    id: form.id,
+    sessionID: form.sessionID,
+    items: fields.map((f) => {
+      const options = (f.options ?? []).map((o) => ({
+        value: o.value,
+        label: o.label.replace(RECOMMENDED, '') || o.label,
+        description: o.description || null,
+        recommended: RECOMMENDED.test(o.label),
+      }));
+      return {
+        key: f.key,
+        header: f.title || form.title || '',
+        question: f.description || f.title || '',
+        options,
+        multiple: f.type === 'multiselect',
+        // Sin opciones solo cabe escribir.
+        custom: f.custom !== false || !options.length,
+      };
+    }),
+  };
 }

@@ -122,6 +122,7 @@
       "title": "Session with opencode",
       "working": "Working",
       "waitingPermission": "Waiting for your permission",
+      "waitingAnswer": "Waiting for your answer",
       "newSession": "New session",
       "openTerminal": "Open in terminal",
       "log": "Conversation",
@@ -161,6 +162,19 @@
         "deny": "Deny",
         "alwaysHint": "With “Always allow” it will not ask again for: {{patterns}}",
         "showDiff": "Show the change"
+      },
+      "question": {
+        "title": "opencode is asking you",
+        "multiple": "{{header}} · you can pick several",
+        "recommended": "recommended",
+        "other": "Other answer…",
+        "send": "Answer",
+        "skip": "Don't answer",
+        "missing_one": "Answer the question to reply.",
+        "missing_other": "Answer the {{count}} questions to reply.",
+        "asking": "Asks you",
+        "answered": "You answered",
+        "skipped": "Not answered"
       },
       "inputLabel": "Message for opencode",
       "placeholder": "Write to opencode. Enter sends, Shift+Enter adds a line.",

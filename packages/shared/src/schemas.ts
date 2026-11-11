@@ -850,6 +850,41 @@ export interface ChatPermission {
   always: string[];
 }
 
+/** Una opción de una pregunta de opencode. */
+export interface ChatQuestionOption {
+  /** Lo que se le devuelve a opencode si se elige. */
+  value: string;
+  label: string;
+  description: string | null;
+  /** opencode la recomienda. */
+  recommended: boolean;
+}
+
+/** Una de las preguntas que opencode hace a la vez. */
+export interface ChatQuestionItem {
+  key: string;
+  /** Nombre corto (Rama, Tests...). */
+  header: string;
+  question: string;
+  options: ChatQuestionOption[];
+  /** Se pueden elegir varias opciones. */
+  multiple: boolean;
+  /** Se puede escribir otra respuesta. */
+  custom: boolean;
+}
+
+/** Preguntas de opencode pendientes de respuesta (solo opencode 2.x). */
+export interface ChatQuestion {
+  id: string;
+  items: ChatQuestionItem[];
+}
+
+export const ChatQuestionReplyInput = z.union([
+  z.object({ answers: z.record(z.string().max(100), z.union([z.string().trim().min(1).max(2000), z.array(z.string().max(2000)).min(1).max(50)])) }),
+  z.object({ skip: z.literal(true) }),
+]);
+export type ChatQuestionReplyInput = z.infer<typeof ChatQuestionReplyInput>;
+
 /** Estado de un chat con opencode en la app (el de una tarea o uno del chat general). */
 export interface ChatState {
   /** false si no se pudo hablar con opencode (`error` dice por qué). */
@@ -861,6 +896,7 @@ export interface ChatState {
   busy: boolean;
   messages: ChatMessage[];
   permissions: ChatPermission[];
+  questions: ChatQuestion[];
   /** Selección actual de la sesión (la última usada o la de Ajustes). */
   model: string | null;
   agent: string;

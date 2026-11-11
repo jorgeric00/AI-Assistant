@@ -119,6 +119,7 @@ export function ChatPage({ params }: { params: string[] }) {
                 send: (input) => (id ? api.sendConversation(id, input) : api.startConversation(input)),
                 abort: () => (id ? api.abortConversation(id) : api.newConversation()),
                 reply: (permissionId, answer) => (id ? api.replyConversationPermission(id, permissionId, answer) : api.newConversation()),
+                answer: (questionId, input) => (id ? api.answerConversationQuestion(id, questionId, input) : api.newConversation()),
               }}
               onData={onData}
               // Al acabar un turno opencode ya suele haber puesto el título.
