@@ -92,12 +92,12 @@ export class OpencodeApi {
   }
 
   private async call<T>(method: string, path: string, { directory, body }: { directory?: string; body?: unknown } = {}): Promise<T> {
-    const { baseUrl } = await this.connection.connect();
+    const { baseUrl, headers } = await this.connection.connect();
     const url = `${baseUrl}${path}${directory ? `?directory=${encodeURIComponent(directory)}` : ''}`;
     try {
       const res = await fetch(url, {
         method,
-        headers: body === undefined ? undefined : { 'content-type': 'application/json' },
+        headers: body === undefined ? headers : { ...headers, 'content-type': 'application/json' },
         body: body === undefined ? undefined : JSON.stringify(body),
       });
       const text = await res.text();
