@@ -285,6 +285,12 @@ export class JiraClient {
     return raw.filter((i) => !i.subtask).map((i) => ({ id: String(i.id), name: i.name ?? String(i.id) }));
   }
 
+  /** Todos los tipos de incidencia de JIRA (no solo los que se pueden crear en un proyecto). */
+  async allIssueTypes(): Promise<{ id: string; name: string; hierarchyLevel?: number }[]> {
+    const { body } = await this.get<(RawIssueType & { hierarchyLevel?: number })[]>('/issuetype', {});
+    return (body ?? []).filter((i) => !i.subtask).map((i) => ({ id: String(i.id), name: i.name ?? String(i.id), hierarchyLevel: i.hierarchyLevel }));
+  }
+
   /** Campos de la pantalla de creación de un proyecto y tipo. */
   async createFields(project: string, issueTypeId: string): Promise<JiraFieldMeta[]> {
     const p = encodeURIComponent(project);

@@ -121,9 +121,13 @@ export class JiraCreateService {
   /** Épicas sin terminar del proyecto, filtradas por texto o clave. */
   async epics(project: string, q?: string): Promise<JiraEpicOption[]> {
     const client = this.requireClient();
-    const types = await client.issueTypes(project).catch(() => []);
-    const epicType = types.find((it) => EPIC_TYPE.test(it.name));
-    const clauses = [`project = "${project}"`, epicType ? `issuetype = ${epicType.id}` : 'issuetype = Epic', 'statusCategory != Done'];
+    // El tipo épica se busca por su nombre entre los del proyecto y, si no se pueden crear ahí, entre todos
+    // los de JIRA (en Cloud, por su nivel). Sin él no hay épicas que ofrecer: buscar «Epic» falla si se llama distinto.
+    const isEpic = (it: { name: string; hierarchyLevel?: number }) => EPIC_TYPE.test(it.name) || it.hierarchyLevel === 1;
+    const epicType =
+      (await client.issueTypes(project).catch(() => [])).find(isEpic) ?? (await client.allIssueTypes().catch(() => [])).find(isEpic);
+    if (!epicType) return [];
+    const clauses = [`project = "${project}"`, `issuetype = ${epicType.id}`, 'statusCategory != Done'];
     const text = q?.trim().replace(/["\\]/g, '');
     if (text) {
       clauses.push(/^[A-Za-z][A-Za-z0-9_]*-\d+$/.test(text) ? `(key = "${text.toUpperCase()}" OR summary ~ "${text}*")` : `summary ~ "${text}*"`);
