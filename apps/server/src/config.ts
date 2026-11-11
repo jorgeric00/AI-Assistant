@@ -11,6 +11,8 @@ export interface AppConfig {
   databasePath: string;
   opencodeConfigPath: string;
   opencodeUrl: string | undefined;
+  /** Contraseña del opencode de OPENCODE_URL (OPENCODE_SERVER_PASSWORD), si la pide. */
+  opencodePassword: string | undefined;
   teamsWebhookUrl: string | undefined;
   /** Carpeta de trabajo de la app: worktrees/<CLAVE>/ con PLAN.md e HISTORIAL.md de cada tarea. */
   devAssistantHome: string;
@@ -33,6 +35,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     databasePath: expandHome(env.DATABASE_PATH ?? './data/assistant.db'),
     opencodeConfigPath: expandHome(env.OPENCODE_CONFIG ?? '~/.config/opencode/opencode.json'),
     opencodeUrl: env.OPENCODE_URL || undefined,
+    opencodePassword: env.OPENCODE_SERVER_PASSWORD || undefined,
     teamsWebhookUrl: env.TEAMS_WEBHOOK_URL || undefined,
     devAssistantHome: expandHome(env.DEV_ASSISTANT_HOME ?? '~/.dev-assistant'),
     opencodeSkillsDir: expandHome(env.OPENCODE_SKILLS_DIR ?? '~/.config/opencode/skill'),

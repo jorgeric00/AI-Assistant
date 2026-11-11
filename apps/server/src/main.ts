@@ -20,7 +20,7 @@ import { TasksRepository } from './modules/tasks/repository.js';
 const config = loadConfig();
 const { db, sqlite } = openDatabase(config.databasePath);
 // opencode arranca solo la primera vez que se usa la IA (o se usa el que indique OPENCODE_URL).
-const opencode = createOpencodeConnection({ url: config.opencodeUrl });
+const opencode = createOpencodeConnection({ url: config.opencodeUrl, password: config.opencodePassword, username: process.env.OPENCODE_SERVER_USERNAME || undefined });
 const aiSettings = new AiSettingsStore(db);
 // La IA de la app usa el modelo elegido en Ajustes (o el predeterminado de opencode).
 const llm = createOpencodeLlm({ connection: opencode, model: () => aiSettings.get().appModel });
