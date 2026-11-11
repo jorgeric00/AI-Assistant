@@ -7,6 +7,7 @@ import type { DevSession, RepoDetail, SessionOpenResult } from '@dev-assistant/s
 import { buildApp } from '../../app.js';
 import { openDatabase } from '../../db/client.js';
 import { parsePlanHeader } from './dev-files.js';
+import { taskAgents, taskContext } from './session.js';
 
 /** Clon con un commit en develop, como el de Jorge. */
 function clone(name: string) {
@@ -108,6 +109,21 @@ describe('sesión de desarrollo', () => {
     expect(context).toContain('#### Tests\n- `pnpm test`');
     expect(context).toContain('## Otros repositorios dados de alta\n\n- **otro**');
     expect(context).toContain('Idioma del usuario: castellano. Contéstale siempre en ese idioma.');
+
+    // AGENTS.md: opencode sabe de qué tarea se trata aunque no se empiece con el mensaje de «Empezar la tarea».
+    const agents = readFileSync(join(folder, 'AGENTS.md'), 'utf8');
+    expect(agents).toContain('# Tarea de JIRA SGAR-7');
+    expect(agents).toContain('lee TAREA.md');
+    expect(agents).toContain(`skill dev-assistant-tarea, que está en ${join(ctx.skills, 'dev-assistant-tarea', 'SKILL.md')}`);
+  });
+
+  it('TAREA.md y AGENTS.md llevan el título y la descripción del ticket', () => {
+    const task = { key: 'SGAR-7', summary: 'Validar email', description: 'Los clientes notifican altas con emails mal formados.', url: 'https://jira/browse/SGAR-7' } as never;
+    const context = taskContext('SGAR-7', task, [], []);
+    expect(context).toContain('# SGAR-7 · Validar email');
+    expect(context).toContain('## Descripción del ticket\nLos clientes notifican altas con emails mal formados.');
+    expect(taskAgents('SGAR-7', task, '/skills/x/SKILL.md')).toContain('# Tarea de JIRA SGAR-7 · Validar email');
+    expect(taskContext('SGAR-7', null, [], [])).not.toContain('Descripción del ticket');
   });
 });
 
