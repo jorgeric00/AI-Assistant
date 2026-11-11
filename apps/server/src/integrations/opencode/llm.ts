@@ -1,6 +1,7 @@
 // Acceso al modelo de IA a través de opencode (diseño, sección 6.2): toda la IA pasa por
 // opencode con los modelos de Copilot que el usuario ya tiene configurados.
 import { t } from '../../i18n/index.js';
+import { OpencodeApi } from './api.js';
 import { LlmUnavailableError, createOpencodeConnection, isConnectionError, type OpencodeConnection, type OpencodeConnectionOptions } from './connection.js';
 
 export { LlmUnavailableError };
@@ -53,9 +54,16 @@ interface OpencodeLlmOptions extends OpencodeConnectionOptions {
 
 export function createOpencodeLlm({ connection, model, ...own }: OpencodeLlmOptions = {}): Llm & { close(): void } {
   const conn = connection ?? createOpencodeConnection(own);
+  const api = new OpencodeApi(conn);
 
   return {
     async complete({ system, user, title }) {
+      // opencode 2.x genera texto sin sesión ni herramientas; las instrucciones van delante.
+      if (await api.isV2().catch(() => false)) {
+        const text = (await api.generate(`${system}\n\n${user}`, parseModel(model?.()))).trim();
+        if (!text) throw new LlmUnavailableError(t('ai.emptyAnswer'));
+        return text;
+      }
       const { client } = await conn.connect();
       let sessionId: string | undefined;
       try {
