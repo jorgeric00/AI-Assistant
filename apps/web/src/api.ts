@@ -4,6 +4,7 @@ import type {
   AiSettings,
   AiSettingsUpdate,
   ChatPermissionReply,
+  ChatQuestionReplyInput,
   ChatSendInput,
   TaskChat,
   ConversationList,
@@ -175,6 +176,8 @@ export const api = {
   resetTaskChat: (key: string) => request<TaskChat>('POST', `/api/tasks/${encodeURIComponent(key)}/chat/reset`),
   replyTaskPermission: (key: string, id: string, reply: ChatPermissionReply) =>
     request<TaskChat>('POST', `/api/tasks/${encodeURIComponent(key)}/chat/permissions/${encodeURIComponent(id)}`, { reply }),
+  answerTaskQuestion: (key: string, id: string, input: ChatQuestionReplyInput) =>
+    request<TaskChat>('POST', `/api/tasks/${encodeURIComponent(key)}/chat/questions/${encodeURIComponent(id)}`, input),
 
   // Chat general con opencode
   conversations: () => request<ConversationList>('GET', '/api/chats'),
@@ -185,6 +188,8 @@ export const api = {
   abortConversation: (id: string) => request<GeneralChat>('POST', `/api/chats/${encodeURIComponent(id)}/abort`),
   replyConversationPermission: (id: string, permissionId: string, reply: ChatPermissionReply) =>
     request<GeneralChat>('POST', `/api/chats/${encodeURIComponent(id)}/permissions/${encodeURIComponent(permissionId)}`, { reply }),
+  answerConversationQuestion: (id: string, questionId: string, input: ChatQuestionReplyInput) =>
+    request<GeneralChat>('POST', `/api/chats/${encodeURIComponent(id)}/questions/${encodeURIComponent(questionId)}`, input),
   deleteConversation: (id: string) => request<void>('DELETE', `/api/chats/${encodeURIComponent(id)}`),
   opencodeSkill: () => request<OpencodeSkillStatus>('GET', '/api/opencode/skill'),
   installOpencodeSkill: () => request<OpencodeSkillStatus>('POST', '/api/opencode/skill/install'),

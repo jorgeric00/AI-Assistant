@@ -1,7 +1,7 @@
 // Lo común a los chats con opencode de la app (el de cada tarea y el general): leer una sesión de opencode
 // y pasarla a mensajes y permisos que entiende la web, enviar mensajes, pararla y contestar permisos.
 import { relative, isAbsolute } from 'node:path';
-import type { ChatMessage, ChatPart, ChatPermission, ChatPermissionReply, ChatState, ChatToolStatus } from '@dev-assistant/shared';
+import type { ChatMessage, ChatPart, ChatPermission, ChatPermissionReply, ChatQuestion, ChatQuestionReplyInput, ChatState, ChatToolStatus } from '@dev-assistant/shared';
 import { CHAT_TOOL_STATUSES } from '@dev-assistant/shared';
 import type { OcMessage, OcPart, OcPermission, OpencodeApi } from '../../integrations/opencode/api.js';
 import { LlmUnavailableError } from '../../integrations/opencode/connection.js';
@@ -15,14 +15,15 @@ const MAX_OUTPUT = 4000;
 const MAX_DETAIL = 400;
 const MAX_DIFF = 6000;
 
-// En la app no hay cómo contestar a la herramienta de preguntas de opencode: sin ella, pregunta en el chat.
+// La 1.x no deja contestar desde fuera a su herramienta de preguntas: sin ella, pregunta en el chat. La 2.x no
+// deja quitarla y sus preguntas se contestan en la app.
 const TOOLS = { question: false };
 
 export const clip = (text: string, max: number) => (text.length > max ? `${text.slice(0, max)}…` : text);
 const str = (value: unknown) => (typeof value === 'string' ? value : '');
 
 /** Lo que se sabe de una sesión de opencode al leerla (sin la selección de modelo y modo). */
-export type SessionView = Pick<ChatState, 'busy' | 'messages' | 'permissions' | 'contextPercent'>;
+export type SessionView = Pick<ChatState, 'busy' | 'messages' | 'permissions' | 'questions' | 'contextPercent'>;
 
 export class OpencodeChat {
   constructor(
@@ -45,7 +46,12 @@ export class OpencodeChat {
    */
   async view(sessionId: string, folder: string, { allPermissions = false } = {}): Promise<SessionView | null> {
     const api = this.requireApi();
-    const [messages, status, permissions] = await Promise.all([api.messages(sessionId, folder), api.status(folder), api.permissions(folder)]);
+    const [messages, status, permissions, questions] = await Promise.all([
+      api.messages(sessionId, folder),
+      api.status(folder),
+      api.permissions(folder),
+      api.questions(folder),
+    ]);
     if (!messages) return null;
     this.aiOptions.warm();
     const busy = (id: string) => !!status[id] && status[id]!.type !== 'idle';
@@ -57,6 +63,7 @@ export class OpencodeChat {
         .slice(-MAX_MESSAGES),
       // Solo de sesiones en marcha: al parar una, opencode deja su permiso en la lista.
       permissions: permissions.filter((p) => (allPermissions || p.sessionID === sessionId) && busy(p.sessionID)).map((p) => toPermission(p, folder)),
+      questions: questions.filter((q) => (allPermissions || q.sessionID === sessionId) && busy(q.sessionID)).map(({ id, items }): ChatQuestion => ({ id, items })),
       contextPercent: this.contextPercent(messages),
     };
   }
@@ -69,12 +76,25 @@ export class OpencodeChat {
     return this.requireApi().prompt(sessionId, folder, { parts: [{ type: 'text', text }], model: parseModel(model), agent, tools: TOOLS });
   }
 
-  /** Para la sesión y rechaza lo que tuviera pendiente de permiso. */
+  /** Para la sesión y rechaza lo que tuviera pendiente de permiso o de respuesta. */
   async stop(sessionId: string, folder: string) {
     const api = this.requireApi();
-    const pending = (await api.permissions(folder)).filter((p) => p.sessionID === sessionId);
+    const [permissions, questions] = await Promise.all([api.permissions(folder), api.questions(folder)]);
+    const pending = permissions.filter((p) => p.sessionID === sessionId);
     await api.abort(sessionId, folder);
-    await Promise.all(pending.map((p) => api.replyPermission(p.id, 'reject', folder).catch(() => {})));
+    await Promise.all([
+      ...pending.map((p) => api.replyPermission(p.id, 'reject', folder).catch(() => {})),
+      ...questions.filter((q) => q.sessionID === sessionId).map((q) => api.dismissQuestion(q.sessionID, q.id).catch(() => {})),
+    ]);
+  }
+
+  async replyQuestion(questionId: string, input: ChatQuestionReplyInput, folder: string) {
+    const api = this.requireApi();
+    const pending = (await api.questions(folder)).find((q) => q.id === questionId);
+    // Si ya no está pendiente (se contestó en la terminal, se paró la sesión), no hay nada que responder.
+    if (!pending) return;
+    if ('skip' in input) await api.dismissQuestion(pending.sessionID, pending.id);
+    else await api.replyQuestion(pending.sessionID, pending.id, input.answers);
   }
 
   async replyPermission(permissionId: string, reply: ChatPermissionReply, folder: string) {
@@ -101,8 +121,24 @@ function shortPath(path: string, folder: string): string {
   return rel && !rel.startsWith('..') && !isAbsolute(rel) ? rel : path;
 }
 
+/** Lo que se preguntó (sus nombres cortos) o, si ya se contestó, «Rama: main · Tests: Unitarios, e2e». */
+function questionDetail(part: OcPart): string {
+  const asked = Array.isArray(part.state?.input?.questions) ? (part.state.input.questions as { question?: unknown; header?: unknown }[]) : [];
+  const name = (q: { question?: unknown; header?: unknown }) => str(q.header) || str(q.question);
+  if (part.state?.status === 'completed') {
+    // opencode resume las respuestas así: "pregunta"="respuesta", "pregunta"="respuesta".
+    const answers = [...str(part.state.output).matchAll(/"((?:[^"\\]|\\.)*)"="((?:[^"\\]|\\.)*)"/g)].map(([, question, answer]) => {
+      const q = asked.find((a) => str(a.question) === question);
+      return `${q ? name(q) : question}: ${answer}`;
+    });
+    if (answers.length) return answers.join(' · ');
+  }
+  return asked.map(name).filter(Boolean).join(', ');
+}
+
 function toolDetail(part: OcPart, folder: string): string {
   const input = part.state?.input ?? {};
+  if (part.tool === 'question') return clip(questionDetail(part), MAX_DETAIL);
   const byTool: Record<string, string> = {
     bash: str(input.command),
     read: shortPath(str(input.filePath), folder),
@@ -131,7 +167,8 @@ function toPart(part: OcPart, folder: string): ChatPart | null {
   if (part.type !== 'tool' || !part.tool || !part.state) return null;
   const { state } = part;
   const status = (CHAT_TOOL_STATUSES as readonly string[]).includes(state.status) ? (state.status as ChatToolStatus) : 'running';
-  const output = status === 'error' ? str(state.error) : str(state.output);
+  // De las preguntas basta el resumen de lo contestado.
+  const output = part.tool === 'question' ? '' : status === 'error' ? str(state.error) : str(state.output);
   const { start, end } = state.time ?? {};
   return {
     type: 'tool',

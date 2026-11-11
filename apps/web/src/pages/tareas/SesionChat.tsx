@@ -45,6 +45,7 @@ export function SesionChat({ taskKey, session }: { taskKey: string; session: Dev
           send: (input) => api.sendTaskChat(taskKey, input),
           abort: () => api.abortTaskChat(taskKey),
           reply: (id, answer) => api.replyTaskPermission(taskKey, id, answer),
+          answer: (id, input) => api.answerTaskQuestion(taskKey, id, input),
         }}
         onData={setChat}
         // Al terminar un turno, opencode puede haber cambiado el plan, el historial y los repos.

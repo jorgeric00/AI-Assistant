@@ -2,7 +2,7 @@
 // modo que se elijan en cada mensaje. opencode hace el trabajo; la app envía los mensajes, enseña lo que
 // va haciendo y pregunta los permisos.
 import { eq } from 'drizzle-orm';
-import type { ChatPermissionReply, ChatSendInput, TaskChat } from '@dev-assistant/shared';
+import type { ChatPermissionReply, ChatQuestionReplyInput, ChatSendInput, TaskChat } from '@dev-assistant/shared';
 import type { Db } from '../../db/client.js';
 import { settings } from '../../db/schema.js';
 import { LlmUnavailableError } from '../../integrations/opencode/connection.js';
@@ -47,6 +47,7 @@ export class TaskChatService {
       busy: false,
       messages: [],
       permissions: [],
+      questions: [],
       model: stored ? stored.model : defaults.sessionModel,
       agent: stored?.agent ?? defaults.sessionAgent,
       contextPercent: null,
@@ -111,6 +112,11 @@ export class TaskChatService {
 
   async replyPermission(key: string, permissionId: string, reply: ChatPermissionReply): Promise<TaskChat> {
     await this.chat.replyPermission(permissionId, reply, this.sessions.folder(key));
+    return this.get(key);
+  }
+
+  async replyQuestion(key: string, questionId: string, input: ChatQuestionReplyInput): Promise<TaskChat> {
+    await this.chat.replyQuestion(questionId, input, this.sessions.folder(key));
     return this.get(key);
   }
 }

@@ -1,14 +1,16 @@
 import { useMutation } from '@tanstack/react-query';
-import type { AiOptions, ChatMessage, ChatPart, ChatPermission, ChatPermissionReply, ChatSendInput, ChatState } from '@dev-assistant/shared';
+import type { AiOptions, ChatMessage, ChatPart, ChatPermission, ChatPermissionReply, ChatQuestionReplyInput, ChatSendInput, ChatState } from '@dev-assistant/shared';
 import { Circle, Lock, Send, Square } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Markdown } from './Markdown';
 import { ModeToggle, ModelSelect, modeName, modelName } from './ModelPicker';
+import { QuestionCard } from './QuestionCard';
 import { primaryButtonClass, secondaryButtonClass } from './fields';
 
 export const smallButton = 'flex h-8 items-center gap-1.5 rounded-md border border-line-strong px-3 text-code text-ink hover:bg-surface-raised disabled:cursor-not-allowed disabled:text-ink-faint';
 const KNOWN_TOOLS = ['bash', 'read', 'edit', 'write', 'grep', 'glob', 'list', 'webfetch', 'task', 'skill', 'todowrite'] as const;
+const QUESTION_VERBS = { completed: 'answered', error: 'skipped' } as const;
 const KNOWN_PERMISSIONS = ['bash', 'edit', 'webfetch', 'external_directory'] as const;
 const known = <T extends string>(list: readonly T[], value: string): value is T => (list as readonly string[]).includes(value);
 
@@ -16,6 +18,7 @@ export interface ChatActions<S extends ChatState> {
   send: (input: ChatSendInput) => Promise<S>;
   abort: () => Promise<S>;
   reply: (permissionId: string, answer: ChatPermissionReply) => Promise<S>;
+  answer: (questionId: string, input: ChatQuestionReplyInput) => Promise<S>;
 }
 
 interface ChatPanelProps<S extends ChatState> {
@@ -53,9 +56,11 @@ export function ChatPanel<S extends ChatState>({ titleId, title, actions, data, 
   const send = useMutation({ mutationFn: (message: string) => actionsApi.send({ text: message, model, agent }), onSuccess: onData });
   const abort = useMutation({ mutationFn: () => actionsApi.abort(), onSuccess: onData });
   const reply = useMutation({ mutationFn: ({ id, answer }: { id: string; answer: ChatPermissionReply }) => actionsApi.reply(id, answer), onSuccess: onData });
+  const answer = useMutation({ mutationFn: ({ id, input }: { id: string; input: ChatQuestionReplyInput }) => actionsApi.answer(id, input), onSuccess: onData });
 
   const busy = !!data?.busy || send.isPending;
   const waiting = !!data?.permissions.length;
+  const asking = !!data?.questions.length;
   const wasBusy = useRef(false);
   const idle = useRef(onIdle);
   idle.current = onIdle;
@@ -68,7 +73,7 @@ export function ChatPanel<S extends ChatState>({ titleId, title, actions, data, 
   const log = useRef<HTMLDivElement>(null);
   const pinned = useRef(true);
   const lastMessage = data?.messages[data.messages.length - 1];
-  const tail = `${data?.messages.length}:${lastMessage?.parts.length}:${lastMessage?.parts[lastMessage.parts.length - 1]?.id}:${data?.permissions.length}`;
+  const tail = `${data?.messages.length}:${lastMessage?.parts.length}:${lastMessage?.parts[lastMessage.parts.length - 1]?.id}:${data?.permissions.length}:${data?.questions.length}`;
   useEffect(() => {
     if (pinned.current && log.current) log.current.scrollTop = log.current.scrollHeight;
   }, [tail]);
@@ -89,7 +94,7 @@ export function ChatPanel<S extends ChatState>({ titleId, title, actions, data, 
       submit(text);
     }
   };
-  const error = send.error ?? abort.error ?? reply.error ?? extraError ?? loadError;
+  const error = send.error ?? abort.error ?? reply.error ?? answer.error ?? extraError ?? loadError;
   const inputId = `${titleId}-texto`;
   const modelId = `${titleId}-modelo`;
 
@@ -104,7 +109,7 @@ export function ChatPanel<S extends ChatState>({ titleId, title, actions, data, 
             {busy && (
               <>
                 <Circle size={12} strokeWidth={2} aria-hidden />
-                {waiting ? t('session.chat.waitingPermission') : t('session.chat.working')}
+                {waiting ? t('session.chat.waitingPermission') : asking ? t('session.chat.waitingAnswer') : t('session.chat.working')}
               </>
             )}
           </span>
@@ -132,6 +137,9 @@ export function ChatPanel<S extends ChatState>({ titleId, title, actions, data, 
         )}
         {data?.permissions.map((p) => (
           <PermissionCard key={p.id} permission={p} disabled={reply.isPending} onReply={(answer) => reply.mutate({ id: p.id, answer })} />
+        ))}
+        {data?.questions.map((q) => (
+          <QuestionCard key={q.id} question={q} disabled={answer.isPending} onAnswer={(input) => answer.mutate({ id: q.id, input })} />
         ))}
       </div>
 
@@ -236,9 +244,22 @@ export function Message({ message, options }: { message: ChatMessage; options: A
 
 export function ToolRow({ tool }: { tool: ChatPart & { type: 'tool' } }) {
   const { t } = useTranslation('tasks');
-  const verb = known(KNOWN_TOOLS, tool.tool) ? t(`session.chat.tool.${tool.tool}`) : t('session.chat.tool.other', { tool: tool.tool });
-  const state =
-    tool.status === 'error' ? t('session.chat.failed') : tool.status !== 'completed' ? t('session.chat.running') : tool.seconds ? t('session.chat.seconds', { count: tool.seconds }) : '';
+  const question = tool.tool === 'question';
+  const verb = question
+    ? t(`session.chat.question.${tool.status === 'completed' || tool.status === 'error' ? QUESTION_VERBS[tool.status] : 'asking'}`)
+    : known(KNOWN_TOOLS, tool.tool)
+      ? t(`session.chat.tool.${tool.tool}`)
+      : t('session.chat.tool.other', { tool: tool.tool });
+  // De una pregunta basta qué se contestó: ni «falló» al dejarla sin contestar ni lo que tardó en contestarse.
+  const state = question
+    ? ''
+    : tool.status === 'error'
+      ? t('session.chat.failed')
+      : tool.status !== 'completed'
+        ? t('session.chat.running')
+        : tool.seconds
+          ? t('session.chat.seconds', { count: tool.seconds })
+          : '';
   return (
     <li className="flex min-w-0 flex-col gap-1">
       <div className="flex min-w-0 flex-wrap items-baseline gap-x-2">

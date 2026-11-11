@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
 import { z } from 'zod';
-import { AiSettingsUpdate, ChatPermissionReplyInput, ChatSendInput, ConversationId, JiraKey } from '@dev-assistant/shared';
+import { AiSettingsUpdate, ChatPermissionReplyInput, ChatQuestionReplyInput, ChatSendInput, ConversationId, JiraKey } from '@dev-assistant/shared';
 import { t } from '../../i18n/index.js';
 import type { AiOptionsService, AiSettingsStore } from './ai-settings.js';
 import type { TaskChatService } from './chat.js';
@@ -11,6 +11,7 @@ const KeyParams = z.object({ key: JiraKey });
 const PermissionParams = KeyParams.extend({ id: z.string().min(1).max(200) });
 const ChatParams = z.object({ id: ConversationId });
 const ChatPermissionParams = ChatParams.extend({ permissionId: z.string().min(1).max(200) });
+const ChatQuestionParams = ChatParams.extend({ questionId: z.string().min(1).max(200) });
 const OptionsQuery = z.object({ refresh: z.enum(['1']).optional() });
 
 /** Modelos y modos de opencode (Ajustes), el chat de cada tarea con opencode y el chat general. */
@@ -31,6 +32,10 @@ export async function opencodeAiRoutes(
     const { key, id } = PermissionParams.parse(req.params);
     return chat.replyPermission(key, id, ChatPermissionReplyInput.parse(req.body).reply);
   });
+  app.post('/api/tasks/:key/chat/questions/:id', async (req) => {
+    const { key, id } = PermissionParams.parse(req.params);
+    return chat.replyQuestion(key, id, ChatQuestionReplyInput.parse(req.body));
+  });
 
   const notFound = (reply: FastifyReply) => reply.code(404).send({ error: t('chat.general.notFound') });
   app.get('/api/chats', async () => general.list());
@@ -42,6 +47,10 @@ export async function opencodeAiRoutes(
   app.post('/api/chats/:id/permissions/:permissionId', async (req, reply) => {
     const { id, permissionId } = ChatPermissionParams.parse(req.params);
     return (await general.replyPermission(id, permissionId, ChatPermissionReplyInput.parse(req.body).reply)) ?? notFound(reply);
+  });
+  app.post('/api/chats/:id/questions/:questionId', async (req, reply) => {
+    const { id, questionId } = ChatQuestionParams.parse(req.params);
+    return (await general.replyQuestion(id, questionId, ChatQuestionReplyInput.parse(req.body))) ?? notFound(reply);
   });
   app.delete('/api/chats/:id', async (req, reply) => ((await general.delete(ChatParams.parse(req.params).id)) ? reply.code(204).send() : notFound(reply)));
 }
