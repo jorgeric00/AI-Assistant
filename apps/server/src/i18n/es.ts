@@ -104,6 +104,7 @@ export const es = {
   // Diario (entradas automáticas)
   'journal.entryNotFound': 'Entrada no encontrada',
   'journal.statusChange': 'Estado en JIRA: {{from}} → {{to}}',
+  'journal.reminderDone': 'Hecho: {{title}}',
   'journal.commit': 'Commit en {{repo}}: {{text}}',
 
   // Notas

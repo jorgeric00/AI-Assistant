@@ -8,7 +8,9 @@ import {
   type SnoozeInput,
 } from '@dev-assistant/shared';
 import type { Db } from '../../db/client.js';
-import { reminderFires, reminders, tasks } from '../../db/schema.js';
+import { journalEntries, reminderFires, reminders, tasks } from '../../db/schema.js';
+import { t } from '../../i18n/index.js';
+import { localDay } from '../journal/feed.js';
 import { ensureTaskId } from '../tasks/ensure-task.js';
 import { advancePast, firstOccurrence, repeatToRrule, rruleToRepeat, snoozeUntil } from './recurrence.js';
 
@@ -79,11 +81,26 @@ export class RemindersRepository {
     return !!this.db.delete(reminders).where(eq(reminders.id, id)).returning({ id: reminders.id }).get();
   }
 
-  /** Marcar como hecho: un puntual se cierra; en un recurrente solo se atiende el aviso (la serie sigue). */
-  complete(id: number): Reminder | undefined {
+  /** Marcar como hecho: un puntual se cierra; en un recurrente solo se atiende el aviso (la serie sigue). Queda apuntado en el diario. */
+  complete(id: number, now = new Date()): Reminder | undefined {
     const current = this.get(id);
     if (!current) return undefined;
+    const taskId = this.db.select({ taskId: reminders.taskId }).from(reminders).where(eq(reminders.id, id)).get()?.taskId ?? null;
     this.db.transaction((tx) => {
+      const at = now.toISOString();
+      tx.insert(journalEntries)
+        .values({
+          date: localDay(now),
+          source: 'auto',
+          taskId,
+          text: t('journal.reminderDone', { title: current.title }),
+          refTable: 'reminders',
+          refId: id,
+          refKey: `reminder:${id}:${at}`,
+          createdAt: at,
+        })
+        .onConflictDoNothing()
+        .run();
       if (current.repeat.kind === 'none') {
         tx.update(reminders).set({ status: 'done', nextFireAt: null, snoozedUntil: null }).where(eq(reminders.id, id)).run();
       }

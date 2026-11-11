@@ -3,6 +3,7 @@ import type { Reminder, ReminderAlert } from '@dev-assistant/shared';
 import { buildApp } from '../../app.js';
 import { openDatabase } from '../../db/client.js';
 import { RemindersRepository } from './repository.js';
+import { localDay } from '../journal/feed.js';
 
 const local = (y: number, m: number, d: number, h = 9, min = 30) => new Date(y, m - 1, d, h, min);
 
@@ -56,6 +57,10 @@ describe('recordatorios', () => {
 
     const done = await ctx.app.inject({ method: 'POST', url: `/api/reminders/${r.id}/done` });
     expect(done.json()).toMatchObject({ status: 'done' });
+    // Queda apuntado en el diario del día en que se marca.
+    const today = localDay(new Date());
+    const journal = (await ctx.app.inject({ method: 'GET', url: `/api/journal?date=${today}` })).json() as { text: string; source: string }[];
+    expect(journal).toMatchObject([{ text: 'Hecho: Revisar PR', source: 'auto' }]);
     expect(await ctx.alerts()).toEqual([]);
     expect((await ctx.app.inject({ method: 'GET', url: '/api/reminders' })).json()).toEqual([]);
   });

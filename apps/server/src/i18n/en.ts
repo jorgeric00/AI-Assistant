@@ -105,6 +105,7 @@ export const en: Messages = {
   // Journal (automatic entries)
   'journal.entryNotFound': 'Entry not found',
   'journal.statusChange': 'Status in JIRA: {{from}} → {{to}}',
+  'journal.reminderDone': 'Done: {{title}}',
   'journal.commit': 'Commit in {{repo}}: {{text}}',
 
   // Notes
