@@ -84,7 +84,8 @@
     "title": "Change history",
     "caption": "opencode logs it on every commit",
     "empty": "No changes yet. Each opencode commit will add a line here with its date, its GitHub link and a short explanation.",
-    "notOnGithub": "Not on GitHub yet"
+    "notOnGithub": "Not on GitHub yet",
+    "analysis": "Analysis"
   },
   "jiraCard": {
     "title": "In JIRA",
@@ -127,9 +128,19 @@
       "openTerminal": "Open in terminal",
       "log": "Conversation",
       "activity": "opencode activity",
-      "emptyTitle": "You have not started this task with opencode yet.",
+      "emptyTitle": "You haven't started this task with opencode yet. What does it need?",
       "emptyBody": "opencode works in the task folder. It proposes the plan and each commit, and never pushes or opens a PR without your confirmation.",
-      "start": "Start the task",
+      "start": "Start development",
+      "analysis": {
+        "title": "Analyse the incident",
+        "body": "opencode reads the ticket, its comments and attachments (logs, reports) and looks for the cause without touching code. Once you validate it, it writes the summary and logs it in the journal. If a fix is needed, it offers to switch to development.",
+        "start": "Analyse the incident",
+        "recommended": "recommended for incidents",
+        "badge": "Incident analysis"
+      },
+      "development": {
+        "title": "Develop"
+      },
       "you": "You",
       "meta": "opencode · {{mode}} · {{model}}",
       "metaNoModel": "opencode · {{mode}}",

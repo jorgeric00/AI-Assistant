@@ -57,6 +57,16 @@ describe('diario automático', () => {
     expect((await ctx.journal('2026-10-07')).map((e) => e.text)).toEqual(['Commit en orders-api: Endpoint de exportación']);
   });
 
+  it('apunta el análisis validado de una incidencia', async () => {
+    ctx = await setup();
+    const folder = join(ctx.home, 'worktrees', 'ABC-1');
+    mkdirSync(folder, { recursive: true });
+    writeFileSync(join(folder, 'HISTORIAL.md'), '- 2026-11-11 12:58 | análisis | - | - | Timeout de lectura corto en la tienda 0412\n');
+    const entries = await ctx.journal('2026-11-11');
+    expect(entries).toEqual([expect.objectContaining({ text: 'Análisis de ABC-1: Timeout de lectura corto en la tienda 0412', taskKey: 'ABC-1', url: null })]);
+    expect(await ctx.journal('2026-11-11')).toHaveLength(1);
+  });
+
   it('apunta los cambios de estado en JIRA, pero no la primera sincronización', async () => {
     ctx = await setup();
     const repo = new TasksRepository(ctx.db);

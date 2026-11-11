@@ -52,8 +52,14 @@ describe('PLAN.md e HISTORIAL.md', () => {
 
   it('lee el histórico del más reciente al más antiguo y tolera URL vacía', () => {
     expect(parseHistory(HISTORY)).toEqual([
-      { date: '2026-10-06 12:31', repo: 'orders-api', sha: '4f2a9c1', url: null, text: 'Tests | con barra' },
-      { date: '2026-10-06 11:20', repo: 'orders-api', sha: '19c3e77', url: 'https://github.com/e/orders-api/commit/19c3e77', text: 'Endpoint GET /orders/export' },
+      { date: '2026-10-06 12:31', repo: 'orders-api', sha: '4f2a9c1', url: null, text: 'Tests | con barra', kind: 'commit' },
+      { date: '2026-10-06 11:20', repo: 'orders-api', sha: '19c3e77', url: 'https://github.com/e/orders-api/commit/19c3e77', text: 'Endpoint GET /orders/export', kind: 'commit' },
+    ]);
+  });
+
+  it('marca las líneas de análisis', () => {
+    expect(parseHistory('- 2026-11-11 12:58 | análisis | - | - | Timeout corto')).toEqual([
+      { date: '2026-11-11 12:58', repo: 'análisis', sha: '-', url: null, text: 'Timeout corto', kind: 'analysis' },
     ]);
   });
 });

@@ -7,7 +7,8 @@ import type { DevSession, RepoDetail, SessionOpenResult } from '@dev-assistant/s
 import { buildApp } from '../../app.js';
 import { openDatabase } from '../../db/client.js';
 import { parsePlanHeader } from './dev-files.js';
-import { taskAgents, taskContext } from './session.js';
+import type { JiraClient, JiraTicketExtras } from '../../integrations/jira/client.js';
+import { openPrompt, taskAgents, taskContext } from './session.js';
 
 /** Clon con un commit en develop, como el de Jorge. */
 function clone(name: string) {
@@ -21,7 +22,7 @@ function clone(name: string) {
   return { dir, git };
 }
 
-async function setup() {
+async function setup(extra: Partial<Parameters<typeof buildApp>[1]> = {}) {
   const home = mkdtempSync(join(tmpdir(), 'da-home-'));
   const launched: { folder: string; key: string; prompt: string }[] = [];
   const skills = join(home, 'skills');
@@ -32,6 +33,7 @@ async function setup() {
       launched.push({ folder, key, prompt });
       return true;
     },
+    ...extra,
   });
   const call = async <T>(method: 'GET' | 'POST' | 'PATCH', url: string, payload?: object) => (await app.inject({ method, url, payload })).json<T>();
   const addRepo = (name: string, localPath: string, extra: object = {}) =>
@@ -127,13 +129,65 @@ describe('sesión de desarrollo', () => {
   });
 });
 
+describe('comentarios y adjuntos del ticket', () => {
+  it('se bajan a la carpeta de la tarea y se listan en TAREA.md', async () => {
+    const downloads: string[] = [];
+    const extras: JiraTicketExtras = {
+      comments: [
+        { author: 'Ana', created: '2026-11-10T09:00:00.000+0100', body: 'Falla en la tienda 0412' },
+        { author: 'Luis', created: '2026-11-10T10:30:00.000+0100', body: 'Adjunto el log' },
+      ],
+      attachments: [
+        { id: '1', filename: 'server.log', size: 5, mimeType: 'text/plain', url: 'https://jira/att/1', created: '' },
+        { id: '2', filename: '../raro?.txt', size: 2, mimeType: 'text/plain', url: 'https://jira/att/2', created: '' },
+        { id: '3', filename: 'enorme.zip', size: 100 * 1024 * 1024, mimeType: 'application/zip', url: 'https://jira/att/3', created: '' },
+      ],
+    };
+    const jira = {
+      ticketExtras: async () => extras,
+      downloadAttachment: async (url: string) => {
+        downloads.push(url);
+        return Buffer.from(url.endsWith('1') ? 'hola!' : 'ok');
+      },
+    } as unknown as JiraClient;
+    ctx = await setup({ jiraClient: jira });
+
+    await ctx.call('POST', '/api/tasks/SGAR-7/session/open');
+    const folder = join(ctx.home, 'worktrees', 'SGAR-7');
+    expect(readFileSync(join(folder, 'adjuntos', 'server.log'), 'utf8')).toBe('hola!');
+    expect(readFileSync(join(folder, 'adjuntos', '__raro_.txt'), 'utf8')).toBe('ok');
+    expect(downloads).toEqual(['https://jira/att/1', 'https://jira/att/2']);
+
+    const context = readFileSync(join(folder, 'TAREA.md'), 'utf8');
+    expect(context).toContain('## Comentarios del ticket\n\n### Ana · 2026-11-10 09:00\nFalla en la tienda 0412\n\n### Luis · 2026-11-10 10:30\nAdjunto el log');
+    expect(context).toContain('- `adjuntos/server.log` (1 KB)');
+    expect(context).toContain('- enorme.zip (100.0 MB): no descargado, es demasiado grande.');
+  });
+
+  it('si JIRA falla, TAREA.md lo dice y la sesión se abre igual', async () => {
+    const jira = { ticketExtras: async () => Promise.reject(new Error('JIRA respondió 401')) } as unknown as JiraClient;
+    ctx = await setup({ jiraClient: jira });
+    const res = await ctx.call<SessionOpenResult>('POST', '/api/tasks/SGAR-7/session/open');
+    expect(res.opened).toBe(true);
+    expect(readFileSync(join(ctx.home, 'worktrees', 'SGAR-7', 'TAREA.md'), 'utf8')).toContain('No se pudieron leer de JIRA (JIRA respondió 401)');
+  });
+
+  it('el mensaje de empezar cambia si es un análisis', () => {
+    expect(openPrompt('SGAR-7', '/s/SKILL.md', 'analysis')).toBe(
+      'Analiza la incidencia SGAR-7 con la skill dev-assistant-tarea, que está en /s/SKILL.md, siguiendo su flujo de solo análisis. Lee primero TAREA.md',
+    );
+  });
+});
+
 describe('cabecera de PLAN.md', () => {
   it('lee la rama, los repos y las PR, e ignora lo que va después de la primera sección', () => {
     expect(parsePlanHeader('# K-1\n\n- **Rama:** `bugfix/K-1-x`\nRepos: a, b (C:\\dev\\b, base main)\nPR: https://github.com/o/a/pull/1 y https://github.com/o/b/pull/2\n\n## Análisis\nRepos: c')).toEqual({
       branch: 'bugfix/K-1-x',
       repos: ['a', 'b'],
       prUrls: ['https://github.com/o/a/pull/1', 'https://github.com/o/b/pull/2'],
+      analysis: false,
     });
-    expect(parsePlanHeader('')).toEqual({ branch: null, repos: [], prUrls: [] });
+    expect(parsePlanHeader('')).toEqual({ branch: null, repos: [], prUrls: [], analysis: false });
+    expect(parsePlanHeader('# K-1\n\nTipo: análisis\n').analysis).toBe(true);
   });
 });

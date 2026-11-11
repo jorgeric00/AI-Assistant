@@ -125,7 +125,7 @@ export async function buildApp(db: Db, opts: BuildAppOptions = {}) {
   await app.register(journalRoutes, { db, diaryFeed });
   await app.register(aiRoutes, { db, llm: opts.llm ?? noLlm, diaryFeed, devAssistantHome });
   const tasksRepo = new TasksRepository(db);
-  const sessions = new DevSessionService(db, tasksRepo, devAssistantHome, opts.git, opts.terminalLauncher, opts.opencodeSkillsDir ?? config.opencodeSkillsDir);
+  const sessions = new DevSessionService(db, tasksRepo, devAssistantHome, opts.git, opts.terminalLauncher, opts.opencodeSkillsDir ?? config.opencodeSkillsDir, opts.jiraClient ?? null);
   await app.register(tasksRoutes, {
     db,
     jiraSync: opts.jiraSync ?? new JiraSync(db, tasksRepo, null, ''),

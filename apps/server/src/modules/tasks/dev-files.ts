@@ -37,6 +37,8 @@ export function parsePlan(markdown: string, updatedAt: string): DevPlan | null {
 }
 
 export interface PlanHeader {
+  /** «Tipo: análisis» en la cabecera: la tarea es solo el análisis de una incidencia. */
+  analysis: boolean;
   branch: string | null;
   repos: string[];
   prUrls: string[];
@@ -44,14 +46,15 @@ export interface PlanHeader {
 
 /** Cabecera de PLAN.md (antes de la primera sección): "Rama: ...", "Repos: a, b" y una línea "PR: <url>" por PR. */
 export function parsePlanHeader(markdown: string): PlanHeader {
-  const header: PlanHeader = { branch: null, repos: [], prUrls: [] };
+  const header: PlanHeader = { analysis: false, branch: null, repos: [], prUrls: [] };
   for (const line of markdown.split(/\r?\n/)) {
     if (/^##\s/.test(line)) break;
-    const m = line.match(/^\s*(?:[-*]\s+)?\**(Rama|Repos|PR)\**:\**\s*(.+?)\s*$/i);
+    const m = line.match(/^\s*(?:[-*]\s+)?\**(Rama|Repos|PR|Tipo)\**:\**\s*(.+?)\s*$/i);
     if (!m) continue;
     const field = m[1]!.toLowerCase();
     const value = m[2]!.replace(/`/g, '');
-    if (field === 'rama') header.branch = value.split(/\s/)[0]!;
+    if (field === 'tipo') header.analysis = /^(an[aá]lisis|analysis)\b/i.test(value);
+    else if (field === 'rama') header.branch = value.split(/\s/)[0]!;
     else if (field === 'pr') header.prUrls.push(...(value.match(/https?:\/\/\S+/g) ?? []));
     // "orders-api (C:\dev\orders-api, base develop), web": se queda solo con los nombres.
     else header.repos.push(...value.replace(/\([^)]*\)/g, '').split(',').map((r) => r.trim()).filter(Boolean));
@@ -60,6 +63,8 @@ export function parsePlanHeader(markdown: string): PlanHeader {
 }
 
 /** Líneas "- fecha | repo | hash | url | explicación"; las que no encajan se ignoran. */
+const ANALYSIS_LINE = /^(an[aá]lisis|analysis)$/i;
+
 export function parseHistory(markdown: string): HistoryEntry[] {
   const entries: HistoryEntry[] = [];
   for (const line of markdown.split(/\r?\n/)) {
@@ -68,7 +73,9 @@ export function parseHistory(markdown: string): HistoryEntry[] {
     const parts = m[1]!.split(/\s+\|\s+/);
     if (parts.length < 5) continue;
     const [date, repo, sha, url, ...rest] = parts.map((p) => p.trim());
-    entries.push({ date: date!, repo: repo!, sha: sha!, url: url && /^https?:\/\//.test(url) ? url : null, text: rest.join(' | ') });
+    // El análisis de una incidencia va como "| análisis | - | - |": no tiene repo ni commit.
+    const kind = ANALYSIS_LINE.test(repo!) ? 'analysis' : 'commit';
+    entries.push({ kind, date: date!, repo: repo!, sha: sha!, url: url && /^https?:\/\//.test(url) ? url : null, text: rest.join(' | ') });
   }
   return entries.reverse();
 }

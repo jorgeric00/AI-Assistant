@@ -52,6 +52,8 @@ export class TaskChatService {
       agent: stored?.agent ?? defaults.sessionAgent,
       contextPercent: null,
       starterPrompt: this.sessions.prompt(key),
+      analysisPrompt: this.sessions.prompt(key, 'analysis'),
+      suggestAnalysis: this.sessions.suggestsAnalysis(key),
       ...extra,
     };
   }

@@ -84,7 +84,8 @@
     "title": "Histórico de cambios",
     "caption": "Lo anota opencode en cada commit",
     "empty": "Sin cambios todavía. Cada commit de opencode añadirá aquí una línea con su fecha, su enlace de GitHub y una explicación breve.",
-    "notOnGithub": "Aún no está en GitHub"
+    "notOnGithub": "Aún no está en GitHub",
+    "analysis": "Análisis"
   },
   "jiraCard": {
     "title": "En JIRA",
@@ -127,9 +128,19 @@
       "openTerminal": "Abrir en terminal",
       "log": "Conversación",
       "activity": "Actividad de opencode",
-      "emptyTitle": "Aún no has empezado esta tarea con opencode.",
+      "emptyTitle": "Aún no has empezado esta tarea con opencode. ¿Qué hace falta?",
       "emptyBody": "opencode trabaja en la carpeta de la tarea. Te propone el plan y cada commit, y no hace push ni abre PR sin que se lo confirmes.",
-      "start": "Empezar la tarea",
+      "start": "Empezar el desarrollo",
+      "analysis": {
+        "title": "Analizar la incidencia",
+        "body": "opencode lee el ticket, sus comentarios y los adjuntos (logs, reportes) y busca el origen sin tocar código. Cuando lo valides, deja el resumen y lo apunta en el diario. Si hace falta un arreglo, te propone pasar a desarrollo.",
+        "start": "Analizar la incidencia",
+        "recommended": "recomendado para incidencias",
+        "badge": "Análisis de incidencia"
+      },
+      "development": {
+        "title": "Desarrollar"
+      },
       "you": "Tú",
       "meta": "opencode · {{mode}} · {{model}}",
       "metaNoModel": "opencode · {{mode}}",

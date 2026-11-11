@@ -448,6 +448,8 @@ export interface DevPlan {
 }
 
 export interface HistoryEntry {
+  /** Un commit subido, o el análisis validado de una incidencia (sin commit). */
+  kind: 'commit' | 'analysis';
   /** "AAAA-MM-DD HH:MM" tal como lo escribe opencode (hora local). */
   date: string;
   repo: string;
@@ -487,6 +489,8 @@ export interface DevSession {
   folder: string;
   /** Rama de la tarea (línea "Rama:" de PLAN.md). */
   branch: string | null;
+  /** La tarea es solo el análisis de una incidencia (línea "Tipo: análisis" de PLAN.md). */
+  analysis: boolean;
   /** true si opencode ya ha fijado los repos en PLAN.md; si no, son los dados de alta para el proyecto de JIRA. */
   reposConfirmed: boolean;
   repos: SessionRepo[];
@@ -907,6 +911,10 @@ export interface ChatState {
 export interface TaskChat extends ChatState {
   /** Mensaje con el que se empieza la tarea. */
   starterPrompt: string;
+  /** Mensaje con el que se empieza solo el análisis de una incidencia. */
+  analysisPrompt: string;
+  /** La tarea parece una incidencia (por su tipo en JIRA): se recomienda empezar por el análisis. */
+  suggestAnalysis: boolean;
 }
 
 // ── Chat general con opencode (sin tarea) ────────────────────────────────────

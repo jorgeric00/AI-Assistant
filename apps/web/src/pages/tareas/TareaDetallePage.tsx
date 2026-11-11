@@ -220,7 +220,9 @@ export function HistoryCard({ history, loading }: { history: HistoryEntry[]; loa
           {history.map((h, i) => (
             <li key={`${h.sha}-${i}`} className="flex flex-wrap gap-x-4 gap-y-1 border-b border-line py-2.5 last:border-b-0">
               <span className="w-36 shrink-0 font-mono text-code text-ink-faint">{h.date}</span>
-              {h.url ? (
+              {h.kind === 'analysis' ? (
+                <span className="w-44 shrink-0 truncate text-code text-info">{t('history.analysis')}</span>
+              ) : h.url ? (
                 <a href={h.url} target="_blank" rel="noreferrer" className="w-44 shrink-0 truncate font-mono text-code text-info">
                   {h.repo}@{h.sha}
                 </a>

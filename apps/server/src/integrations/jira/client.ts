@@ -46,6 +46,11 @@ interface RawTransition {
 }
 
 /** Error que se muestra tal cual al usuario. */
+export interface JiraTicketExtras {
+  comments: { author: string; created: string; body: string }[];
+  attachments: { id: string; filename: string; size: number; mimeType: string; url: string; created: string }[];
+}
+
 export class JiraError extends Error {}
 
 /** Metadatos de un campo al crear una incidencia (createmeta). */
@@ -79,6 +84,7 @@ const PAGE_SIZE = 100;
 /** Tope de seguridad: con más incidencias asignadas la sincronización se corta aquí. */
 const MAX_ISSUES = 1000;
 const TIMEOUT_MS = 20_000;
+const DOWNLOAD_TIMEOUT_MS = 120_000;
 
 interface RawIssue {
   key: string;
@@ -210,6 +216,43 @@ export class JiraClient {
   async getIssue(key: string): Promise<JiraIssue | null> {
     const { body } = await this.get<RawIssue>(`/issue/${encodeURIComponent(key)}`, { fields: FIELDS.join(',') });
     return body ? this.normalize(body) : null;
+  }
+
+  /** Comentarios y adjuntos de la incidencia (lo que suele traer una incidencia: logs, reportes...). */
+  async ticketExtras(key: string): Promise<JiraTicketExtras | null> {
+    const { body } = await this.get<{
+      fields?: {
+        comment?: { comments?: { author?: { displayName?: string }; created?: string; body?: unknown }[] };
+        attachment?: { id: string | number; filename?: string; size?: number; mimeType?: string; content?: string; created?: string }[];
+      };
+    }>(`/issue/${encodeURIComponent(key)}`, { fields: 'comment,attachment' });
+    if (!body) return null;
+    const text = (value: unknown) => (typeof value === 'string' ? value : value ? adfToText(value) : '').trim();
+    return {
+      comments: (body.fields?.comment?.comments ?? [])
+        .map((c) => ({ author: c.author?.displayName ?? '', created: c.created ?? '', body: text(c.body) }))
+        .filter((c) => c.body),
+      attachments: (body.fields?.attachment ?? [])
+        .filter((a) => a.content && a.filename)
+        .map((a) => ({ id: String(a.id), filename: a.filename!, size: a.size ?? 0, mimeType: a.mimeType ?? '', url: a.content!, created: a.created ?? '' })),
+    };
+  }
+
+  /** Contenido de un adjunto (la URL `content` que da JIRA). */
+  async downloadAttachment(url: string): Promise<Buffer> {
+    const authorization = this.cloud
+      ? `Basic ${Buffer.from(`${this.config.email}:${this.config.token}`).toString('base64')}`
+      : `Bearer ${this.config.token}`;
+    let res: Response;
+    try {
+      // JIRA Cloud redirige a su almacén de ficheros: aquí sí se sigue la redirección.
+      res = await this.fetchImpl(url, { headers: { authorization }, redirect: 'follow', signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS) });
+    } catch (err) {
+      const cause = err instanceof Error ? (err.cause instanceof Error ? err.cause.message : err.message) : String(err);
+      throw new JiraError(t('jira.connectFailed', { url: this.baseUrl, cause }));
+    }
+    if (!res.ok) throw new JiraError(t('jira.httpError', { status: res.status }));
+    return Buffer.from(await res.arrayBuffer());
   }
 
   /** Estados a los que JIRA deja pasar la incidencia desde el actual. */
