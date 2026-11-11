@@ -1,6 +1,6 @@
 ---
 name: dev-assistant-tarea
-description: Forma de trabajar en una tarea de JIRA lanzada desde AI-Assistant. Úsala siempre que desarrolles una tarea con clave de JIRA (p. ej. ABC-123): ramas, plan, commits, push, PR, JIRA, PLAN.md e HISTORIAL.md.
+description: Forma de trabajar en una tarea de JIRA lanzada desde AI-Assistant. Úsala siempre que desarrolles una tarea con clave de JIRA (p. ej. ABC-123) o analices una incidencia: ramas, plan, commits, push, PR, JIRA, PLAN.md e HISTORIAL.md.
 ---
 
 # Desarrollo de una tarea de JIRA con AI-Assistant
@@ -20,7 +20,8 @@ en este orden, y para en cada punto marcado con **Pregunta al usuario** hasta qu
 - **Nunca** incluyas en un commit `PLAN.md`, `HISTORIAL.md`, ficheros `.env`, tokens ni contraseñas.
 - Si la rama base avanza y al traerla hay conflictos, **pregunta al usuario** antes de mezclar.
 - En JIRA solo haces lo que dice este flujo: pasar a "In Progress" al crear la rama y, tras la validación,
-  a "In Review" con un comentario. Nada más sin que el usuario lo pida.
+  a "In Review" con un comentario (o, en un análisis, el comentario con el origen si el usuario lo confirma).
+  Nada más sin que el usuario lo pida.
 - Contesta **siempre** al usuario en el idioma del sistema: el que indica `TAREA.md` en «Idioma del usuario» o, si no
   lo indica, el del sistema operativo (configuración regional, `LANG`). Aunque el ticket, el código o esta skill
   estén en otro idioma. Los commits, las PR y los comentarios de JIRA siguen el formato que se indica abajo.
@@ -34,6 +35,8 @@ Cada tarea tiene una carpeta fuera de los repositorios de la empresa:
   PLAN.md         ← el plan de desarrollo (lo escribes tú)
   HISTORIAL.md    ← una línea por cada cambio subido (la añades tú)
   TAREA.md        ← contexto que deja AI-Assistant al abrir la sesión (no lo edites)
+  AGENTS.md       ← lo deja AI-Assistant (no lo edites)
+  adjuntos/       ← los adjuntos del ticket (logs, reportes...), descargados por AI-Assistant
   RESUMEN.md      ← la documentación de la tarea, al cerrarla (la escribes tú)
 ```
 
@@ -41,12 +44,21 @@ Cada tarea tiene una carpeta fuera de los repositorios de la empresa:
 (`C:\Users\<usuario>`). Crea la carpeta si no existe. El código se trabaja en el **clon de siempre** de cada
 repositorio, en la ruta que indica AI-Assistant (o el usuario); esta carpeta guarda el plan, el historial y la documentación de la tarea.
 
-`TAREA.md` trae los repositorios dados de alta en AI-Assistant (nombre, ruta local, rama base y repo de GitHub) y
-la ficha de cada uno (convenciones, comandos de tests y arquitectura). Léelo antes de empezar y sigue esas fichas.
+`TAREA.md` trae el ticket (título, descripción y comentarios), la lista de adjuntos descargados en `adjuntos/`, los
+repositorios dados de alta en AI-Assistant (nombre, ruta local, rama base y repo de GitHub) y la ficha de cada uno
+(convenciones, comandos de tests y arquitectura). Léelo antes de empezar y sigue esas fichas.
+
+## ¿Desarrollo o solo análisis?
+
+Algunas tareas son incidencias que no piden cambiar código: hay que analizar logs, reportes o datos que dejan los
+usuarios en el ticket y encontrar el origen. Sigue el **flujo de solo análisis** (abajo) cuando el usuario lo pida (el
+mensaje de inicio dice «flujo de solo análisis») o cuando, siendo una incidencia, te diga que solo hay que analizarla.
+En cualquier otro caso, sigue el flujo de desarrollo (secciones 1 a 4). Si no está claro, **pregunta al usuario**.
 
 ## 1. Arranque
 
-1. Lee el ticket con el MCP de JIRA: resumen, descripción, criterios de aceptación y tipo de incidencia.
+1. Lee el ticket en `TAREA.md` (y los adjuntos de `adjuntos/` si hacen falta); si tienes el MCP de JIRA, úsalo
+   para lo que falte: resumen, descripción, comentarios, criterios de aceptación y tipo de incidencia.
    Si el ticket no tiene descripción (o solo repite el título) y el usuario aún no te ha dicho qué hay que hacer
    (en esta conversación o en `PLAN.md`), **pregunta al usuario** qué se debe hacer antes de seguir. No te lo inventes.
 2. Propón qué repositorios toca la tarea (empieza por los de `TAREA.md`), con su ruta local y su rama base.
@@ -107,6 +119,72 @@ la ficha de cada uno (convenciones, comandos de tests y arquitectura). Léelo an
 19. Escribe `RESUMEN.md` en la carpeta de la tarea con el formato de abajo: es la documentación de la tarea
     que AI-Assistant enseña en "Documentación". Si ya existe (la tarea se retomó), actualízalo entero.
 20. Ahí termina tu trabajo: la revisión y el merge son de las personas.
+
+## Flujo de solo análisis (incidencias)
+
+Aquí **no se toca código**: nada de ramas, cambios en ficheros de los repos, commits, push ni PR. Puedes leer código
+y ejecutar comandos que no cambian nada (buscar, `git log`, abrir logs, consultas de solo lectura).
+
+A1. Lee el ticket en `TAREA.md` (descripción y comentarios) y los adjuntos de `adjuntos/`. Si faltan datos para
+    analizarla (logs, fechas, ejemplos), **pregunta al usuario**.
+A2. Escribe `PLAN.md` con el formato de análisis de abajo (cabecera `Tipo: análisis`).
+A3. Investiga: cruza los logs y reportes con el código y la configuración de los repos de `TAREA.md`.
+    Marca cada paso del plan en cuanto lo termines.
+A4. Presenta al usuario el **origen**: qué pasa, desde cuándo y a quién afecta, las evidencias (líneas de log,
+    `fichero:línea`, datos) y si hace falta un arreglo en el código o no. **Pregunta al usuario** si valida el
+    análisis. Si no lo valida, sigue investigando con lo que te diga y vuelve a preguntar.
+A5. Cuando lo valide:
+    - Añade al final de `HISTORIAL.md` una línea de análisis (formato abajo): AI-Assistant la apunta en el diario.
+    - Escribe `RESUMEN.md` con el formato de análisis de abajo.
+    - Marca los pasos que queden en `PLAN.md`.
+A6. **Pregunta al usuario** si deja en JIRA un comentario con el origen y la conclusión. Hazlo solo si lo confirma,
+    y no cambies el estado del ticket salvo que te lo pida.
+A7. Si hace falta un arreglo, **pregunta al usuario** si pasáis a desarrollo. Si dice que sí: en `PLAN.md` cambia la
+    cabecera a `Tipo: desarrollo`, deja las secciones del análisis como están y añade debajo las del desarrollo
+    (`Plan aprobado`, `Implementación`, `Pruebas y PR`). Sigue desde el paso 2 de «1. Arranque» con el flujo normal.
+    Al cerrar el desarrollo, amplía `RESUMEN.md` con lo que se hizo.
+
+### Formato de PLAN.md para un análisis
+
+```markdown
+# <CLAVE> · <resumen del ticket>
+
+Tipo: análisis
+Repos: <repo>, <otro repo>
+
+## Ticket y adjuntos
+- [x] Leer el ticket, los comentarios y los adjuntos
+
+## Origen
+- [ ] Paso concreto de la investigación (p. ej. buscar el error del log en <repo>)
+- [ ] Origen encontrado
+
+## Validación
+- [ ] El usuario valida el análisis
+
+## Resumen y diario
+- [ ] RESUMEN.md y línea en HISTORIAL.md
+```
+
+### Formato de RESUMEN.md para un análisis
+
+```markdown
+# <CLAVE> · <resumen del ticket>
+
+Fecha: <AAAA-MM-DD> · Tipo: análisis · Repos: <repo>
+
+## Qué se reportó
+Lo que dicen el ticket y los usuarios, en una o dos frases.
+
+## Qué se analizó
+- Logs, reportes, código y datos revisados.
+
+## Origen
+Qué pasa y por qué, con las evidencias (líneas de log, `fichero:línea`).
+
+## Conclusión
+- Si hace falta un arreglo o no, y el siguiente paso (desarrollo, configuración, respuesta al usuario...).
+```
 
 ## Cuando el usuario pide cambios
 
@@ -201,3 +279,9 @@ Ejemplo:
 ```
 
 La URL es `https://github.com/<owner>/<repo>/commit/<hash>`. Usa la hora local. Sin borrar ni reordenar las líneas anteriores.
+
+El análisis validado de una incidencia (sin commit) va con `análisis` en lugar del repo y `-` en el hash y la URL:
+
+```
+- 2026-11-11 12:58 | análisis | - | - | Timeout de lectura corto para más de 400 etiquetas en la tienda 0412
+```

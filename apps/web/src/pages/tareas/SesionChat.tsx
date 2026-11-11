@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { api, queryKeys } from '../../api';
 import { ChatPanel, smallButton } from '../../components/ChatPanel';
 import { McpWarning } from '../../components/McpWarning';
-import { primaryButtonClass } from '../../components/fields';
+import { primaryButtonClass, secondaryButtonClass } from '../../components/fields';
 
 /** Chat con opencode en la carpeta de la tarea: se elige modelo y modo en cada mensaje y se responden sus permisos. */
 export function SesionChat({ taskKey, session }: { taskKey: string; session: DevSession | null }) {
@@ -28,7 +28,14 @@ export function SesionChat({ taskKey, session }: { taskKey: string; session: Dev
       <McpWarning />
       <ChatPanel
         titleId="chat-titulo"
-        title={t('session.chat.title')}
+        title={
+          <>
+            {t('session.chat.title')}
+            {session?.analysis && (
+              <span className="ml-2.5 rounded border border-info px-2 py-0.5 align-middle text-small font-normal text-info">{t('session.chat.analysis.badge')}</span>
+            )}
+          </>
+        }
         actions={
           <>
             <button type="button" className={smallButton} disabled={!chat.data?.started || reset.isPending} onClick={() => reset.mutate()}>
@@ -53,15 +60,7 @@ export function SesionChat({ taskKey, session }: { taskKey: string; session: Dev
           void queryClient.invalidateQueries({ queryKey: queryKeys.taskSession(taskKey) });
           void queryClient.invalidateQueries({ queryKey: queryKeys.taskDev(taskKey) });
         }}
-        empty={(submit, disabled) => (
-          <div className="flex flex-col items-start gap-2.5">
-            <p className="m-0 font-medium">{t('session.chat.emptyTitle')}</p>
-            <p className="m-0 text-ink-muted">{t('session.chat.emptyBody')}</p>
-            <button type="button" className={primaryButtonClass} disabled={disabled} onClick={() => chat.data && submit(chat.data.starterPrompt)}>
-              {t('session.chat.start')}
-            </button>
-          </div>
-        )}
+        empty={(submit, disabled) => <StartOptions chat={chat.data} disabled={disabled} submit={submit} />}
         help={t('session.chat.help')}
       />
     </div>
@@ -92,5 +91,48 @@ function TerminalButton({ taskKey, session }: { taskKey: string; session: DevSes
       <SquareTerminal size={14} strokeWidth={1.5} aria-hidden />
       {open.isPending ? t('session.opening') : t('session.chat.openTerminal')}
     </button>
+  );
+}
+
+/** Antes de empezar: analizar la incidencia (sin tocar código) o el desarrollo de siempre. */
+function StartOptions({ chat, disabled, submit }: { chat: TaskChat | undefined; disabled: boolean; submit: (text: string) => void }) {
+  const { t } = useTranslation('tasks');
+  const analysisFirst = !!chat?.suggestAnalysis;
+  const options = [
+    {
+      id: 'analysis',
+      title: t('session.chat.analysis.title'),
+      body: t('session.chat.analysis.body'),
+      action: t('session.chat.analysis.start'),
+      prompt: chat?.analysisPrompt,
+      recommended: analysisFirst,
+    },
+    { id: 'development', title: t('session.chat.development.title'), body: t('session.chat.emptyBody'), action: t('session.chat.start'), prompt: chat?.starterPrompt, recommended: !analysisFirst },
+  ];
+  // La recomendada va primero.
+  if (!analysisFirst) options.reverse();
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="m-0 font-medium">{t('session.chat.emptyTitle')}</p>
+      <div className="flex flex-wrap gap-3">
+        {options.map((o) => (
+          <div key={o.id} className={`flex min-w-[260px] flex-1 flex-col gap-2 rounded-lg border bg-bg p-3.5 ${o.recommended ? 'border-info' : 'border-line'}`}>
+            <div className="flex flex-wrap items-baseline gap-x-2">
+              <h3 className="m-0 font-semibold">{o.title}</h3>
+              {o.recommended && analysisFirst && <span className="text-small text-success">{t('session.chat.analysis.recommended')}</span>}
+            </div>
+            <p className="m-0 text-small text-ink-muted">{o.body}</p>
+            <button
+              type="button"
+              className={`${o.recommended ? primaryButtonClass : secondaryButtonClass} self-start`}
+              disabled={disabled || !o.prompt}
+              onClick={() => o.prompt && submit(o.prompt)}
+            >
+              {o.action}
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

@@ -62,8 +62,8 @@ export class DiaryFeed {
             date: localDay(when),
             source: 'auto',
             taskId,
-            text: t('journal.commit', { repo: h.repo, text: h.text }),
-            refKey: `commit:${key}:${h.repo}@${h.sha}`,
+            text: h.kind === 'analysis' ? t('journal.analysis', { key, text: h.text }) : t('journal.commit', { repo: h.repo, text: h.text }),
+            refKey: h.kind === 'analysis' ? `analysis:${key}:${h.date}` : `commit:${key}:${h.repo}@${h.sha}`,
             url: h.url,
             createdAt: when.toISOString(),
           })

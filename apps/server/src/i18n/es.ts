@@ -106,6 +106,7 @@ export const es = {
   'journal.statusChange': 'Estado en JIRA: {{from}} → {{to}}',
   'journal.reminderDone': 'Hecho: {{title}}',
   'journal.commit': 'Commit en {{repo}}: {{text}}',
+  'journal.analysis': 'Análisis de {{key}}: {{text}}',
 
   // Notas
   'notes.notFound': 'Nota no encontrada',
