@@ -6,7 +6,11 @@ import { api, queryKeys } from '../../api';
 export function useReminderActions() {
   const queryClient = useQueryClient();
   const refresh = () => queryClient.invalidateQueries({ queryKey: queryKeys.reminders });
-  const complete = useMutation({ mutationFn: (id: number) => api.completeReminder(id), onSuccess: refresh });
+  const complete = useMutation({
+    mutationFn: (id: number) => api.completeReminder(id),
+    // Al marcarlo como hecho queda apuntado en el diario.
+    onSuccess: () => Promise.all([refresh(), queryClient.invalidateQueries({ queryKey: ['journal'] })]),
+  });
   const snooze = useMutation({
     mutationFn: ({ id, until }: { id: number; until: SnoozeInput['until'] }) => api.snoozeReminder(id, until),
     onSuccess: refresh,
