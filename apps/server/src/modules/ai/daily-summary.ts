@@ -25,13 +25,14 @@ ${t('ai.answerLanguage')} En Markdown, con exactamente estas tres secciones y en
 Reglas:
 - Usa solo la información que te doy. No inventes tareas, avances ni bloqueos.
 - "${t('ai.daily.yesterday')}" resume lo hecho desde el día laborable anterior. "${t('ai.daily.today')}" recoge lo apuntado para hoy y los recordatorios del día.
-- Agrupa lo que sea de la misma tarea y menciona la clave de JIRA (por ejemplo ABC-123) cuando la haya.
-- Viñetas cortas, en primera persona, como se diría en voz alta. Máximo 5 viñetas por sección.
+- Cada entrada marcada "(a mano)" la ha escrito el usuario: va en su propia viñeta, sin juntarla con ninguna otra entrada.
+- Las entradas automáticas (commits, cambios en JIRA) de la misma tarea sí se agrupan en una viñeta. Menciona la clave de JIRA (por ejemplo ABC-123) cuando la haya.
+- Viñetas cortas, en primera persona, como se diría en voz alta. Máximo 5 viñetas por sección, sin contar las entradas a mano.
 - Pon un bloqueo solo si las entradas lo dicen claramente (bloqueado, esperando a, no puedo...).
 - Si una sección no tiene nada, escribe "- ${t('ai.daily.nothing')}".
 - No añadas nada antes ni después de las tres secciones.`;
 
-type EntryRow = { date: string; text: string; taskKey: string | null; createdAt: string };
+type EntryRow = { date: string; text: string; taskKey: string | null; createdAt: string; source: string };
 
 export class DailySummaryService {
   private readonly reminders: RemindersRepository;
@@ -57,7 +58,7 @@ export class DailySummaryService {
   async generate(date: string): Promise<DailySummary> {
     const since = previousWorkday(date);
     const entries: EntryRow[] = this.db
-      .select({ date: journalEntries.date, text: journalEntries.text, taskKey: tasks.jiraKey, createdAt: journalEntries.createdAt })
+      .select({ date: journalEntries.date, text: journalEntries.text, taskKey: tasks.jiraKey, createdAt: journalEntries.createdAt, source: journalEntries.source })
       .from(journalEntries)
       .leftJoin(tasks, eq(tasks.id, journalEntries.taskId))
       .where(and(gte(journalEntries.date, since), lte(journalEntries.date, date)))
@@ -90,7 +91,7 @@ function remindersOn(list: Reminder[], date: string): Reminder[] {
 const time = (iso: string) => new Date(iso).toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
 
 function line(e: EntryRow): string {
-  return `- ${e.taskKey ? `[${e.taskKey}] ` : ''}${e.text.replace(/\s+/g, ' ').trim()}`;
+  return `- ${e.source === 'manual' ? '(a mano) ' : ''}${e.taskKey ? `[${e.taskKey}] ` : ''}${e.text.replace(/\s+/g, ' ').trim()}`;
 }
 
 function buildPrompt(date: string, since: string, entries: EntryRow[], reminders: Reminder[]): string {
