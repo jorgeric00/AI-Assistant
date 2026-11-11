@@ -52,7 +52,7 @@ const created = (key: string): JiraIssue => ({
   url: `https://jira/browse/${key}`,
 });
 
-async function setup({ failSprint = false } = {}) {
+async function setup({ failSprint = false, projectTypes = [{ id: '10001', name: 'Historia' }, { id: '10000', name: 'Epic' }], allTypes = [] as { id: string; name: string }[] } = {}) {
   const { db } = openDatabase(':memory:');
   const calls: { created?: Record<string, unknown>; epic?: string; sprint?: number; jql?: string } = {};
   const client = {
@@ -60,10 +60,8 @@ async function setup({ failSprint = false } = {}) {
       { key: 'DEF', name: 'Plataforma' },
       { key: 'ABC', name: 'Backoffice' },
     ],
-    issueTypes: async () => [
-      { id: '10001', name: 'Historia' },
-      { id: '10000', name: 'Epic' },
-    ],
+    issueTypes: async () => projectTypes,
+    allIssueTypes: async () => allTypes,
     createFields: async () => FIELDS,
     assigneeRef: async () => ({ name: 'jorge' }),
     richText: (text: string) => text,
@@ -173,6 +171,20 @@ describe('Nueva tarea en JIRA', () => {
     const res = await ctx.inject<JiraEpicOption[]>('GET', '/api/jira/create/projects/ABC/epics?q=abc-90');
     expect(res.body).toEqual([{ key: 'ABC-90', summary: 'Exportar devoluciones a CSV' }]);
     expect(ctx.calls.jql).toBe('project = "ABC" AND issuetype = 10000 AND statusCategory != Done AND (key = "ABC-90" OR summary ~ "abc-90*") ORDER BY updated DESC');
+  });
+
+  it('si las épicas no se crean en el proyecto, busca el tipo épica entre todos los de JIRA', async () => {
+    ctx = await setup({ projectTypes: [{ id: '10001', name: 'Historia' }], allTypes: [{ id: '10001', name: 'Historia' }, { id: '10500', name: 'Épica' }] });
+    await ctx.inject<JiraEpicOption[]>('GET', '/api/jira/create/projects/ABC/epics');
+    expect(ctx.calls.jql).toBe('project = "ABC" AND issuetype = 10500 AND statusCategory != Done ORDER BY updated DESC');
+  });
+
+  it('si JIRA no tiene tipo épica, no ofrece épicas (y no busca «Epic», que daría error)', async () => {
+    ctx = await setup({ projectTypes: [{ id: '10001', name: 'Historia' }] });
+    const res = await ctx.inject<JiraEpicOption[]>('GET', '/api/jira/create/projects/ABC/epics');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([]);
+    expect(ctx.calls.jql).toBeUndefined();
   });
 
   it('redacta resumen y descripción a partir de la idea', async () => {
