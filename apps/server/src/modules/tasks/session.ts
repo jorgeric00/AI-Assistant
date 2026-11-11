@@ -121,7 +121,7 @@ export class DevSessionService {
     return { folder, branch: header.branch, reposConfirmed: header.repos.length > 0, repos, command: openCommand(folder, this.prompt(key)), canOpen: process.platform === 'win32' };
   }
 
-  /** Crea la carpeta de la tarea y deja TAREA.md al día (el contexto que lee opencode al empezar). */
+  /** Crea la carpeta de la tarea y deja TAREA.md y AGENTS.md al día (el contexto que lee opencode). */
   async prepare(key: string): Promise<string> {
     const folder = this.folder(key);
     await mkdir(folder, { recursive: true });
@@ -130,7 +130,11 @@ export class DevSessionService {
     const candidates = this.candidates(key);
     const others = this.repos.list().filter((r) => !candidates.some((c) => c.id === r.id));
     const details = (list: typeof candidates) => list.map((r) => this.repos.get(r.id)).filter((r): r is Omit<RepoDetail, 'pathOk'> => !!r);
-    await writeFile(join(folder, 'TAREA.md'), taskContext(key, this.tasks.get(key), details(candidates), details(others)), 'utf8');
+    const task = this.tasks.get(key);
+    await writeFile(join(folder, 'TAREA.md'), taskContext(key, task, details(candidates), details(others)), 'utf8');
+    // opencode lee AGENTS.md siempre que trabaja en la carpeta: así sabe de qué tarea se trata aunque no se
+    // empiece con el mensaje de «Empezar la tarea» (en el chat de la app o en la terminal).
+    await writeFile(join(folder, 'AGENTS.md'), taskAgents(key, task, this.skillsDir ? skillPath(this.skillsDir) : SKILL_NAME), 'utf8');
     return folder;
   }
 
@@ -146,12 +150,29 @@ function repoLine(r: Omit<RepoDetail, 'pathOk'>) {
   return `- **${r.name}**: \`${r.localPath}\` · rama base \`${r.defaultBranch}\`${r.github ? ` · GitHub \`${r.github}\`` : ''}`;
 }
 
+/** Descripción del ticket que se copia en TAREA.md como mucho (caracteres). */
+const MAX_DESCRIPTION = 20_000;
+
+/** Instrucciones que opencode carga solo al trabajar en la carpeta de la tarea. */
+export function taskAgents(key: string, task: TaskDetail | null, skill: string): string {
+  return `${[
+    `# Tarea de JIRA ${key}${task ? ` · ${task.summary}` : ''}`,
+    `Esta carpeta es la de la tarea ${key}. La prepara AI-Assistant, que reescribe este fichero y TAREA.md cada vez: no los edites.`,
+    `- Antes de nada, lee TAREA.md: tiene el ticket (con su descripción) y los repositorios con los que trabajar.`,
+    `- Trabaja siguiendo la skill ${SKILL_NAME}, que está en ${skill}.`,
+    `- Idioma del usuario: ${language() === 'es' ? 'castellano' : 'inglés (English)'}. Contéstale siempre en ese idioma.`,
+  ].join('\n\n')}\n`;
+}
+
 /** Contexto que la app le da a opencode al abrir la sesión (lo regenera cada vez). */
 export function taskContext(key: string, task: TaskDetail | null, candidates: Omit<RepoDetail, 'pathOk'>[], others: Omit<RepoDetail, 'pathOk'>[]): string {
   const parts = [
     `# ${key}${task ? ` · ${task.summary}` : ''}`,
     'Fichero generado por AI-Assistant al abrir la sesión. No lo edites: se reescribe cada vez.',
     task?.url ? `Ticket: ${task.url}` : '',
+    task?.description?.trim()
+      ? `## Descripción del ticket\n${task.description.trim().length > MAX_DESCRIPTION ? `${task.description.trim().slice(0, MAX_DESCRIPTION)}…` : task.description.trim()}`
+      : '',
     '## Repositorios dados de alta para este proyecto de JIRA',
     candidates.length ? candidates.map(repoLine).join('\n') : 'Ninguno. Propón al usuario los repos que haga falta tocar.',
   ];

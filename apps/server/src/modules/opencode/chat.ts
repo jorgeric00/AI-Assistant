@@ -83,9 +83,9 @@ export class TaskChatService {
     const agent = input.agent ?? stored?.agent ?? defaults.sessionAgent;
     const folder = this.sessions.folder(key);
     if (stored && !(await this.chat.exists(stored.sessionId, folder))) stored = null;
+    // TAREA.md y AGENTS.md al día en cada mensaje: son el contexto de la tarea que lee opencode.
+    await this.sessions.prepare(key);
     if (!stored) {
-      // TAREA.md al día: es lo primero que lee opencode.
-      await this.sessions.prepare(key);
       const session = await api.createSession(folder, `${key} · AI-Assistant`);
       stored = { sessionId: session.id, model, agent };
     }
