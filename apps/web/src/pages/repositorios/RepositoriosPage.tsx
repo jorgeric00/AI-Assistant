@@ -281,6 +281,7 @@ const TABS = [
   { id: 'conventionsMd', label: 'tabs.conventions', title: 'tabs.conventionsTitle' },
   { id: 'testCommandsMd', label: 'tabs.tests', title: 'tabs.testsTitle' },
   { id: 'architectureMd', label: 'tabs.architecture', title: 'tabs.architectureTitle' },
+  { id: 'userNotesMd', label: 'tabs.notes', title: 'tabs.notesTitle' },
 ] as const satisfies readonly { id: keyof RepoProfileInput; label: string; title: string }[];
 
 function RepoPanel({ id }: { id: number }) {
@@ -296,6 +297,7 @@ const profileOf = (r: RepoDetail): RepoProfileInput => ({
   conventionsMd: r.profile?.conventionsMd ?? '',
   testCommandsMd: r.profile?.testCommandsMd ?? '',
   architectureMd: r.profile?.architectureMd ?? '',
+  userNotesMd: r.profile?.userNotesMd ?? '',
 });
 
 function RepoEditor({ repo }: { repo: RepoDetail }) {
@@ -336,7 +338,7 @@ function RepoEditor({ repo }: { repo: RepoDetail }) {
   });
 
   const askDraft = () => {
-    const hasProfile = Object.values(profile).some((text) => text.trim());
+    const hasProfile = [profile.conventionsMd, profile.testCommandsMd, profile.architectureMd].some((text) => text.trim());
     if (hasProfile && !window.confirm(t('editor.confirmRedraft'))) return;
     draft.mutate();
   };
@@ -403,8 +405,8 @@ function RepoEditor({ repo }: { repo: RepoDetail }) {
           rows={10}
           value={profile[tab]}
           onChange={(e) => setProfile({ ...profile, [tab]: e.target.value })}
-          disabled={draft.isPending}
-          placeholder={draft.isPending ? t('editor.aiReadingPlaceholder') : t('editor.placeholder')}
+          disabled={draft.isPending && tab !== 'userNotesMd'}
+          placeholder={draft.isPending ? t('editor.aiReadingPlaceholder') : tab === 'userNotesMd' ? t('tabs.notesPlaceholder') : t('editor.placeholder')}
           className={`${inputClass} h-auto resize-y py-2.5 font-mono text-code`}
         />
       </div>

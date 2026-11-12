@@ -96,7 +96,7 @@ describe('sesión de desarrollo', () => {
     ctx = await setup();
     const web = clone('checkout-web');
     const { id } = await ctx.addRepo('checkout-web', web.dir);
-    await ctx.call('PATCH', `/api/repos/${id}`, { profile: { conventionsMd: '- TypeScript estricto', testCommandsMd: '- `pnpm test`', architectureMd: '' } });
+    await ctx.call('PATCH', `/api/repos/${id}`, { profile: { conventionsMd: '- TypeScript estricto', testCommandsMd: '- `pnpm test`', architectureMd: '', userNotesMd: 'Las configuraciones de lectores van en acme/reader-config' } });
     await ctx.addRepo('otro', clone('otro').dir, { jiraProjectKeys: [] });
 
     const res = await ctx.call<SessionOpenResult>('POST', '/api/tasks/SGAR-7/session/open');
@@ -109,6 +109,7 @@ describe('sesión de desarrollo', () => {
     const context = readFileSync(join(folder, 'TAREA.md'), 'utf8');
     expect(context).toContain(`- **checkout-web**: \`${web.dir}\` · rama base \`develop\``);
     expect(context).toContain('#### Tests\n- `pnpm test`');
+    expect(context).toContain('#### Comentarios del usuario (repos relacionados, configuraciones, etc.)\nLas configuraciones de lectores van en acme/reader-config');
     expect(context).toContain('## Otros repositorios dados de alta\n\n- **otro**');
     expect(context).toContain('Idioma del usuario: castellano. Contéstale siempre en ese idioma.');
 

@@ -312,6 +312,7 @@ export function taskContext(
     if (p.conventionsMd.trim()) parts.push(`#### Convenciones\n${p.conventionsMd.trim()}`);
     if (p.testCommandsMd.trim()) parts.push(`#### Tests\n${p.testCommandsMd.trim()}`);
     if (p.architectureMd.trim()) parts.push(`#### Arquitectura\n${p.architectureMd.trim()}`);
+    if (p.userNotesMd.trim()) parts.push(`#### Comentarios del usuario (repos relacionados, configuraciones, etc.)\n${p.userNotesMd.trim()}`);
   }
   if (others.length) parts.push('## Otros repositorios dados de alta', others.map(repoLine).join('\n'));
   parts.push(

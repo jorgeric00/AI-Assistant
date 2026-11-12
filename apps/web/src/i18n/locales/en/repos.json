@@ -50,7 +50,10 @@
     "tests": "Tests",
     "testsTitle": "How to run the tests",
     "architecture": "Architecture",
-    "architectureTitle": "Architecture"
+    "architectureTitle": "Architecture",
+    "notes": "Comments",
+    "notesTitle": "Comments for opencode",
+    "notesPlaceholder": "Write what opencode should know about this repository that the code does not show. For example:\n- The RFID app is this repository.\n- The configuration of the entrance, store and exit readers is pushed to the repository inditex/…\nThe AI never edits this text."
   },
   "editor": {
     "aiDrafted": "drafted by AI",

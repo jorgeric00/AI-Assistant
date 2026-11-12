@@ -51,7 +51,7 @@ export class ReposRepository {
     if (!row) return null;
     const p = row.p ?? undefined;
     const profile: RepoProfile | null = p
-      ? { conventionsMd: p.conventionsMd, testCommandsMd: p.testCommandsMd, architectureMd: p.architectureMd, aiDraft: p.aiDraft, updatedAt: p.updatedAt }
+      ? { conventionsMd: p.conventionsMd, testCommandsMd: p.testCommandsMd, architectureMd: p.architectureMd, userNotesMd: p.userNotesMd, aiDraft: p.aiDraft, updatedAt: p.updatedAt }
       : null;
     return { ...toRepo(row.r, p), profile };
   }

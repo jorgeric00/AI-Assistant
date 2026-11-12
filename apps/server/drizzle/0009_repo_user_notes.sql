@@ -1,0 +1,1 @@
+ALTER TABLE `repo_profiles` ADD `user_notes_md` text DEFAULT '' NOT NULL;
