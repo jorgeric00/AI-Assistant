@@ -64,6 +64,13 @@
       "when": 1794473367797,
       "tag": "0008_pr_author",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1794488895721,
+      "tag": "0009_repo_user_notes",
+      "breakpoints": true
     }
   ]
 }

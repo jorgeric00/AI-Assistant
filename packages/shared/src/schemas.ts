@@ -562,6 +562,8 @@ export const RepoProfileInput = z.object({
   conventionsMd: z.string(),
   testCommandsMd: z.string(),
   architectureMd: z.string(),
+  /** Comentario libre del usuario para opencode (repos relacionados, dónde van las configuraciones...). La IA no lo toca. */
+  userNotesMd: z.string().optional(),
 });
 export type RepoProfileInput = z.infer<typeof RepoProfileInput>;
 
@@ -601,7 +603,7 @@ export interface Repo {
   profileStatus: RepoProfileStatus;
 }
 
-export interface RepoProfile extends RepoProfileInput {
+export interface RepoProfile extends Required<RepoProfileInput> {
   /** Borrador de la IA aún sin revisar. */
   aiDraft: boolean;
   updatedAt: string;

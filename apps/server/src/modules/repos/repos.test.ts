@@ -110,6 +110,18 @@ describe('repositorios', () => {
     const saved = await ctx.call<RepoDetail>('PATCH', `/api/repos/${body.id}`, { profile: drafted.body.profile! });
     expect(saved.body.profileStatus).toBe('completa');
   });
+
+  it('el comentario del usuario se guarda y la IA no lo borra al rehacer la ficha', async () => {
+    ctx = await setup();
+    const dir = gitRepo('orders-api');
+    const { body } = await ctx.call<RepoDetail>('POST', '/api/repos', { name: 'orders-api', localPath: dir });
+    const saved = await ctx.call<RepoDetail>('PATCH', `/api/repos/${body.id}`, {
+      profile: { conventionsMd: '', testCommandsMd: '', architectureMd: '', userNotesMd: 'Configuraciones en acme/reader-config' },
+    });
+    expect(saved.body.profile?.userNotesMd).toBe('Configuraciones en acme/reader-config');
+    const drafted = await ctx.call<RepoDetail>('POST', `/api/repos/${body.id}/profile/draft`);
+    expect(drafted.body.profile).toMatchObject({ architectureMd: '- API de pedidos', userNotesMd: 'Configuraciones en acme/reader-config' });
+  });
 });
 
 describe('utilidades', () => {
