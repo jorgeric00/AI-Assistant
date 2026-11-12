@@ -279,6 +279,12 @@ export class JiraClient {
     if (status === 404) throw new JiraError(t('jira.cannotComment', { key }));
   }
 
+  /** Registra tiempo trabajado en una tarea. `started` es la fecha y hora de inicio con zona horaria. */
+  async addWorklog(key: string, started: string, timeSpentSeconds: number): Promise<void> {
+    const { status } = await this.request('POST', `/issue/${encodeURIComponent(key)}/worklog`, { started, timeSpentSeconds });
+    if (status === 404) throw new JiraError(t('jira.cannotLogWork', { key }));
+  }
+
   /** Cambia el estado con una de las transiciones que devuelve `transitions`. */
   async transition(key: string, transitionId: string): Promise<void> {
     const { status } = await this.request('POST', `/issue/${encodeURIComponent(key)}/transitions`, { transition: { id: transitionId } });

@@ -11,6 +11,7 @@ import { LlmUnavailableError, type Llm } from './integrations/opencode/llm.js';
 import { aiRoutes } from './modules/ai/routes.js';
 import { DiaryFeed } from './modules/journal/feed.js';
 import { journalRoutes } from './modules/journal/routes.js';
+import { WorklogService } from './modules/journal/worklog.js';
 import { notesRoutes, type NotesRoutesOptions } from './modules/notes/routes.js';
 import type { GitRunner } from './modules/repos/git.js';
 import { opencodeSkillRoutes } from './modules/opencode/skill.js';
@@ -123,7 +124,7 @@ export async function buildApp(db: Db, opts: BuildAppOptions = {}) {
   const devAssistantHome = opts.devAssistantHome ?? config.devAssistantHome;
   // Los commits que anota opencode en HISTORIAL.md entran en el diario antes de leerlo.
   const diaryFeed = new DiaryFeed(db, devAssistantHome);
-  await app.register(journalRoutes, { db, diaryFeed });
+  await app.register(journalRoutes, { db, diaryFeed, worklog: new WorklogService(db, opts.jiraClient ?? null) });
   await app.register(aiRoutes, { db, llm: opts.llm ?? noLlm, diaryFeed, devAssistantHome });
   const tasksRepo = new TasksRepository(db);
   const sessions = new DevSessionService(db, tasksRepo, devAssistantHome, opts.git, opts.terminalLauncher, opts.opencodeSkillsDir ?? config.opencodeSkillsDir, opts.jiraClient ?? null);

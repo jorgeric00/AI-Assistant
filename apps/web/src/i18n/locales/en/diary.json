@@ -30,5 +30,33 @@
   },
   "addForm": {
     "label": "New journal entry"
+  },
+  "worklog": {
+    "button": "Log hours",
+    "title": "Log hours in JIRA",
+    "intro": "Monday to Thursday 9 hours are logged and on Fridays 6. They are split among the tasks with activity that day. Nothing is written until you press “Log in JIRA”.",
+    "from": "From",
+    "to": "To",
+    "calc": "Calculate",
+    "calculating": "Calculating…",
+    "error": "Could not calculate: {{message}}",
+    "noDays": "There are no working days in that range.",
+    "total": "{{sum}} of {{target}} h",
+    "imputed": "Already logged",
+    "noActivity": "No recorded activity: add the task by hand or skip the day.",
+    "skip": "Skip day",
+    "unskip": "Include day",
+    "skipped": "Day skipped",
+    "hoursOf": "Hours on {{key}}",
+    "remove": "Remove {{key}}",
+    "addKey": "Add task (ABC-123)",
+    "add": "Add",
+    "submit": "Log in JIRA",
+    "submitting": "Logging…",
+    "confirm": "{{count}} work logs ({{hours}} h) will be written to JIRA. Continue?",
+    "result": "Logged {{done}} entries.",
+    "failed": "{{count}} were not logged:",
+    "nothing": "Nothing to log.",
+    "diff": "Does not add up to the day's hours"
   }
 }

@@ -33,6 +33,9 @@ import type {
   JiraUpdateInput,
   JournalEntry,
   JournalEntryInput,
+  WorklogDay,
+  WorklogSubmit,
+  WorklogSubmitResult,
   LinkTitleResponse,
   Note,
   NoteInput,
@@ -121,6 +124,8 @@ export const api = {
 
   listJournal: (date: string) => request<JournalEntry[]>('GET', `/api/journal?date=${date}`),
   addJournalEntry: (input: JournalEntryInput) => request<JournalEntry>('POST', '/api/journal', input),
+  previewWorklog: (from: string, to: string) => request<WorklogDay[]>('GET', `/api/journal/worklog?from=${from}&to=${to}`),
+  submitWorklog: (input: WorklogSubmit) => request<WorklogSubmitResult>('POST', '/api/journal/worklog', input),
   deleteJournalEntry: (id: number) => request<void>('DELETE', `/api/journal/${id}`),
 
   getDailySummary: (date: string) => request<DailySummary | null>('GET', `/api/daily-summary?date=${date}`),
