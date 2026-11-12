@@ -30,10 +30,7 @@ export function ImputarHoras() {
 
   const calc = useMutation({
     mutationFn: () => api.previewWorklog(from, to),
-    onSuccess: (data) => {
-      setResult(null);
-      setDays(data.map((d) => ({ ...d, skipped: false })));
-    },
+    onSuccess: (data) => setDays(data.map((d) => ({ ...d, skipped: false }))),
   });
   const entries = (days ?? [])
     .filter((d) => d.status !== 'imputado' && !d.skipped)
@@ -63,6 +60,7 @@ export function ImputarHoras() {
         className="flex flex-wrap items-end gap-3"
         onSubmit={(e) => {
           e.preventDefault();
+          setResult(null);
           calc.mutate();
         }}
       >
