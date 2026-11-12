@@ -196,7 +196,8 @@
       "help": "El modo y el modelo valen desde el siguiente mensaje.",
       "helpBuild": "Build puede modificar ficheros y ejecutar comandos.",
       "helpPlan": "Plan solo lee y propone, no modifica nada.",
-      "unavailable": "No se puede hablar con opencode: {{error}}"
+      "unavailable": "No se puede hablar con opencode: {{error}}",
+      "emptyTitleDev": "Aún no has empezado esta tarea con opencode."
     }
   },
   "updateJira": {

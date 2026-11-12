@@ -196,7 +196,8 @@
       "help": "The mode and the model apply from the next message.",
       "helpBuild": "Build can change files and run commands.",
       "helpPlan": "Plan only reads and proposes; it changes nothing.",
-      "unavailable": "Cannot talk to opencode: {{error}}"
+      "unavailable": "Cannot talk to opencode: {{error}}",
+      "emptyTitleDev": "You haven't started this task with opencode yet."
     }
   },
   "updateJira": {
