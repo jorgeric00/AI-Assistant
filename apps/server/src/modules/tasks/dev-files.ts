@@ -16,6 +16,11 @@ export function parsePlan(markdown: string, updatedAt: string): DevPlan | null {
     const step = line.match(/^\s*[-*]\s+\[([ xX])\]\s+(.+?)\s*$/);
     if (step && sections.length) sections.at(-1)!.steps.push({ text: step[2]!, done: step[1] !== ' ' });
   }
+  return buildPlan(sections, updatedAt);
+}
+
+/** Fases y contadores a partir de las secciones con sus pasos. */
+export function buildPlan(sections: PlanSection[], updatedAt: string): DevPlan | null {
   const withSteps = sections.filter((s) => s.steps.length);
   if (!withSteps.length) return null;
 
@@ -34,6 +39,38 @@ export function parsePlan(markdown: string, updatedAt: string): DevPlan | null {
     total: all.length,
     updatedAt,
   };
+}
+
+/** Estado de la tarea fuera de PLAN.md: sus PR en la app y el estado en JIRA. */
+export interface TaskOutside {
+  prs: { state: 'open' | 'merged' | 'closed'; isDraft: boolean }[];
+  jiraStatus: string | null;
+  jiraDone: boolean;
+}
+
+const READY_STEP = /ready for review/i;
+const IN_REVIEW = /review|revisi[oó]n|revisar/i;
+
+/**
+ * El último paso del plan («PR en "ready for review" y JIRA en "In Review"») se marca solo cuando se cumple
+ * aunque el cambio lo haya hecho el usuario a mano y no opencode: ninguna PR sigue en borrador y JIRA está en revisión o más allá.
+ */
+export function withReadyStepDone(plan: DevPlan | null, outside: TaskOutside): DevPlan | null {
+  if (!plan) return plan;
+  const live = outside.prs.filter((p) => p.state !== 'closed');
+  const prsReady = live.length > 0 && live.every((p) => p.state === 'merged' || !p.isDraft);
+  const jiraReady = outside.jiraDone || (!!outside.jiraStatus && IN_REVIEW.test(outside.jiraStatus));
+  if (!prsReady || !jiraReady) return plan;
+  let changed = false;
+  const sections = plan.sections.map((sec) => ({
+    ...sec,
+    steps: sec.steps.map((st) => {
+      if (st.done || !READY_STEP.test(st.text)) return st;
+      changed = true;
+      return { ...st, done: true };
+    }),
+  }));
+  return changed ? buildPlan(sections, plan.updatedAt) : plan;
 }
 
 export interface PlanHeader {

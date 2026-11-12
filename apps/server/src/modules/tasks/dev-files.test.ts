@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { OpencodeSkillStatus, TaskDevInfo } from '@dev-assistant/shared';
 import { buildApp } from '../../app.js';
 import { openDatabase } from '../../db/client.js';
-import { parseHistory, parsePlan } from './dev-files.js';
+import { parseHistory, parsePlan, withReadyStepDone } from './dev-files.js';
 
 const PLAN = `# ABC-131 · Exportar informe
 
@@ -102,5 +102,26 @@ describe('API de desarrollo y skill de opencode', () => {
 
     writeFileSync(after.path, 'versión vieja');
     expect((await app.inject({ method: 'GET', url: '/api/opencode/skill' })).json<OpencodeSkillStatus>().upToDate).toBe(false);
+  });
+});
+
+describe('último paso del plan', () => {
+  const plan = parsePlan('# K-1\n\n## Pruebas y PR\n- [x] Checks en verde\n- [x] El usuario valida\n- [ ] PR en "ready for review" y JIRA en "In Review"\n', 't')!;
+  const ready = { prs: [{ state: 'open' as const, isDraft: false }], jiraStatus: 'In Review', jiraDone: false };
+
+  it('se marca solo cuando las PR salieron de borrador y JIRA está en revisión', () => {
+    const done = withReadyStepDone(plan, ready)!;
+    expect(done.sections[0]!.steps.map((st) => st.done)).toEqual([true, true, true]);
+    expect(done).toMatchObject({ done: 3, total: 3, currentPhase: null });
+    expect(withReadyStepDone(plan, { ...ready, jiraStatus: 'En revisión' })!.done).toBe(3);
+    expect(withReadyStepDone(plan, { ...ready, prs: [{ state: 'merged', isDraft: false }], jiraStatus: 'Hecha', jiraDone: true })!.done).toBe(3);
+  });
+
+  it('se queda pendiente si falta algo', () => {
+    expect(withReadyStepDone(plan, { ...ready, prs: [{ state: 'open', isDraft: true }] })).toBe(plan);
+    expect(withReadyStepDone(plan, { ...ready, prs: [{ state: 'open', isDraft: false }, { state: 'open', isDraft: true }] })).toBe(plan);
+    expect(withReadyStepDone(plan, { ...ready, prs: [] })).toBe(plan);
+    expect(withReadyStepDone(plan, { ...ready, jiraStatus: 'En curso' })).toBe(plan);
+    expect(withReadyStepDone(plan, { ...ready, jiraStatus: null })).toBe(plan);
   });
 });

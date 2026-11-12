@@ -1,10 +1,12 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
+import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { JiraCreateDraftInput, JiraDraftInput, JiraKey, JiraUpdateInput, ProjectKey, TaskImportInput, TaskListQuery, type JiraSyncStatus } from '@dev-assistant/shared';
 import { t } from '../../i18n/index.js';
-import { readTaskDevInfo } from './dev-files.js';
+import { readTaskDevInfo, withReadyStepDone } from './dev-files.js';
 import { getTaskDoc, listTaskDocs } from './task-docs.js';
 import type { Db } from '../../db/client.js';
+import { pullRequests } from '../../db/schema.js';
 import type { JiraSync } from './jira-sync.js';
 import { TaskImportError, type TaskImportService } from './import.js';
 import { JiraCreateInputError, type JiraCreateService } from './jira-create.js';
@@ -66,7 +68,15 @@ export async function tasksRoutes(
   app.get('/api/tasks/:key', async (req, reply) => repo.get(KeyParams.parse(req.params).key) ?? reply.code(404).send({ error: t('tasks.notFound') }));
 
   // Plan e histórico que escribe opencode en la carpeta de la tarea (aunque la tarea no esté sincronizada).
-  app.get('/api/tasks/:key/dev', async (req) => readTaskDevInfo(devAssistantHome, KeyParams.parse(req.params).key));
+  app.get('/api/tasks/:key/dev', async (req) => {
+    const { key } = KeyParams.parse(req.params);
+    const info = await readTaskDevInfo(devAssistantHome, key);
+    if (!info.plan) return info;
+    // El paso final del plan lo marca la app si las PR y JIRA ya están como dice, lo haya hecho opencode o el usuario.
+    const task = repo.get(key);
+    const prs = db.select({ state: pullRequests.state, isDraft: pullRequests.isDraft }).from(pullRequests).where(eq(pullRequests.taskKey, key)).all();
+    return { ...info, plan: withReadyStepDone(info.plan, { prs, jiraStatus: task?.synced ? task.status : null, jiraDone: task?.statusCategory === 'done' }) };
+  });
 
   // Documentación de tareas: el RESUMEN.md que escribe opencode al cerrar cada tarea.
   app.get('/api/task-docs', async (req) => listTaskDocs(devAssistantHome, z.object({ q: z.string().trim().optional() }).parse(req.query).q));
