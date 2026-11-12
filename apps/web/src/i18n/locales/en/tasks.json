@@ -234,7 +234,7 @@
   },
   "newTask": {
     "button": "New task",
-    "title": "New JIRA task",
+    "title": "New task",
     "subtitle": "It is created in JIRA only when you press \"Create in JIRA\".",
     "project": "Project",
     "projectHint": "Remembers the last one you used.",
@@ -278,6 +278,33 @@
     "shortcuts": "<kbd>Esc</kbd> close · <kbd>Ctrl+Enter</kbd> create",
     "creating": "Creating…",
     "create": "Create in JIRA",
-    "createdWithWarnings": "{{key}} was created, but:\n{{warnings}}"
+    "createdWithWarnings": "{{key}} was created, but:\n{{warnings}}",
+    "modeLabel": "What to do",
+    "mode": {
+      "create": "Create in JIRA",
+      "import": "Import from JIRA"
+    }
+  },
+  "import": {
+    "subtitle": "Bring a task that isn't yours into the app, to keep it at hand with its notes, documentation and opencode session.",
+    "ref": "JIRA ID or link",
+    "placeholder": "SGAR-123 or https://jira.company.com/browse/SGAR-123",
+    "hint": "The task ID or its JIRA link both work, and so does a board link with selectedIssue.",
+    "search": "Search",
+    "searching": "Searching…",
+    "assignedTo": "Assigned to {{name}}",
+    "unassigned": "Unassigned",
+    "project": "Project {{project}}",
+    "run": "Import into the app",
+    "importing": "Importing…",
+    "noChanges": "Nothing changes in JIRA.",
+    "open": "Open the task",
+    "inApp": "It's already in the app.",
+    "close": "Close",
+    "badge": "Imported",
+    "badgeFrom": "Imported · from {{name}}",
+    "remove": "Remove from the app",
+    "removeHint": "It's only removed from the app; nothing changes in JIRA.",
+    "confirmRemove": "Remove {{key}} from the app? Its links to notes go with it. Nothing changes in JIRA."
   }
 }

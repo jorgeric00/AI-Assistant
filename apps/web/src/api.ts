@@ -21,6 +21,8 @@ import type {
   JiraProjectOption,
   JiraSprintOption,
   AskResponse,
+  RewriteResult,
+  TaskImportPreview,
   DailySummary,
   DevSession,
   JiraDraft,
@@ -123,6 +125,7 @@ export const api = {
 
   getDailySummary: (date: string) => request<DailySummary | null>('GET', `/api/daily-summary?date=${date}`),
   generateDailySummary: (date: string) => request<DailySummary>('POST', '/api/daily-summary', { date }),
+  rewriteText: (text: string) => request<RewriteResult>('POST', '/api/ai/rewrite', { text }),
   ask: (question: string, sources?: AskSourceType[]) => request<AskResponse>('POST', '/api/search/ask', { question, sources }),
 
   listTasks: (done: boolean) => request<Task[]>('GET', `/api/tasks${done ? '?done=true' : ''}`),
@@ -146,6 +149,9 @@ export const api = {
     request<JiraEpicOption[]>('GET', `/api/jira/create/projects/${encodeURIComponent(project)}/epics${q ? `?q=${encodeURIComponent(q)}` : ''}`),
   jiraSprints: (project: string) => request<JiraSprintOption[]>('GET', `/api/jira/create/projects/${encodeURIComponent(project)}/sprints`),
   draftJiraTask: (input: JiraCreateDraftInput) => request<JiraCreateDraft>('POST', '/api/jira/create/draft', input),
+  previewTaskImport: (ref: string) => request<TaskImportPreview>('GET', `/api/tasks/import/preview?ref=${encodeURIComponent(ref)}`),
+  importTask: (ref: string) => request<Task>('POST', '/api/tasks/import', { ref }),
+  removeTask: (key: string) => request<void>('DELETE', `/api/tasks/${encodeURIComponent(key)}`),
   createJiraTask: (input: JiraCreateInput) => request<JiraCreateResult>('POST', '/api/jira/create', input),
 
   listRepos: () => request<Repo[]>('GET', '/api/repos'),

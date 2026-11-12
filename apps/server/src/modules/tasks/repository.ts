@@ -8,7 +8,7 @@ import { UNSYNCED_TASK_STATUS } from './ensure-task.js';
 import { jiraUpdatesOf } from './jira-update.js';
 
 /** Datos de JIRA que se guardan en `raw_json` además de las columnas propias. */
-type StoredIssue = Pick<JiraIssue, 'issueType' | 'project' | 'updated'>;
+type StoredIssue = Pick<JiraIssue, 'issueType' | 'project' | 'updated'> & { assignee?: string | null; imported?: boolean };
 
 type Row = typeof tasks.$inferSelect;
 
@@ -26,6 +26,8 @@ function toTask(row: Row): Task {
     url: row.url,
     updatedAt: raw.updated ?? null,
     synced: row.status !== UNSYNCED_TASK_STATUS,
+    imported: raw.imported === true,
+    assignee: raw.assignee ?? null,
   };
 }
 
@@ -66,6 +68,24 @@ export class TasksRepository {
       .map((r) => r.key);
   }
 
+  /** Claves de las tareas importadas de otra persona, que se siguen actualizando aunque no estén en la JQL. */
+  importedKeys(): string[] {
+    return this.db
+      .select({ key: tasks.jiraKey })
+      .from(tasks)
+      .where(sql`json_extract(${tasks.rawJson}, '$.imported') = 1`)
+      .all()
+      .map((r) => r.key);
+  }
+
+  /** Quita de la app una tarea importada (sus vínculos con notas se van con ella). Devuelve false si no lo era. */
+  removeImported(key: string): boolean {
+    const row = this.db.select().from(tasks).where(eq(tasks.jiraKey, key)).get();
+    if (!row || (row.rawJson as Partial<StoredIssue> | null)?.imported !== true) return false;
+    this.db.delete(tasks).where(eq(tasks.id, row.id)).run();
+    return true;
+  }
+
   lastSyncedAt(): string | null {
     return this.db.select({ at: max(tasks.lastSyncedAt) }).from(tasks).get()?.at ?? null;
   }
@@ -85,7 +105,7 @@ export class TasksRepository {
     return [...byKey].map(([key, name]) => ({ key, name })).sort((a, b) => a.key.localeCompare(b.key));
   }
 
-  upsertFromJira(issues: JiraIssue[], syncedAt: string) {
+  upsertFromJira(issues: JiraIssue[], syncedAt: string, imported: ReadonlySet<string> = new Set()) {
     this.db.transaction((tx) => {
       for (const issue of issues) {
         const values = {
@@ -95,7 +115,13 @@ export class TasksRepository {
           statusCategory: issue.statusCategory,
           priority: issue.priority,
           url: issue.url,
-          rawJson: { issueType: issue.issueType, project: issue.project, updated: issue.updated } satisfies StoredIssue,
+          rawJson: {
+            issueType: issue.issueType,
+            project: issue.project,
+            updated: issue.updated,
+            assignee: issue.assignee ?? null,
+            ...(imported.has(issue.key) ? { imported: true } : {}),
+          } satisfies StoredIssue,
           lastSyncedAt: syncedAt,
         };
         const before = tx.select({ id: tasks.id, status: tasks.status }).from(tasks).where(eq(tasks.jiraKey, issue.key)).get();

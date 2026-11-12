@@ -8,6 +8,7 @@ import { primaryButtonClass, secondaryButtonClass } from '../../components/field
 import { timeAgo } from '../../dates';
 import { ActualizarJiraButton, JiraUpdatesList } from './ActualizarJira';
 import { NuevaTareaButton } from './NuevaTarea';
+import { ImportedBadge } from './ImportarTarea';
 import { SesionPage } from './SesionPage';
 import { TareaDetallePage } from './TareaDetallePage';
 import { useJiraSync, useTaskList } from './useTasks';
@@ -192,7 +193,15 @@ function TaskTable({ tasks, current }: { tasks: Task[]; current?: string }) {
                     {task.key}
                   </a>
                 </td>
-                <td className="px-2 py-3">{task.summary === task.key ? <span className="text-ink-faint">{t('taskTable.noSummary')}</span> : task.summary}</td>
+                <td className="px-2 py-3">
+                  {task.summary === task.key ? <span className="text-ink-faint">{t('taskTable.noSummary')}</span> : task.summary}
+                  {task.imported && (
+                    <>
+                      {' '}
+                      <ImportedBadge assignee={task.assignee} />
+                    </>
+                  )}
+                </td>
                 <td className="py-3 pr-4 pl-2">
                   <StatusBadge task={task} />
                 </td>

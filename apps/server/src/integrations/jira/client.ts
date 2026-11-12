@@ -26,6 +26,8 @@ export interface JiraIssue {
   project: string | null;
   /** Última modificación en JIRA (ISO). */
   updated: string | null;
+  /** Nombre de la persona a la que está asignada, si lo hay. */
+  assignee?: string | null;
   url: string;
 }
 
@@ -79,7 +81,7 @@ interface RawIssueType {
   subtask?: boolean;
 }
 
-const FIELDS = ['summary', 'description', 'status', 'priority', 'issuetype', 'project', 'updated'];
+const FIELDS = ['summary', 'description', 'status', 'priority', 'issuetype', 'project', 'updated', 'assignee'];
 const PAGE_SIZE = 100;
 /** Tope de seguridad: con más incidencias asignadas la sincronización se corta aquí. */
 const MAX_ISSUES = 1000;
@@ -96,6 +98,7 @@ interface RawIssue {
     issuetype?: { name?: string } | null;
     project?: { key?: string; name?: string } | null;
     updated?: string;
+    assignee?: { displayName?: string } | null;
   };
 }
 
@@ -406,6 +409,7 @@ export class JiraClient {
       issueType: f.issuetype?.name ?? null,
       project: f.project?.name ?? f.project?.key ?? null,
       updated: f.updated ?? null,
+      assignee: f.assignee?.displayName ?? null,
       url: this.browseUrl(key),
     };
   }

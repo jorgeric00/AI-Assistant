@@ -5,6 +5,7 @@ import { openDatabase } from '../../db/client.js';
 import type { JiraClient, JiraIssue } from '../../integrations/jira/client.js';
 import { JiraError } from '../../integrations/jira/client.js';
 import { JiraSync } from './jira-sync.js';
+import { parseJiraRef } from './import.js';
 import { TasksRepository } from './repository.js';
 
 const issue = (key: string, extra: Partial<JiraIssue> = {}): JiraIssue => ({
@@ -38,10 +39,10 @@ function fakeClient(assigned: JiraIssue[], others: JiraIssue[] = []) {
   return { client, state };
 }
 
-async function setup(client: JiraClient | null) {
+async function setup(client: JiraClient | null, withClient = false) {
   const { db } = openDatabase(':memory:');
   const jiraSync = new JiraSync(db, new TasksRepository(db), client, 'assignee = currentUser()');
-  const app = await buildApp(db, { jiraSync });
+  const app = await buildApp(db, { jiraSync, jiraClient: withClient ? client : undefined });
   const get = async <T>(url: string) => (await app.inject({ method: 'GET', url })).json() as T;
   const sync = () => app.inject({ method: 'POST', url: '/api/jira/sync' });
   const note = async (taskKeys: string[]) =>
@@ -148,5 +149,51 @@ describe('tareas de JIRA', () => {
     expect(res.statusCode).toBe(503);
     expect(res.json().error).toContain('JIRA_URL');
     expect((await ctx.app.inject({ method: 'GET', url: '/api/tasks/ABC-404' })).statusCode).toBe(404);
+  });
+});
+
+describe('importar tareas de otra persona', () => {
+  it('saca la clave de un ID o de un enlace de JIRA', () => {
+    expect(parseJiraRef(' sgar-123 ')).toBe('SGAR-123');
+    expect(parseJiraRef('https://jira.empresa.com/browse/SGAR-123')).toBe('SGAR-123');
+    expect(parseJiraRef('https://jira-2.empresa.com/jira/browse/sgar-7?focusedId=5')).toBe('SGAR-7');
+    expect(parseJiraRef('https://jira.empresa.com/jira/software/projects/SGAR/boards/4?selectedIssue=SGAR-88')).toBe('SGAR-88');
+    expect(parseJiraRef('https://jira.empresa.com/')).toBeNull();
+    expect(parseJiraRef('hola')).toBeNull();
+  });
+
+  it('se mira, se importa, se actualiza con cada sincronización y se puede quitar', async () => {
+    const { client, state } = fakeClient([issue('ABC-1')], [issue('XYZ-9', { assignee: 'Luis Pérez' })]);
+    ctx = await setup(client, true);
+    const preview = await ctx.app.inject({ method: 'GET', url: `/api/tasks/import/preview?ref=${encodeURIComponent('https://jira/browse/xyz-9')}` });
+    expect(preview.json()).toMatchObject({ key: 'XYZ-9', assignee: 'Luis Pérez', inApp: false });
+    expect(await ctx.get<Task[]>('/api/tasks')).toEqual([]);
+
+    const imported = await ctx.app.inject({ method: 'POST', url: '/api/tasks/import', payload: { ref: 'XYZ-9' } });
+    expect(imported.statusCode).toBe(201);
+    expect(imported.json()).toMatchObject({ key: 'XYZ-9', imported: true, assignee: 'Luis Pérez', synced: true });
+    expect((await ctx.app.inject({ method: 'GET', url: '/api/tasks/import/preview?ref=XYZ-9' })).json()).toMatchObject({ inApp: true });
+
+    // La sincronización la actualiza y sigue siendo importada.
+    state.others = [issue('XYZ-9', { assignee: 'Luis Pérez', status: 'Hecha', statusCategory: 'indeterminate' })];
+    await ctx.sync();
+    const tasks = await ctx.get<Task[]>('/api/tasks');
+    expect(tasks.map((t) => [t.key, t.imported, t.status])).toEqual(expect.arrayContaining([['XYZ-9', true, 'Hecha'], ['ABC-1', false, 'En curso']]));
+
+    // Solo se quitan las importadas.
+    expect((await ctx.app.inject({ method: 'DELETE', url: '/api/tasks/ABC-1' })).statusCode).toBe(400);
+    expect((await ctx.app.inject({ method: 'DELETE', url: '/api/tasks/XYZ-9' })).statusCode).toBe(204);
+    expect((await ctx.get<Task[]>('/api/tasks')).map((t) => t.key)).toEqual(['ABC-1']);
+  });
+
+  it('explica si la tarea no existe o el enlace no vale, y no toca una que ya está en la app', async () => {
+    const { client } = fakeClient([issue('ABC-1')], [issue('ABC-1')]);
+    ctx = await setup(client, true);
+    await ctx.sync();
+    expect((await ctx.app.inject({ method: 'POST', url: '/api/tasks/import', payload: { ref: 'ABC-1' } })).json()).toMatchObject({ key: 'ABC-1', imported: false });
+    const missing = await ctx.app.inject({ method: 'POST', url: '/api/tasks/import', payload: { ref: 'ABC-404' } });
+    expect(missing.statusCode).toBe(400);
+    expect(missing.json().error).toContain('ABC-404');
+    expect((await ctx.app.inject({ method: 'GET', url: '/api/tasks/import/preview?ref=nada' })).statusCode).toBe(400);
   });
 });

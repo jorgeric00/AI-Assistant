@@ -114,6 +114,10 @@ export const es = {
   // Tareas
   'tasks.notFound': 'Tarea no encontrada',
   'tasks.noSummary': '{{key}} aún no tiene resumen',
+  'tasks.importBadRef': 'No encuentro una tarea de JIRA en «{{ref}}». Escribe su ID (SGAR-123) o el enlace.',
+  'tasks.importNotFound': 'JIRA no encuentra {{key}}, o tu usuario no tiene permiso para verla.',
+  'tasks.importNotConfigured': 'JIRA no está configurado.',
+  'tasks.removeNotImported': 'Solo se pueden quitar las tareas importadas.',
 
   // Repositorios
   'repos.notFound': 'Repositorio no encontrado',

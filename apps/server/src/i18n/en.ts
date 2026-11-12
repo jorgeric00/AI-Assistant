@@ -115,6 +115,10 @@ export const en: Messages = {
   // Tasks
   'tasks.notFound': 'Task not found',
   'tasks.noSummary': '{{key}} has no summary yet',
+  'tasks.importBadRef': 'I can\'t find a JIRA task in «{{ref}}». Enter its ID (SGAR-123) or its link.',
+  'tasks.importNotFound': "JIRA can't find {{key}}, or your user can't see it.",
+  'tasks.importNotConfigured': 'JIRA is not configured.',
+  'tasks.removeNotImported': 'Only imported tasks can be removed.',
 
   // Repositories
   'repos.notFound': 'Repository not found',

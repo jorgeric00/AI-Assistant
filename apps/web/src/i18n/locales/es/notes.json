@@ -79,7 +79,13 @@
     "notSyncedHint": "Aún sin sincronizar con JIRA. Se enlazará sola cuando llegue la tarea.",
     "commit": "Commit de la tarea (opcional)",
     "pinTop": "Fijar arriba en la lista",
-    "shortcuts": "<kbd>Ctrl+Enter</kbd> guardar · <kbd>Esc</kbd> cancelar"
+    "shortcuts": "<kbd>Ctrl+Enter</kbd> guardar · <kbd>Esc</kbd> cancelar",
+    "ai": "Mejorar con IA",
+    "aiWorking": "Redactando…",
+    "aiEmpty": "Escribe algo y la IA lo redacta mejor",
+    "aiUndo": "Deshacer la IA",
+    "aiHint": "La IA redacta mejor tu texto sin cambiar lo que dices.",
+    "aiDone": "Texto de la IA puesto. Aún no se ha guardado."
   },
   "linkTitle": {
     "loading": "Buscando el título de la página…",

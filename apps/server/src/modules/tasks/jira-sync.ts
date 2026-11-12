@@ -62,12 +62,14 @@ export class JiraSync {
       const issues = await client.search(this.jql);
       const found = new Set(issues.map((i) => i.key));
       // Claves de notas que no están en la JQL (p. ej. tareas de otra persona): se piden una a una.
-      for (const key of this.repo.unsyncedKeys().filter((k) => !found.has(k))) {
+      // Las importadas de otra persona también se actualizan.
+      const imported = new Set(this.repo.importedKeys().filter((k) => !found.has(k)));
+      for (const key of [...this.repo.unsyncedKeys(), ...imported].filter((k) => !found.has(k))) {
         // Una clave mal escrita o sin permiso no debe frenar el resto de la sincronización.
         const issue = await client.getIssue(key).catch(() => null);
         if (issue) issues.push(issue);
       }
-      this.repo.upsertFromJira(issues, syncedAt);
+      this.repo.upsertFromJira(issues, syncedAt, imported);
       const last: LastSync = { at: syncedAt, user, count: issues.length };
       this.db
         .insert(settings)

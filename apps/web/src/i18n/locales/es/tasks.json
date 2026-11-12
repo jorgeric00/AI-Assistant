@@ -234,7 +234,7 @@
   },
   "newTask": {
     "button": "Nueva tarea",
-    "title": "Nueva tarea en JIRA",
+    "title": "Nueva tarea",
     "subtitle": "Se crea en JIRA solo cuando pulses \"Crear en JIRA\".",
     "project": "Proyecto",
     "projectHint": "Recuerda el último que usaste.",
@@ -278,6 +278,33 @@
     "shortcuts": "<kbd>Esc</kbd> cerrar · <kbd>Ctrl+Enter</kbd> crear",
     "creating": "Creando…",
     "create": "Crear en JIRA",
-    "createdWithWarnings": "Se creó {{key}}, pero:\n{{warnings}}"
+    "createdWithWarnings": "Se creó {{key}}, pero:\n{{warnings}}",
+    "modeLabel": "Qué hacer",
+    "mode": {
+      "create": "Crear en JIRA",
+      "import": "Importar de JIRA"
+    }
+  },
+  "import": {
+    "subtitle": "Trae a la app una tarea que no es tuya, para tenerla a mano con sus notas, documentación y sesión de opencode.",
+    "ref": "ID o enlace de JIRA",
+    "placeholder": "SGAR-123 o https://jira.empresa.com/browse/SGAR-123",
+    "hint": "Vale el ID o el enlace de la tarea en JIRA, también el de un tablero con selectedIssue.",
+    "search": "Buscar",
+    "searching": "Buscando…",
+    "assignedTo": "Asignada a {{name}}",
+    "unassigned": "Sin asignar",
+    "project": "Proyecto {{project}}",
+    "run": "Importar a la app",
+    "importing": "Importando…",
+    "noChanges": "No cambia nada en JIRA.",
+    "open": "Abrir la tarea",
+    "inApp": "Ya está en la app.",
+    "close": "Cerrar",
+    "badge": "Importada",
+    "badgeFrom": "Importada · de {{name}}",
+    "remove": "Quitar de la app",
+    "removeHint": "Solo la quita de la app; no cambia nada en JIRA.",
+    "confirmRemove": "¿Quitar {{key}} de la app? Se van sus vínculos con notas. En JIRA no cambia nada."
   }
 }
