@@ -79,7 +79,13 @@
     "notSyncedHint": "Not synced with JIRA yet. It will link automatically when the task arrives.",
     "commit": "Task commit (optional)",
     "pinTop": "Pin to the top of the list",
-    "shortcuts": "<kbd>Ctrl+Enter</kbd> save · <kbd>Esc</kbd> cancel"
+    "shortcuts": "<kbd>Ctrl+Enter</kbd> save · <kbd>Esc</kbd> cancel",
+    "ai": "Improve with AI",
+    "aiWorking": "Writing…",
+    "aiEmpty": "Write something and the AI will word it better",
+    "aiUndo": "Undo AI",
+    "aiHint": "The AI words your text better without changing what you say.",
+    "aiDone": "AI text applied. Not saved yet."
   },
   "linkTitle": {
     "loading": "Fetching the page title…",

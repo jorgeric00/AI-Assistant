@@ -3,6 +3,7 @@ import type { PrAlert, PrDetail, PrList, PullRequestInfo } from '@dev-assistant/
 import { buildApp } from '../../app.js';
 import { openDatabase } from '../../db/client.js';
 import { GithubClient, normalizePr, type GhPullRequest } from '../../integrations/github/client.js';
+import { TasksRepository } from '../tasks/repository.js';
 import { PrWatcher, taskKeyOf } from './watcher.js';
 
 const base = (over: Partial<GhPullRequest> = {}): GhPullRequest => ({
@@ -24,10 +25,14 @@ const base = (over: Partial<GhPullRequest> = {}): GhPullRequest => ({
 
 /** Cliente falso: devuelve en cada consulta lo que diga `open`, y `byId` para las que ya no están abiertas. */
 function fakeClient() {
-  const state = { open: [] as GhPullRequest[], closed: [] as GhPullRequest[], byId: new Map<string, GhPullRequest>() };
+  const state = { open: [] as GhPullRequest[], others: [] as GhPullRequest[], searchedKeys: [] as string[][], closed: [] as GhPullRequest[], byId: new Map<string, GhPullRequest>() };
   const client = {
     warnings: [] as string[],
     myOpenPrs: async () => ({ login: 'jorge', prs: state.open }),
+    openPrsWithKeys: async (keys: string[]) => {
+      state.searchedKeys.push(keys);
+      return state.others;
+    },
     prsByIds: async (ids: string[]) => ids.flatMap((id) => state.byId.get(id) ?? []),
     myClosedPrs: async () => ({ login: 'jorge', prs: state.closed }),
   } as unknown as GithubClient;
@@ -44,7 +49,7 @@ async function setup() {
   const app = await buildApp(db, { prWatcher: watcher });
   const get = async <T>(url: string) => (await app.inject({ method: 'GET', url })).json<T>();
   const put = async (url: string, payload: object) => app.inject({ method: 'PUT', url, payload });
-  return { app, gh, watcher, notified, get, put };
+  return { app, db, gh, watcher, notified, get, put };
 }
 
 let ctx: Awaited<ReturnType<typeof setup>>;
@@ -162,6 +167,67 @@ describe('GitHub', () => {
       new Response(JSON.stringify({ errors: [{ message: 'Resource protected by organization SAML enforcement.' }] }), { status: 200 }),
     );
     await expect(client.myOpenPrs()).rejects.toThrow(/SSO/);
+  });
+});
+
+describe('PR de otras personas con la clave de una tarea', () => {
+  const boss = () => base({ id: 'PR_B', number: 1130, repo: 'acme/lib-orders', title: '[ABC-131] Algoritmo en la librería', headRef: 'feature/algoritmo', author: 'jefe', checks: 'failure', failingChecks: ['build'] });
+
+  it('salen en su tarea, pero no en tus PR y no avisan', async () => {
+    ctx = await setup();
+    new TasksRepository(ctx.db).upsertFromJira(
+      [{ key: 'ABC-131', summary: 'Exportar', description: null, status: 'En curso', statusCategory: 'indeterminate', priority: null, issueType: null, project: null, updated: null, url: 'u' }],
+      '2026-10-06T10:00:00Z',
+    );
+    ctx.gh.state.open = [base()];
+    ctx.gh.state.others = [boss()];
+    await ctx.watcher.check();
+    ctx.gh.state.others = [boss()];
+    await ctx.watcher.check();
+
+    // Se buscó por la clave de la tarea abierta.
+    expect(ctx.gh.state.searchedKeys[0]).toEqual(['ABC-131']);
+    const forTask = await ctx.get<PullRequestInfo[]>('/api/tasks/ABC-131/prs');
+    expect(forTask.map((p) => [p.number, p.mine, p.author])).toEqual(expect.arrayContaining([[1130, false, 'jefe'], [212, true, null]]));
+    expect((await ctx.get<PrList>('/api/prs')).prs.map((p) => p.number)).toEqual([212]);
+    expect(await ctx.get<PrAlert[]>('/api/pr-alerts')).toEqual([]);
+    expect(ctx.notified).toEqual([]);
+
+    // Cuando se mergea se actualiza, aunque ya no salga en la búsqueda de abiertas.
+    ctx.gh.state.others = [];
+    ctx.gh.state.byId.set('PR_B', { ...boss(), state: 'merged' });
+    await ctx.watcher.check();
+    expect((await ctx.get<PullRequestInfo[]>('/api/tasks/ABC-131/prs')).find((p) => p.number === 1130)).toMatchObject({ state: 'merged', mine: false });
+    expect(await ctx.get<PrAlert[]>('/api/pr-alerts')).toEqual([]);
+  });
+
+  it('si la búsqueda falla, sigue con tus PR y deja el motivo', async () => {
+    ctx = await setup();
+    new TasksRepository(ctx.db).upsertFromJira(
+      [{ key: 'ABC-131', summary: 'Exportar', description: null, status: 'En curso', statusCategory: 'indeterminate', priority: null, issueType: null, project: null, updated: null, url: 'u' }],
+      '2026-10-06T10:00:00Z',
+    );
+    ctx.gh.state.open = [base()];
+    (ctx.gh.client as unknown as { openPrsWithKeys: () => Promise<never> }).openPrsWithKeys = async () => Promise.reject(new Error('rate limit'));
+    await ctx.watcher.check();
+    expect((await ctx.get<PrList>('/api/prs')).prs).toHaveLength(1);
+    expect(ctx.watcher.status().lastError).toBe('rate limit');
+  });
+
+  it('la búsqueda en GitHub va de 5 en 5 claves y descarta las que no llevan la clave exacta en el título', async () => {
+    const queries: string[] = [];
+    const node = (n: number, title: string) => ({
+      id: `PR_${n}`, number: n, title, url: `u${n}`, state: 'OPEN', isDraft: false, headRefName: 'x', updatedAt: '2026-10-06T10:00:00Z', author: { login: 'jefe' },
+      repository: { nameWithOwner: 'acme/lib' }, commits: { nodes: [] }, reviews: { nodes: [] }, comments: { nodes: [] },
+    });
+    const client = new GithubClient({ token: 't' }, async (_url, init) => {
+      const q = (JSON.parse(String(init?.body)) as { variables: { q: string } }).variables.q;
+      queries.push(q);
+      return new Response(JSON.stringify({ data: { search: { nodes: q.includes('"A-1"') ? [node(1, '[A-1] bien'), node(2, '[A-10] otra tarea'), null, {}] : [] } } }), { status: 200 });
+    });
+    const prs = await client.openPrsWithKeys(['A-1', 'A-2', 'A-3', 'A-4', 'A-5', 'A-6'], 'jorge');
+    expect(queries).toEqual(['is:pr is:open in:title ("A-1" OR "A-2" OR "A-3" OR "A-4" OR "A-5")', 'is:pr is:open in:title ("A-6")']);
+    expect(prs.map((p) => [p.number, p.author])).toEqual([[1, 'jefe']]);
   });
 });
 

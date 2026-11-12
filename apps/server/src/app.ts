@@ -27,6 +27,7 @@ import { JiraSync } from './modules/tasks/jira-sync.js';
 import { JiraCreateService } from './modules/tasks/jira-create.js';
 import { JiraUpdateService } from './modules/tasks/jira-update.js';
 import { TasksRepository } from './modules/tasks/repository.js';
+import { TaskImportService } from './modules/tasks/import.js';
 import { tasksRoutes } from './modules/tasks/routes.js';
 import { PrWatcher } from './modules/prs/watcher.js';
 import { PrFixService } from './modules/prs/fix.js';
@@ -131,6 +132,7 @@ export async function buildApp(db: Db, opts: BuildAppOptions = {}) {
     jiraSync: opts.jiraSync ?? new JiraSync(db, tasksRepo, null, ''),
     jiraUpdates: new JiraUpdateService(db, tasksRepo, opts.jiraClient ?? null, opts.llm ?? noLlm, devAssistantHome),
     jiraCreate: new JiraCreateService(db, tasksRepo, opts.jiraClient ?? null, opts.llm ?? noLlm),
+    taskImport: new TaskImportService(tasksRepo, opts.jiraClient ?? null),
     devAssistantHome,
     sessions,
   });

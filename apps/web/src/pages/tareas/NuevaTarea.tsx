@@ -8,6 +8,7 @@ import { Modal } from '../../components/Modal';
 import { TagInput } from '../../components/TagInput';
 import { inputClass, primaryButtonClass, secondaryButtonClass } from '../../components/fields';
 import { navigate } from '../../sections';
+import { ImportarTarea } from './ImportarTarea';
 
 const hint = 'text-small text-ink-faint';
 const select = `${inputClass} w-full [color-scheme:dark] disabled:text-ink-faint`;
@@ -26,6 +27,7 @@ function useDebounced<T>(value: T, ms: number): T {
 export function NuevaTareaDialog({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation(['tasks', 'common']);
   const queryClient = useQueryClient();
+  const [mode, setMode] = useState<'create' | 'import'>('create');
   const projects = useQuery({ queryKey: queryKeys.jiraCreateProjects, queryFn: api.jiraCreateProjects, retry: false });
 
   const [project, setProject] = useState('');
@@ -131,13 +133,32 @@ export function NuevaTareaDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <Modal labelledBy="nueva-tarea-titulo" onClose={onClose} width="max-w-[680px]">
-      <form onSubmit={submit} className="flex flex-col gap-5">
+      <div className="flex flex-col gap-5">
         <div className="flex flex-col gap-1">
           <h1 id="nueva-tarea-titulo" className="m-0 text-title font-semibold">
             {t('newTask.title')}
           </h1>
-          <p className="m-0 text-ink-muted">{t('newTask.subtitle')}</p>
+          <div role="tablist" aria-label={t('newTask.modeLabel')} className="mt-1.5 flex gap-0.5 self-start rounded-md bg-surface-raised p-0.5">
+            {(['create', 'import'] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                role="tab"
+                aria-selected={mode === m}
+                onClick={() => setMode(m)}
+                className={`h-8 rounded-sm px-3 text-small ${mode === m ? 'bg-line text-ink' : 'text-ink-muted hover:text-ink'}`}
+              >
+                {t(`newTask.mode.${m}`)}
+              </button>
+            ))}
+          </div>
+          <p className="m-0 mt-1.5 text-ink-muted">{mode === 'import' ? t('import.subtitle') : t('newTask.subtitle')}</p>
         </div>
+
+        {mode === 'import' ? (
+          <ImportarTarea onClose={onClose} />
+        ) : (
+      <form onSubmit={submit} className="flex flex-col gap-5">
 
         {loadError && (
           <p role="alert" className="m-0 flex items-start gap-2 rounded-md border border-line p-3 text-danger">
@@ -343,6 +364,8 @@ export function NuevaTareaDialog({ onClose }: { onClose: () => void }) {
           </div>
         </div>
       </form>
+        )}
+      </div>
     </Modal>
   );
 }

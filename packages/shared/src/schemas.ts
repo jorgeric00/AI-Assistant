@@ -221,6 +221,15 @@ export const AskInput = z.object({
 });
 export type AskInput = z.input<typeof AskInput>;
 
+export const RewriteInput = z.object({
+  text: z.string().trim().min(1, 'Escribe algo y la IA lo redacta mejor').max(20000, 'El texto es demasiado largo'),
+});
+export type RewriteInput = z.input<typeof RewriteInput>;
+
+export interface RewriteResult {
+  text: string;
+}
+
 export interface AskSource {
   /** Número con el que la respuesta la cita: [1], [2]... */
   ref: number;
@@ -260,6 +269,25 @@ export interface Task {
   updatedAt: string | null;
   /** false mientras la tarea solo existe como clave escrita en una nota. */
   synced: boolean;
+  /** Tarea que no era mía y se trajo con «Importar de JIRA». */
+  imported: boolean;
+  /** A quién está asignada en JIRA, si se sabe. */
+  assignee: string | null;
+}
+
+/** ID o enlace de JIRA de la tarea que se quiere importar. */
+export const TaskImportInput = z.object({ ref: z.string().trim().min(1, 'Escribe el ID o el enlace de la tarea').max(500) });
+export type TaskImportInput = z.input<typeof TaskImportInput>;
+
+export interface TaskImportPreview {
+  key: string;
+  summary: string;
+  issueType: string | null;
+  status: string;
+  assignee: string | null;
+  project: string | null;
+  /** Ya está en la app: en vez de importarla se abre. */
+  inApp: boolean;
 }
 
 export interface TaskNoteLink {
@@ -625,6 +653,10 @@ export interface PullRequestInfo {
   updatedAt: string;
   /** false = no avisa en Hoy ni con notificaciones. */
   watched: boolean;
+  /** Quién la abrió en GitHub. */
+  author: string | null;
+  /** false = la abrió otra persona: solo sale en su tarea. */
+  mine: boolean;
 }
 
 export const PR_LIST_FILTERS = ['open', 'merged', 'closed', 'all'] as const;

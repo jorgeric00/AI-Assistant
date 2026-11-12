@@ -214,6 +214,7 @@ export function TaskPullRequests({ taskKey, className }: { taskKey: string; clas
                   {repoName(pr.repo)} #{pr.number} ↗
                 </span>
                 <span className="break-words text-ink">{pr.title}</span>
+                {!pr.mine && pr.author && <span className="text-small text-ink-muted">{t('taskPrs.by', { name: pr.author })}</span>}
               </a>
               <span className="rounded-sm border border-line-strong px-1.5 py-0.5 text-small whitespace-nowrap text-ink-muted">{stateLabel(pr, t)}</span>
               {pr.state === 'open' && <Checks pr={pr} />}

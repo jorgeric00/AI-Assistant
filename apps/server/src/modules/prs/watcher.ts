@@ -2,10 +2,10 @@
 // anterior. Lo que cambia (CI en rojo, comentarios o revisiones de otros, cambios pedidos, aprobada,
 // mergeada) queda como aviso en la app (tarjeta de Hoy) y sale como notificación del sistema.
 import type { FastifyBaseLogger } from 'fastify';
-import { and, desc, eq, gte, inArray } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNull, ne, or } from 'drizzle-orm';
 import type { PrAlert, PrAlertKind, PrDetail, PrFailures, PrList, PrListFilter, PrWatchStatus, PullRequestInfo } from '@dev-assistant/shared';
 import type { Db } from '../../db/client.js';
-import { prAlerts, pullRequests, settings } from '../../db/schema.js';
+import { prAlerts, pullRequests, settings, tasks } from '../../db/schema.js';
 import { GithubError, type GhPullRequest, type GithubClient } from '../../integrations/github/client.js';
 import { t } from '../../i18n/index.js';
 
@@ -71,7 +71,7 @@ export function diffPr(prev: PrRow, pr: GhPullRequest): { alerts: NewAlert[]; cu
 }
 
 /** Lo que se guarda de una PR (sin `watched`, que solo cambia el usuario). */
-function rowValues(pr: GhPullRequest, now: string, cursor: string | null) {
+function rowValues(pr: GhPullRequest, now: string, cursor: string | null, me: string) {
   return {
     repo: pr.repo,
     number: pr.number,
@@ -80,6 +80,8 @@ function rowValues(pr: GhPullRequest, now: string, cursor: string | null) {
     state: pr.state,
     isDraft: pr.isDraft,
     headRef: pr.headRef,
+    author: pr.author,
+    mine: !pr.author || pr.author.toLowerCase() === me.toLowerCase(),
     taskKey: taskKeyOf(pr.headRef, pr.title),
     checks: pr.checks,
     failingChecks: pr.failingChecks,
@@ -100,6 +102,7 @@ function latestActivity(pr: GhPullRequest): string | null {
 export class PrWatcher {
   private running: Promise<void> | null = null;
   private lastError: string | null = null;
+  private searchWarning: string | null = null;
 
   constructor(
     private readonly db: Db,
@@ -128,7 +131,10 @@ export class PrWatcher {
   private async run(client: GithubClient) {
     try {
       const now = new Date().toISOString();
-      const { login, prs } = await client.myOpenPrs();
+      const { login, prs: mine } = await client.myOpenPrs();
+      // Las de otras personas con la clave de una de tus tareas abiertas en el título: solo se enseñan en la tarea.
+      const others = await this.othersWithTaskKeys(client, login, new Set(mine.map((p) => p.id)));
+      const prs = [...mine, ...others];
       const openIds = new Set(prs.map((p) => p.id));
       // Las que estaban abiertas y ya no salen: se mergearon o se cerraron.
       const gone = this.db
@@ -147,11 +153,14 @@ export class PrWatcher {
           const prev = tx.select().from(pullRequests).where(eq(pullRequests.id, pr.id)).get();
           let alerts: NewAlert[] = [];
           let cursor = latestActivity(pr);
+          const values0 = rowValues(pr, now, cursor, login);
           if (prev) {
             ({ alerts, cursor } = diffPr(prev, pr));
             if (pr.state === 'merged' && prev.state !== 'merged') alerts.push({ kind: 'merged', title: t('prs.alert.merged'), detail: null });
           }
-          const values = rowValues(pr, now, cursor);
+          // De las PR de otras personas no se avisa.
+          if (!values0.mine) alerts = [];
+          const values = { ...values0, activityCursor: cursor };
           tx.insert(pullRequests)
             .values({ id: pr.id, ...values })
             .onConflictDoUpdate({ target: pullRequests.id, set: values })
@@ -165,7 +174,8 @@ export class PrWatcher {
         const status: StoredStatus = { user: login, lastCheckedAt: now };
         tx.insert(settings).values({ key: STATUS_KEY, valueJson: status }).onConflictDoUpdate({ target: settings.key, set: { valueJson: status } }).run();
       });
-      this.lastError = warning;
+      this.lastError = warning ?? this.searchWarning;
+      this.searchWarning = null;
 
       for (const { pr, alert } of fired) {
         const repo = pr.repo.split('/').pop();
@@ -174,6 +184,28 @@ export class PrWatcher {
     } catch (err) {
       this.lastError = err instanceof Error ? err.message : String(err);
       throw err;
+    }
+  }
+
+  /** Claves de las tareas sin terminar, que son las que se buscan en los títulos de las PR. */
+  private openTaskKeys(): string[] {
+    return this.db
+      .select({ key: tasks.jiraKey })
+      .from(tasks)
+      .where(or(isNull(tasks.statusCategory), ne(tasks.statusCategory, 'done')))
+      .all()
+      .map((r) => r.key);
+  }
+
+  /** Si la búsqueda falla (límite de GitHub, permisos) la comprobación sigue con tus PR y queda el motivo. */
+  private async othersWithTaskKeys(client: GithubClient, login: string, known: Set<string>): Promise<GhPullRequest[]> {
+    const keys = this.openTaskKeys();
+    if (!keys.length) return [];
+    try {
+      return (await client.openPrsWithKeys(keys, login)).filter((p) => !known.has(p.id));
+    } catch (err) {
+      this.searchWarning = err instanceof Error ? err.message : String(err);
+      return [];
     }
   }
 
@@ -207,12 +239,12 @@ export class PrWatcher {
     let error: string | null = null;
     if (filter !== 'open' && this.client) {
       try {
-        const { prs } = await this.client.myClosedPrs();
+        const { login, prs } = await this.client.myClosedPrs();
         const now = new Date().toISOString();
         this.db.transaction((tx) => {
           for (const pr of prs) {
             const prev = tx.select().from(pullRequests).where(eq(pullRequests.id, pr.id)).get();
-            const values = rowValues(pr, now, prev ? prev.activityCursor : latestActivity(pr));
+            const values = rowValues(pr, now, prev ? prev.activityCursor : latestActivity(pr), login);
             tx.insert(pullRequests).values({ id: pr.id, ...values }).onConflictDoUpdate({ target: pullRequests.id, set: values }).run();
           }
         });
@@ -225,7 +257,7 @@ export class PrWatcher {
     const prs = this.db
       .select()
       .from(pullRequests)
-      .where(inArray(pullRequests.state, [...states]))
+      .where(and(inArray(pullRequests.state, [...states]), eq(pullRequests.mine, true)))
       .orderBy(desc(pullRequests.updatedAt))
       .all()
       .map(toInfo);

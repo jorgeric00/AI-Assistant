@@ -1,11 +1,14 @@
 import type { FastifyInstance, FastifyReply } from 'fastify';
+import { eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { JiraCreateDraftInput, JiraDraftInput, JiraKey, JiraUpdateInput, ProjectKey, TaskListQuery, type JiraSyncStatus } from '@dev-assistant/shared';
+import { JiraCreateDraftInput, JiraDraftInput, JiraKey, JiraUpdateInput, ProjectKey, TaskImportInput, TaskListQuery, type JiraSyncStatus } from '@dev-assistant/shared';
 import { t } from '../../i18n/index.js';
-import { readTaskDevInfo } from './dev-files.js';
+import { readTaskDevInfo, withReadyStepDone } from './dev-files.js';
 import { getTaskDoc, listTaskDocs } from './task-docs.js';
 import type { Db } from '../../db/client.js';
+import { pullRequests } from '../../db/schema.js';
 import type { JiraSync } from './jira-sync.js';
+import { TaskImportError, type TaskImportService } from './import.js';
 import { JiraCreateInputError, type JiraCreateService } from './jira-create.js';
 import { JiraUpdateInputError, type JiraUpdateService } from './jira-update.js';
 import { TasksRepository } from './repository.js';
@@ -23,14 +26,23 @@ export async function tasksRoutes(
     jiraSync,
     jiraUpdates,
     jiraCreate,
+    taskImport,
     devAssistantHome,
     sessions,
-  }: { db: Db; jiraSync: JiraSync; jiraUpdates: JiraUpdateService; jiraCreate: JiraCreateService; devAssistantHome: string; sessions: DevSessionService },
+  }: {
+    db: Db;
+    jiraSync: JiraSync;
+    jiraUpdates: JiraUpdateService;
+    jiraCreate: JiraCreateService;
+    taskImport: TaskImportService;
+    devAssistantHome: string;
+    sessions: DevSessionService;
+  },
 ) {
   const repo = new TasksRepository(db);
   const status = (): JiraSyncStatus => ({ ...jiraSync.status(), ...jiraUpdates.writerStatus() });
   const badInput = (reply: FastifyReply) => (err: unknown) => {
-    if (err instanceof JiraUpdateInputError || err instanceof JiraCreateInputError) return reply.code(400).send({ error: err.message });
+    if (err instanceof JiraUpdateInputError || err instanceof JiraCreateInputError || err instanceof TaskImportError) return reply.code(400).send({ error: err.message });
     throw err;
   };
 
@@ -39,10 +51,32 @@ export async function tasksRoutes(
   // Proyectos de las tareas cargadas, para elegirlos en la ficha de un repositorio.
   app.get('/api/tasks/projects', async () => repo.projects());
 
+  // Importar una tarea de otra persona: se mira primero (preview) y luego se guarda.
+  app.get('/api/tasks/import/preview', async (req, reply) =>
+    taskImport.preview(TaskImportInput.parse(req.query).ref).catch(badInput(reply)),
+  );
+  app.post('/api/tasks/import', async (req, reply) => {
+    const task = await taskImport.import(TaskImportInput.parse(req.body).ref).catch(badInput(reply));
+    return task && reply.code(201).send(task);
+  });
+
+  // Solo se pueden quitar las importadas; las propias vuelven con la siguiente sincronización.
+  app.delete('/api/tasks/:key', async (req, reply) =>
+    repo.removeImported(KeyParams.parse(req.params).key) ? reply.code(204).send() : reply.code(400).send({ error: t('tasks.removeNotImported') }),
+  );
+
   app.get('/api/tasks/:key', async (req, reply) => repo.get(KeyParams.parse(req.params).key) ?? reply.code(404).send({ error: t('tasks.notFound') }));
 
   // Plan e histórico que escribe opencode en la carpeta de la tarea (aunque la tarea no esté sincronizada).
-  app.get('/api/tasks/:key/dev', async (req) => readTaskDevInfo(devAssistantHome, KeyParams.parse(req.params).key));
+  app.get('/api/tasks/:key/dev', async (req) => {
+    const { key } = KeyParams.parse(req.params);
+    const info = await readTaskDevInfo(devAssistantHome, key);
+    if (!info.plan) return info;
+    // El paso final del plan lo marca la app si las PR y JIRA ya están como dice, lo haya hecho opencode o el usuario.
+    const task = repo.get(key);
+    const prs = db.select({ state: pullRequests.state, isDraft: pullRequests.isDraft }).from(pullRequests).where(eq(pullRequests.taskKey, key)).all();
+    return { ...info, plan: withReadyStepDone(info.plan, { prs, jiraStatus: task?.synced ? task.status : null, jiraDone: task?.statusCategory === 'done' }) };
+  });
 
   // Documentación de tareas: el RESUMEN.md que escribe opencode al cerrar cada tarea.
   app.get('/api/task-docs', async (req) => listTaskDocs(devAssistantHome, z.object({ q: z.string().trim().optional() }).parse(req.query).q));

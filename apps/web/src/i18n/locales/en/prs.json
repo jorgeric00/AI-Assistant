@@ -30,7 +30,8 @@
     "title": "Pull requests",
     "fromGithub": "From GitHub",
     "fromGithubChecked": "From GitHub · checked {{when}}",
-    "empty": "No PRs with {{taskKey}} in the branch or title yet."
+    "empty": "No PRs with {{taskKey}} in the branch or title yet.",
+    "by": "Opened by {{name}}"
   },
   "failures": {
     "title": "Failing checks",

@@ -157,3 +157,21 @@ describe('Pregunta sobre todo', () => {
     expect((await ctx.post('/api/search/ask', { question: '¿Qué separador usa el CSV?', sources: [] })).statusCode).toBe(400);
   });
 });
+
+describe('Mejorar con IA', () => {
+  it('redacta el texto sin enviarle más que el texto y quita el bloque de código que lo envuelva', async () => {
+    const { llm, calls } = fakeLlm('```markdown\n## Desplegar\n\n1. Merge a `release`.\n```');
+    ctx = await setup(llm);
+    const res = await ctx.post('/api/ai/rewrite', { text: '  para desplegar hacer merge a release  ' });
+    expect(res.json()).toEqual({ text: '## Desplegar\n\n1. Merge a `release`.' });
+    expect(calls[0]!.user).toBe('para desplegar hacer merge a release');
+    expect(calls[0]!.system).toContain('SOLO con el texto ya redactado');
+  });
+
+  it('con el texto vacío no llama a la IA', async () => {
+    const { llm, calls } = fakeLlm('x');
+    ctx = await setup(llm);
+    expect((await ctx.post('/api/ai/rewrite', { text: '   ' })).statusCode).toBe(400);
+    expect(calls).toHaveLength(0);
+  });
+});

@@ -116,6 +116,7 @@ En cualquier otro caso, sigue el flujo de desarrollo (secciones 1 a 4). Si no es
 18. Si lo valida, **pregunta al usuario** si pasas las PR a "ready for review". Cuando lo confirme:
     - Pasa cada PR a "ready for review" con el MCP de GitHub.
     - En JIRA, pasa la tarea a "In Review" y añade un comentario con un resumen del cambio y el enlace a cada PR.
+    - Marca en `PLAN.md` el paso «PR en "ready for review" y JIRA en "In Review"» (y el de la validación del usuario si seguía sin marcar).
 19. Escribe `RESUMEN.md` en la carpeta de la tarea con el formato de abajo: es la documentación de la tarea
     que AI-Assistant enseña en "Documentación". Si ya existe (la tarea se retomó), actualízalo entero.
 20. Ahí termina tu trabajo: la revisión y el merge son de las personas.

@@ -9,6 +9,7 @@ import { primaryButtonClass, secondaryButtonClass } from '../../components/field
 import { dayAndTime, timeAgo } from '../../dates';
 import { TaskPullRequests } from '../prs/PrWidgets';
 import { ActualizarJiraButton, JiraUpdatesList } from './ActualizarJira';
+import { ImportedBadge, RemoveImportedButton } from './ImportarTarea';
 
 const card = 'flex min-w-0 flex-col gap-4 rounded-lg border border-line bg-surface p-4';
 const caption = 'text-small text-ink-muted';
@@ -94,6 +95,7 @@ function Header({ task }: { task: TaskDetail }) {
         <h1 className="m-0 text-display font-semibold break-words">{task.summary}</h1>
         <div className={`flex flex-wrap items-center gap-2 ${caption}`}>
           {task.synced && <span className="rounded-sm border border-line-strong px-1.5 py-0.5 whitespace-nowrap">{task.status}</span>}
+          {task.imported && <ImportedBadge assignee={task.assignee} />}
           {meta.map((m, i) => (
             <span key={i}>
               {i > 0 && '· '}
@@ -107,6 +109,7 @@ function Header({ task }: { task: TaskDetail }) {
           <SquareTerminal size={16} strokeWidth={1.5} aria-hidden />
           {t('shared.devSession')}
         </a>
+        {task.imported && <RemoveImportedButton taskKey={task.key} />}
         <ActualizarJiraButton task={task} className={primaryButtonClass} />
       </div>
     </header>

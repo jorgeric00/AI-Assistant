@@ -94,26 +94,25 @@ function TerminalButton({ taskKey, session }: { taskKey: string; session: DevSes
   );
 }
 
-/** Antes de empezar: analizar la incidencia (sin tocar código) o el desarrollo de siempre. */
+/** Antes de empezar: el desarrollo de siempre y, solo si la tarea es una incidencia en JIRA, analizarla sin tocar código. */
 function StartOptions({ chat, disabled, submit }: { chat: TaskChat | undefined; disabled: boolean; submit: (text: string) => void }) {
   const { t } = useTranslation('tasks');
-  const analysisFirst = !!chat?.suggestAnalysis;
+  const isIncident = !!chat?.suggestAnalysis;
+  const analysisFirst = isIncident;
   const options = [
-    {
+    ...(isIncident ? [{
       id: 'analysis',
       title: t('session.chat.analysis.title'),
       body: t('session.chat.analysis.body'),
       action: t('session.chat.analysis.start'),
       prompt: chat?.analysisPrompt,
       recommended: analysisFirst,
-    },
+    }] : []),
     { id: 'development', title: t('session.chat.development.title'), body: t('session.chat.emptyBody'), action: t('session.chat.start'), prompt: chat?.starterPrompt, recommended: !analysisFirst },
   ];
-  // La recomendada va primero.
-  if (!analysisFirst) options.reverse();
   return (
     <div className="flex flex-col gap-3">
-      <p className="m-0 font-medium">{t('session.chat.emptyTitle')}</p>
+      <p className="m-0 font-medium">{isIncident ? t('session.chat.emptyTitle') : t('session.chat.emptyTitleDev')}</p>
       <div className="flex flex-wrap gap-3">
         {options.map((o) => (
           <div key={o.id} className={`flex min-w-[260px] flex-1 flex-col gap-2 rounded-lg border bg-bg p-3.5 ${o.recommended ? 'border-info' : 'border-line'}`}>

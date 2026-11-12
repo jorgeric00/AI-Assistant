@@ -24,6 +24,7 @@ const raw = (key: string, extra: object = {}) => ({
     issuetype: { name: 'Historia' },
     project: { key: 'ABC', name: 'Proyecto ABC' },
     updated: '2026-10-05T10:00:00.000+0200',
+    assignee: { displayName: 'Luis Pérez' },
     ...extra,
   },
 });
@@ -53,6 +54,7 @@ describe('cliente de JIRA', () => {
       issueType: 'Historia',
       project: 'Proyecto ABC',
       updated: '2026-10-05T10:00:00.000+0200',
+      assignee: 'Luis Pérez',
       url: 'https://jira.empresa.com/browse/ABC-1',
     });
   });

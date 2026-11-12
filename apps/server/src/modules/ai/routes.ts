@@ -1,11 +1,12 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { AskInput, DailySummaryInput, IsoDate } from '@dev-assistant/shared';
+import { AskInput, DailySummaryInput, IsoDate, RewriteInput } from '@dev-assistant/shared';
 import type { Db } from '../../db/client.js';
 import type { Llm } from '../../integrations/opencode/llm.js';
 import type { DiaryFeed } from '../journal/feed.js';
 import { AskService } from './ask.js';
 import { DailySummaryService, NothingToSummarizeError } from './daily-summary.js';
+import { RewriteService } from './rewrite.js';
 
 const DateQuery = z.object({ date: IsoDate });
 
@@ -16,6 +17,7 @@ export async function aiRoutes(
 ) {
   const daily = new DailySummaryService(db, llm);
   const ask = new AskService(db, llm, devAssistantHome);
+  const rewriter = new RewriteService(llm);
 
   app.get('/api/daily-summary', async (req) => daily.latest(DateQuery.parse(req.query).date));
 
@@ -36,4 +38,6 @@ export async function aiRoutes(
     if (sources.includes('diary')) await diaryFeed.importCommits();
     return ask.ask(question, sources);
   });
+
+  app.post('/api/ai/rewrite', async (req) => rewriter.rewrite(RewriteInput.parse(req.body).text));
 }

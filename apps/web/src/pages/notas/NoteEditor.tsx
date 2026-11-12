@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { CommitRef, Note, NoteKind } from '@dev-assistant/shared';
-import { CircleCheck, CircleAlert, LoaderCircle } from 'lucide-react';
+import { CircleCheck, CircleAlert, LoaderCircle, Sparkles } from 'lucide-react';
 import { useEffect, useId, useState, type FormEvent } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { api, queryKeys } from '../../api';
@@ -59,6 +59,16 @@ function EditorForm({ note, newKind }: { note?: Note; newKind: NoteKind }) {
   const [mode, setMode] = useState<'write' | 'preview'>('write');
   const [error, setError] = useState<string | null>(null);
   const linkTitle = useLinkTitle(title, setTitle);
+  // Lo que había escrito antes de que la IA reemplazara el texto; se pierde al seguir escribiendo.
+  const [beforeAi, setBeforeAi] = useState<string | null>(null);
+  const improve = useMutation({
+    mutationFn: (text: string) => api.rewriteText(text),
+    onSuccess: (result, original) => {
+      setBeforeAi(original);
+      setBodyMd(result.text);
+      setMode('write');
+    },
+  });
 
   const taskKeys = kind === 'doc' ? [] : parseTaskKeys(taskText);
   // El commit es de la primera tarea vinculada.
@@ -178,6 +188,29 @@ function EditorForm({ note, newKind }: { note?: Note; newKind: NoteKind }) {
             <span id={`${ids}-body-label`} className={labelClass}>
               {t('editor.body')}
             </span>
+            <div className="flex flex-wrap items-center gap-2">
+              {beforeAi !== null && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBodyMd(beforeAi);
+                    setBeforeAi(null);
+                  }}
+                  className="h-7 rounded-sm border border-line-strong px-2.5 text-small text-ink hover:border-ink-muted"
+                >
+                  {t('editor.aiUndo')}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => improve.mutate(bodyMd)}
+                disabled={!bodyMd.trim() || improve.isPending}
+                title={bodyMd.trim() ? undefined : t('editor.aiEmpty')}
+                className="flex h-7 items-center gap-1.5 rounded-sm border border-info px-2.5 text-small text-info hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {improve.isPending ? <LoaderCircle size={14} className="animate-spin" aria-hidden /> : <Sparkles size={14} strokeWidth={1.5} aria-hidden />}
+                {improve.isPending ? t('editor.aiWorking') : t('editor.ai')}
+              </button>
             <div role="tablist" aria-label={t('editor.editorMode')} className="flex gap-1">
               <button type="button" role="tab" aria-selected={mode === 'write'} onClick={() => setMode('write')} className={tabClass(mode === 'write')}>
                 {t('editor.write')}
@@ -186,18 +219,31 @@ function EditorForm({ note, newKind }: { note?: Note; newKind: NoteKind }) {
                 {t('editor.preview')}
               </button>
             </div>
+            </div>
           </div>
           {mode === 'write' ? (
             <textarea
               aria-labelledby={`${ids}-body-label`}
               value={bodyMd}
-              onChange={(e) => setBodyMd(e.target.value)}
+              onChange={(e) => {
+                setBodyMd(e.target.value);
+                setBeforeAi(null);
+              }}
               className="min-h-[260px] resize-y rounded-md border border-line-strong bg-surface-raised p-3 font-mono text-code text-ink focus:border-accent focus:outline-none"
             />
           ) : (
             <div className="min-h-[260px] rounded-md border border-line bg-bg p-3">
               {bodyMd.trim() ? <Markdown>{bodyMd}</Markdown> : <p className="m-0 text-ink-muted">{t('editor.nothingToShow')}</p>}
             </div>
+          )}
+          {improve.isError ? (
+            <p role="alert" className="m-0 text-small text-danger">
+              {improve.error.message}
+            </p>
+          ) : (
+            <span className="text-small text-ink-faint" role="status">
+              {beforeAi !== null ? t('editor.aiDone') : t('editor.aiHint')}
+            </span>
           )}
         </div>
 
