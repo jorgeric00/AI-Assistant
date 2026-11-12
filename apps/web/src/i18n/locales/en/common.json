@@ -150,5 +150,12 @@
     "text_one": "opencode can't use the MCP {{names}}.",
     "text_other": "opencode can't use the MCPs {{names}}.",
     "link": "See Settings"
+  },
+  "tagFilter": {
+    "label": "Tags",
+    "selected": "Tag: {{tag}}",
+    "search": "Search tag…",
+    "none": "No tag matches.",
+    "clear": "Clear the tag filter"
   }
 }
