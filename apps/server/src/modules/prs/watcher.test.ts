@@ -88,8 +88,9 @@ describe('avisos de tus PR', () => {
     ctx.gh.state.open = [];
     ctx.gh.state.byId.set('PR_1', base({ state: 'merged', checks: 'success', reviews: [{ author: 'maria', at: '2099-01-02T10:00:00Z', state: 'APPROVED', comments: 0 }] }));
     await ctx.watcher.check();
-    const kinds = (await ctx.get<PrAlert[]>('/api/pr-alerts')).map((a) => a.kind);
-    expect(kinds).toEqual(expect.arrayContaining(['approved', 'merged']));
+    // Se avisa de que se ha mergeado, pero la PR sale de los avisos de Hoy con todos sus avisos.
+    expect(ctx.notified).toEqual(expect.arrayContaining(['Aprobada · orders-api #212', 'Mergeada · orders-api #212']));
+    expect(await ctx.get<PrAlert[]>('/api/pr-alerts')).toEqual([]);
 
     const prs = await ctx.get<PullRequestInfo[]>('/api/tasks/ABC-131/prs');
     expect(prs).toEqual([expect.objectContaining({ number: 212, state: 'merged', checks: 'success', approvedBy: ['maria'], changesRequestedBy: [] })]);

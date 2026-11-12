@@ -177,14 +177,14 @@ export class PrWatcher {
     }
   }
 
-  /** Avisos de los últimos `days` días, del más reciente al más antiguo. */
+  /** Avisos de los últimos `days` días de las PR que siguen abiertas, del más reciente al más antiguo. */
   alerts(days = 3, limit = 20): PrAlert[] {
     const since = new Date(Date.now() - days * 86_400_000).toISOString();
     return this.db
       .select({ a: prAlerts, pr: pullRequests })
       .from(prAlerts)
       .innerJoin(pullRequests, eq(pullRequests.id, prAlerts.prId))
-      .where(and(gte(prAlerts.createdAt, since), eq(pullRequests.watched, true)))
+      .where(and(gte(prAlerts.createdAt, since), eq(pullRequests.watched, true), eq(pullRequests.state, 'open')))
       .orderBy(desc(prAlerts.createdAt), desc(prAlerts.id))
       .limit(limit)
       .all()
