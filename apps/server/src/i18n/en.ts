@@ -41,6 +41,10 @@ export const en: Messages = {
   'ai.repoProfile.noData': 'No data',
 
   // JIRA (REST API, sync and "Update JIRA")
+  'jira.cannotLogWork': 'Could not log time on {{key}}: it does not exist or you lack permission.',
+  'jira.tempoMissing': 'Tempo not found in your JIRA (/rest/tempo-core does not answer). Do you log time with Tempo Timesheets?',
+  'jira.tempoAttribute': 'Tempo has no attribute “{{name}}”. Available: {{known}}.',
+  'jira.tempoValue': 'The Tempo attribute “{{name}}” has no value “{{value}}”. Available: {{known}}.',
   'jira.notConfigured': 'JIRA is not configured: add JIRA_URL and JIRA_TOKEN to the .env file.',
   'jira.connectFailed': 'Could not connect to JIRA at {{url}}: {{cause}}',
   'jira.loginRedirect': 'JIRA redirects to a login page{{host}}: from this network the API does not accept the token. Try from the company network or over the VPN.',
@@ -108,6 +112,8 @@ export const en: Messages = {
   'journal.reminderDone': 'Done: {{title}}',
   'journal.commit': 'Commit in {{repo}}: {{text}}',
   'journal.analysis': 'Analysis of {{key}}: {{text}}',
+
+  'worklog.alreadyLogged': 'Already logged for that day on this task.',
 
   // Notes
   'notes.notFound': 'Note not found',

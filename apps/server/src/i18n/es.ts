@@ -40,6 +40,10 @@ export const es = {
   'ai.repoProfile.noData': 'Sin datos',
 
   // JIRA (API REST, sincronización y "Actualizar JIRA")
+  'jira.cannotLogWork': 'No se pudo imputar tiempo en {{key}}: no existe o no tienes permiso.',
+  'jira.tempoMissing': 'No encuentro Tempo en tu JIRA (no responde /rest/tempo-core). ¿Imputas con Tempo Timesheets?',
+  'jira.tempoAttribute': 'Tempo no tiene el atributo «{{name}}». Los que hay: {{known}}.',
+  'jira.tempoValue': 'El atributo «{{name}}» de Tempo no tiene el valor «{{value}}». Los que hay: {{known}}.',
   'jira.notConfigured': 'JIRA no está configurado: añade JIRA_URL y JIRA_TOKEN al fichero .env.',
   'jira.connectFailed': 'No se pudo conectar con JIRA en {{url}}: {{cause}}',
   'jira.loginRedirect': 'JIRA redirige a una página de inicio de sesión{{host}}: desde esta red la API no acepta el token. Prueba desde la red de la empresa o con la VPN.',
@@ -107,6 +111,8 @@ export const es = {
   'journal.reminderDone': 'Hecho: {{title}}',
   'journal.commit': 'Commit en {{repo}}: {{text}}',
   'journal.analysis': 'Análisis de {{key}}: {{text}}',
+
+  'worklog.alreadyLogged': 'Ya se imputó ese día en esta tarea.',
 
   // Notas
   'notes.notFound': 'Nota no encontrada',

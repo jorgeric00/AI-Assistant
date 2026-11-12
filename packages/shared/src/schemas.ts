@@ -985,3 +985,34 @@ export const CHAT_PERMISSION_REPLIES = ['once', 'always', 'reject'] as const;
 export type ChatPermissionReply = (typeof CHAT_PERMISSION_REPLIES)[number];
 export const ChatPermissionReplyInput = z.object({ reply: z.enum(CHAT_PERMISSION_REPLIES) });
 export type ChatPermissionReplyInput = z.infer<typeof ChatPermissionReplyInput>;
+
+// ── Imputación de horas en JIRA desde el diario ─────────────────────────────
+
+export const WorklogRange = z.object({ from: IsoDate, to: IsoDate });
+export type WorklogRange = z.infer<typeof WorklogRange>;
+
+export interface WorklogLine {
+  key: string;
+  summary: string;
+  hours: number;
+}
+
+export interface WorklogDay {
+  date: string;
+  /** Horas que hay que completar ese día (9 de lunes a jueves, 6 el viernes). */
+  target: number;
+  /** pendiente: propuesta lista · imputado: ya se imputó · sin_actividad: la app no sabe qué se hizo ese día. */
+  status: 'pendiente' | 'imputado' | 'sin_actividad';
+  lines: WorklogLine[];
+}
+
+export const WorklogSubmit = z.object({
+  entries: z.array(z.object({ date: IsoDate, key: JiraKey, hours: z.number().positive().max(24) })).min(1).max(400),
+});
+export type WorklogSubmit = z.input<typeof WorklogSubmit>;
+
+export interface WorklogSubmitResult {
+  done: number;
+  /** Líneas que no se imputaron (ya imputadas o error de JIRA), con el motivo. */
+  failed: { date: string; key: string; error: string }[];
+}

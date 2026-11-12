@@ -127,6 +127,19 @@ export const journalEntries = sqliteTable(
   (t) => [index('journal_date_idx').on(t.date), uniqueIndex('journal_ref_key_idx').on(t.refKey)],
 );
 
+/** Horas ya imputadas en JIRA desde el diario (una por tarea y día): evita imputar dos veces el mismo día. */
+export const worklogImputations = sqliteTable(
+  'worklog_imputations',
+  {
+    id: id(),
+    date: text('date').notNull(),
+    jiraKey: text('jira_key').notNull(),
+    seconds: integer('seconds').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex('worklog_day_task_idx').on(t.date, t.jiraKey)],
+);
+
 export const dailySummaries = sqliteTable('daily_summaries', {
   id: id(),
   date: text('date').notNull(),

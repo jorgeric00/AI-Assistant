@@ -1,11 +1,12 @@
 import type { JournalEntry } from '@dev-assistant/shared';
-import { ArrowRightLeft, ChevronLeft, ChevronRight, GitCommitHorizontal, PenLine, Sparkles, Trash2, Zap } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { ArrowRightLeft, Clock, ChevronLeft, ChevronRight, GitCommitHorizontal, PenLine, Sparkles, Trash2, Zap } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { primaryButtonClass } from '../../components/fields';
+import { primaryButtonClass, secondaryButtonClass } from '../../components/fields';
 import { addDays, hhmm, localDate, longDay, parseLocalDate } from '../../dates';
 import { navigate } from '../../sections';
 import { DailySummaryPanel, useDailySummary } from './DailySummaryPanel';
+import { ImputarHoras } from './ImputarHoras';
 import { JournalAddForm } from './JournalAddForm';
 import { useJournal } from './useJournal';
 
@@ -20,6 +21,7 @@ export function DiarioPage({ params }: { params: string[] }) {
   const day = parseLocalDate(date);
   const { entries, add, remove } = useJournal(date);
   const summary = useDailySummary(date);
+  const [logging, setLogging] = useState(false);
 
   const autoGenerate = params[0] === 'resumen';
   const autoStarted = useRef(false);
@@ -53,11 +55,19 @@ export function DiarioPage({ params }: { params: string[] }) {
             )}
           </div>
         </div>
-        <button type="button" disabled={summary.generate.isPending} onClick={() => summary.generate.mutate()} className={primaryButtonClass}>
-          <Sparkles size={16} strokeWidth={2} aria-hidden />
-          {t('page.dailySummary')}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" aria-expanded={logging} onClick={() => setLogging((v) => !v)} className={secondaryButtonClass}>
+            <Clock size={16} strokeWidth={1.5} aria-hidden />
+            {t('worklog.button')}
+          </button>
+          <button type="button" disabled={summary.generate.isPending} onClick={() => summary.generate.mutate()} className={primaryButtonClass}>
+            <Sparkles size={16} strokeWidth={2} aria-hidden />
+            {t('page.dailySummary')}
+          </button>
+        </div>
       </header>
+
+      {logging && <ImputarHoras />}
 
       <div className="flex flex-wrap items-start gap-4">
         <section aria-labelledby="h-entradas" className="flex min-w-0 flex-[999_1_460px] flex-col gap-3">

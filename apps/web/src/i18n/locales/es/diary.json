@@ -30,5 +30,33 @@
   },
   "addForm": {
     "label": "Nueva entrada del diario"
+  },
+  "worklog": {
+    "button": "Imputar horas",
+    "title": "Imputar horas en JIRA",
+    "intro": "De lunes a jueves se imputan 9 horas y los viernes 6. Se reparten entre las tareas con actividad ese día. Hasta que no pulses «Imputar en JIRA» no se escribe nada.",
+    "from": "Desde",
+    "to": "Hasta",
+    "calc": "Calcular",
+    "calculating": "Calculando…",
+    "error": "No se pudo calcular: {{message}}",
+    "noDays": "No hay días laborables en ese intervalo.",
+    "total": "{{sum}} de {{target}} h",
+    "imputed": "Ya imputado",
+    "noActivity": "Sin actividad registrada: añade la tarea a mano o salta el día.",
+    "skip": "Saltar día",
+    "unskip": "Incluir día",
+    "skipped": "Día saltado",
+    "hoursOf": "Horas en {{key}}",
+    "remove": "Quitar {{key}}",
+    "addKey": "Añadir tarea (ABC-123)",
+    "add": "Añadir",
+    "submit": "Imputar en JIRA",
+    "submitting": "Imputando…",
+    "confirm": "Se van a escribir {{count}} registros de trabajo en JIRA ({{hours}} h). ¿Seguir?",
+    "result": "Imputados {{done}} registros.",
+    "failed": "No se imputaron {{count}}:",
+    "nothing": "No hay nada que imputar.",
+    "diff": "No suma las horas del día"
   }
 }
