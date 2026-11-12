@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api, queryKeys } from '../../api';
 import { primaryButtonClass } from '../../components/fields';
+import { TagFilter } from '../../components/TagFilter';
 import { navigate } from '../../sections';
 import { NoteEditor } from '../notas/NoteEditor';
 
@@ -77,11 +78,7 @@ function LinksTable({ selectedId }: { selectedId?: number }) {
           <button type="button" aria-pressed={!tag} onClick={() => setTag(undefined)} className={chipClass(!tag)}>
             {t('links.all')}
           </button>
-          {tags.data?.map((tg) => (
-            <button key={tg.name} type="button" aria-pressed={tag === tg.name} onClick={() => setTag(tag === tg.name ? undefined : tg.name)} className={chipClass(tag === tg.name)}>
-              {tg.name}
-            </button>
-          ))}
+          {!!tags.data?.length && <TagFilter tags={tags.data} value={tag} onChange={setTag} chipClass={chipClass} />}
           <button type="button" aria-pressed={archived} onClick={() => setArchived(!archived)} className={chipClass(archived)}>
             {t('links.archived')}
           </button>

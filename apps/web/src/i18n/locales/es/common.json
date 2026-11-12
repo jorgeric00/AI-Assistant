@@ -150,5 +150,12 @@
     "text_one": "opencode no tiene disponible el MCP {{names}}.",
     "text_other": "opencode no tiene disponibles los MCP {{names}}.",
     "link": "Ver en Ajustes"
+  },
+  "tagFilter": {
+    "label": "Etiquetas",
+    "selected": "Etiqueta: {{tag}}",
+    "search": "Buscar etiqueta…",
+    "none": "Ninguna etiqueta coincide.",
+    "clear": "Quitar el filtro de etiqueta"
   }
 }
