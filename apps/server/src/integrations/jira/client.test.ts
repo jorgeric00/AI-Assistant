@@ -170,3 +170,36 @@ describe('ADF a texto', () => {
     expect(adfToText(doc)).toBe('Contexto\nHabla con @Ana\n- uno\n- dos');
   });
 });
+
+describe('imputación con Tempo', () => {
+  it('traduce Type of Work y Order a las claves de Tempo y crea el registro', async () => {
+    let sent: unknown;
+    const { impl, calls } = fakeFetch((url, init) => {
+      if (url.pathname === '/rest/api/2/issue/ABC-1') return { body: { id: '10001', key: 'ABC-1' } };
+      if (url.pathname === '/rest/api/2/myself') return { body: { key: 'JIRAUSER1', name: 'jorge' } };
+      if (url.pathname === '/rest/tempo-core/1/work-attribute') {
+        return {
+          body: [
+            { id: 1, key: '_TypeofWork_', name: 'Type of Work', staticListValues: [{ name: 'New Functionality', value: 'NEW' }, { name: 'Support', value: 'SUP' }] },
+            { id: 2, key: '_Order_', name: 'Order', staticListValues: [{ name: 'Services', value: 'SERV' }] },
+          ],
+        };
+      }
+      expect(init.method).toBe('POST');
+      sent = JSON.parse(String(init.body));
+      return { body: {} };
+    });
+    const client = new JiraClient({ baseUrl: 'https://jira.empresa.com', token: 'pat' }, impl);
+    await client.logWork('ABC-1', '2026-11-11', 7200, { 'Type of Work': 'new functionality', Order: 'Services' });
+    const post = calls.at(-1)!;
+    expect(post.url.pathname).toBe('/rest/tempo-timesheets/4/worklogs');
+    expect(sent).toEqual({
+      originTaskId: '10001',
+      worker: 'JIRAUSER1',
+      started: '2026-11-11',
+      timeSpentSeconds: 7200,
+      attributes: { _TypeofWork_: { name: 'Type of Work', workAttributeId: 1, value: 'NEW' }, _Order_: { name: 'Order', workAttributeId: 2, value: 'SERV' } },
+    });
+    await expect(client.logWork('ABC-1', '2026-11-11', 60, { 'Type of Work': 'Otra cosa' })).rejects.toThrow(/Support/);
+  });
+});

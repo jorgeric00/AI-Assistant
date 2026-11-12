@@ -49,12 +49,11 @@ function days(from: string, to: string): string[] {
   return out;
 }
 
-/** Inicio del registro: las 9:00 del día, con la zona horaria local de ese día ("+0100"). */
-function startedAt(date: string): string {
-  const off = -new Date(`${date}T09:00:00`).getTimezoneOffset();
-  const abs = Math.abs(off);
-  const zone = `${off < 0 ? '-' : '+'}${String(Math.floor(abs / 60)).padStart(2, '0')}${String(abs % 60).padStart(2, '0')}`;
-  return `${date}T09:00:00.000${zone}`;
+const INCIDENT_TYPE = /bug|incidenc|incident|defect|error|fallo|\bbaus?\b/i;
+
+/** Atributos de Tempo de una imputación: incidencias, bugs y baus son Support; el resto (historias, tareas) New Functionality. Order es siempre Services. */
+export function tempoAttributes(issueType: string | null | undefined): Record<string, string> {
+  return { 'Type of Work': INCIDENT_TYPE.test(issueType ?? '') ? 'Support' : 'New Functionality', Order: 'Services' };
 }
 
 export class WorklogService {
@@ -85,6 +84,12 @@ export class WorklogService {
     return result;
   }
 
+  /** Tipo de ticket guardado al sincronizar con JIRA. */
+  private issueType(key: string): string | null {
+    const raw = this.db.select({ raw: tasks.rawJson }).from(tasks).where(eq(tasks.jiraKey, key)).get()?.raw as { issueType?: string | null } | null | undefined;
+    return raw?.issueType ?? null;
+  }
+
   async submit(input: WorklogSubmit): Promise<WorklogSubmitResult> {
     if (!this.jira) throw new JiraError(t('jira.notConfigured'));
     const result: WorklogSubmitResult = { done: 0, failed: [] };
@@ -96,7 +101,7 @@ export class WorklogService {
       }
       const seconds = Math.round(e.hours * 3600);
       try {
-        await this.jira.addWorklog(e.key, startedAt(e.date), seconds);
+        await this.jira.logWork(e.key, e.date, seconds, tempoAttributes(this.issueType(e.key)));
       } catch (err) {
         result.failed.push({ date: e.date, key: e.key, error: err instanceof Error ? err.message : String(err) });
         continue;

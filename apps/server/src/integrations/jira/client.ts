@@ -102,6 +102,13 @@ interface RawIssue {
   };
 }
 
+export interface TempoAttribute {
+  id: number;
+  key?: string;
+  name: string;
+  staticListValues?: { id?: number; name: string; value?: string; removed?: boolean }[];
+}
+
 export class JiraClient {
   private readonly baseUrl: string;
   private readonly cloud: boolean;
@@ -279,9 +286,38 @@ export class JiraClient {
     if (status === 404) throw new JiraError(t('jira.cannotComment', { key }));
   }
 
-  /** Registra tiempo trabajado en una tarea. `started` es la fecha y hora de inicio con zona horaria. */
-  async addWorklog(key: string, started: string, timeSpentSeconds: number): Promise<void> {
-    const { status } = await this.request('POST', `/issue/${encodeURIComponent(key)}/worklog`, { started, timeSpentSeconds });
+  /** Definiciones de atributos de trabajo de Tempo (Type of Work, Order...) con los valores de sus listas. */
+  async tempoAttributes(): Promise<TempoAttribute[]> {
+    const { body, status } = await this.request<TempoAttribute[]>('GET', '/rest/tempo-core/1/work-attribute', undefined, this.baseUrl);
+    if (status === 404 || !Array.isArray(body)) throw new JiraError(t('jira.tempoMissing'));
+    return body;
+  }
+
+  /**
+   * Imputa tiempo en Tempo (Timesheets): `attributes` va por nombre de atributo y nombre de valor
+   * ("Type of Work" → "New Functionality"); se traducen a las claves que pide Tempo.
+   */
+  async logWork(key: string, date: string, timeSpentSeconds: number, attributes: Record<string, string>): Promise<void> {
+    const issue = this.required((await this.get<{ id?: string }>(`/issue/${encodeURIComponent(key)}`, { fields: 'summary' })));
+    const me = this.required(await this.get<{ key?: string; name?: string; accountId?: string }>('/myself', {}));
+    const definitions = await this.tempoAttributes();
+    const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const sent: Record<string, { name: string; workAttributeId: number; value: string }> = {};
+    for (const [name, wanted] of Object.entries(attributes)) {
+      const def = definitions.find((d) => norm(d.name) === norm(name));
+      if (!def) throw new JiraError(t('jira.tempoAttribute', { name, known: definitions.map((d) => d.name).join(', ') }));
+      const options = (def.staticListValues ?? []).filter((o) => !o.removed);
+      const option = options.find((o) => norm(o.name) === norm(wanted));
+      if (!option) throw new JiraError(t('jira.tempoValue', { name, value: wanted, known: options.map((o) => o.name).join(', ') }));
+      sent[def.key ?? `_${def.name.replace(/\s+/g, '')}_`] = { name: def.name, workAttributeId: def.id, value: option.value ?? option.name };
+    }
+    const { status } = await this.request('POST', '/rest/tempo-timesheets/4/worklogs', {
+      originTaskId: String(issue.id),
+      worker: me.key ?? me.name ?? me.accountId,
+      started: date,
+      timeSpentSeconds,
+      attributes: sent,
+    }, this.baseUrl);
     if (status === 404) throw new JiraError(t('jira.cannotLogWork', { key }));
   }
 

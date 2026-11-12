@@ -6,7 +6,7 @@ import type { JournalEntry } from '@dev-assistant/shared';
 import { buildApp } from '../../app.js';
 import { openDatabase } from '../../db/client.js';
 import { journalEntries, tasks as tasksTable } from '../../db/schema.js';
-import { allocate, targetHours } from './worklog.js';
+import { allocate, targetHours, tempoAttributes } from './worklog.js';
 import type { JiraIssue } from '../../integrations/jira/client.js';
 import { TasksRepository } from '../tasks/repository.js';
 
@@ -97,10 +97,16 @@ describe('imputación de horas', () => {
     expect(allocate([], 6)).toEqual([]);
   });
 
+  it('Type of Work: incidencias, bugs y baus son Support; historias y tareas New Functionality; Order siempre Services', () => {
+    expect(['Bug', 'Incidencia', 'Incident', 'BAU'].map((t) => tempoAttributes(t)['Type of Work'])).toEqual(['Support', 'Support', 'Support', 'Support']);
+    expect(['Story', 'Historia', 'Task', 'Tarea', null].map((t) => tempoAttributes(t)['Type of Work'])).toEqual(Array(5).fill('New Functionality'));
+    expect(tempoAttributes('Bug').Order).toBe('Services');
+  });
+
   it('propone por día con la actividad del diario, marca los días sin actividad y no repite lo ya imputado', async () => {
     const { db } = openDatabase(':memory:');
-    const logged: [string, string, number][] = [];
-    const jira = { addWorklog: async (k: string, started: string, s: number) => void logged.push([k, started.slice(0, 10), s]) } as never;
+    const logged: [string, string, number, Record<string, string>][] = [];
+    const jira = { logWork: async (k: string, date: string, s: number, a: Record<string, string>) => void logged.push([k, date, s, a]) } as never;
     const app = await buildApp(db, { devAssistantHome: mkdtempSync(join(tmpdir(), 'da-wl-')), jiraClient: jira });
     const repo = new TasksRepository(db);
     repo.upsertFromJira([issue('In Progress'), { ...issue('To Do'), key: 'ABC-2', summary: 'Otra' }], '2026-11-09T08:00:00Z');
@@ -123,7 +129,8 @@ describe('imputación de horas', () => {
     const send = (entries: unknown[]) => app.inject({ method: 'POST', url: '/api/journal/worklog', payload: { entries } });
     const r = (await send([{ date: '2026-11-09', key: 'ABC-1', hours: 7 }, { date: '2026-11-09', key: 'ABC-2', hours: 2 }])).json();
     expect(r).toEqual({ done: 2, failed: [] });
-    expect(logged).toEqual([['ABC-1', '2026-11-09', 25200], ['ABC-2', '2026-11-09', 7200]]);
+    const story = { 'Type of Work': 'New Functionality', Order: 'Services' };
+    expect(logged).toEqual([['ABC-1', '2026-11-09', 25200, story], ['ABC-2', '2026-11-09', 7200, story]]);
     const again = (await send([{ date: '2026-11-09', key: 'ABC-1', hours: 7 }])).json<{ done: number; failed: unknown[] }>();
     expect([again.done, again.failed.length]).toEqual([0, 1]);
     expect((await app.inject({ method: 'GET', url })).json<{ status: string }[]>()[0]!.status).toBe('imputado');
