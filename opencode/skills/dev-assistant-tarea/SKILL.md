@@ -20,7 +20,7 @@ en este orden, y para en cada punto marcado con **Pregunta al usuario** hasta qu
 - **Nunca** incluyas en un commit `PLAN.md`, `HISTORIAL.md`, ficheros `.env`, tokens ni contraseñas.
 - Si la rama base avanza y al traerla hay conflictos, **pregunta al usuario** antes de mezclar.
 - En JIRA solo haces lo que dice este flujo: pasar a "In Progress" al crear la rama y, tras la validación,
-  a "In Review" con un comentario (o, en un análisis, el comentario con el origen si el usuario lo confirma).
+  a "In Review" con un comentario que el usuario haya visto y validado antes (o, en un análisis, el comentario con el origen si el usuario lo confirma).
   Nada más sin que el usuario lo pida.
 - Contesta **siempre** al usuario en el idioma del sistema: el que indica `TAREA.md` en «Idioma del usuario» o, si no
   lo indica, el del sistema operativo (configuración regional, `LANG`). Aunque el ticket, el código o esta skill
@@ -115,7 +115,14 @@ En cualquier otro caso, sigue el flujo de desarrollo (secciones 1 a 4). Si no es
     el trabajo, con el enlace a cada PR.
 18. Si lo valida, **pregunta al usuario** si pasas las PR a "ready for review". Cuando lo confirme:
     - Pasa cada PR a "ready for review" con el MCP de GitHub.
-    - En JIRA, pasa la tarea a "In Review" y añade un comentario con un resumen del cambio y el enlace a cada PR.
+    - En JIRA, pasa la tarea a "In Review" y añade un comentario corto con el enlace a cada PR y un resumen de **lo que
+      se ha hecho y solo eso**: 2 a 5 líneas o viñetas, sin contexto, sin pruebas ni decisiones ni lo que quedó fuera.
+      Si la tarea es una incidencia y hubo un análisis previo (tiene `Tipo: análisis` en `PLAN.md`, o secciones de
+      análisis o una línea de análisis en `HISTORIAL.md`), añade antes un párrafo de 1 a 3 líneas con lo que se vio
+      en el análisis (la causa) para que se entienda por qué se hizo el cambio. El comentario nunca copia ni
+      reproduce `RESUMEN.md`: es mucho más corto, ese fichero es la documentación completa.
+      **Antes de publicarlo, enséñale el texto exacto del comentario al usuario y espera a que lo valide** (o lo
+      corrija). Sin su visto bueno no lo subas a JIRA; publícalo junto con el paso a "In Review".
     - Marca en `PLAN.md` el paso «PR en "ready for review" y JIRA en "In Review"» (y el de la validación del usuario si seguía sin marcar).
 19. Escribe `RESUMEN.md` en la carpeta de la tarea con el formato de abajo: es la documentación de la tarea
     que AI-Assistant enseña en "Documentación". Si ya existe (la tarea se retomó), actualízalo entero.
