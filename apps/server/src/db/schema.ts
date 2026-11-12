@@ -281,6 +281,10 @@ export const pullRequests = sqliteTable('pull_requests', {
   lastSeenAt: text('last_seen_at').notNull(),
   /** false = no avisa en Hoy ni con notificaciones. */
   watched: integer('watched', { mode: 'boolean' }).notNull().default(true),
+  /** Quién la abrió en GitHub. */
+  author: text('author'),
+  /** false = la abrió otra persona y la app solo la enseña en su tarea (no es de «tus PR» ni avisa). */
+  mine: integer('mine', { mode: 'boolean' }).notNull().default(true),
 }, (t) => [index('pull_requests_task_idx').on(t.taskKey)]);
 
 export const prAlerts = sqliteTable('pr_alerts', {

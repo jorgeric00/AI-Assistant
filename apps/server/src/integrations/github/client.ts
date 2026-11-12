@@ -33,6 +33,8 @@ export interface GhPullRequest {
   state: PrState;
   isDraft: boolean;
   headRef: string;
+  /** Quién la abrió. */
+  author?: string | null;
   updatedAt: string;
   checks: PrChecksState | null;
   failingChecks: string[];
@@ -42,6 +44,7 @@ export interface GhPullRequest {
 
 const PR_FIELDS = `
   id number title url state isDraft headRefName updatedAt
+  author { login }
   repository { nameWithOwner }
   commits(last: 1) { nodes { commit { statusCheckRollup { state contexts(first: 100) { nodes {
     __typename
@@ -65,6 +68,7 @@ const FAILURES = `query($id: ID!) { node(id: $id) { ... on PullRequest {
 const CLOSED_PRS = `query { viewer { login pullRequests(states: [MERGED, CLOSED], first: 50, orderBy: { field: UPDATED_AT, direction: DESC }) { nodes { ${PR_FIELDS} } } } }`;
 
 const OPEN_PRS = `query { viewer { login pullRequests(states: OPEN, first: 50, orderBy: { field: UPDATED_AT, direction: DESC }) { nodes { ${PR_FIELDS} } } } }`;
+const SEARCH_PRS = `query($q: String!) { search(query: $q, type: ISSUE, first: 100) { nodes { ... on PullRequest { ${PR_FIELDS} } } } }`;
 const BY_IDS = `query($ids: [ID!]!) { nodes(ids: $ids) { ... on PullRequest { ${PR_FIELDS} } } }`;
 
 interface RawAuthor {
@@ -80,6 +84,7 @@ interface RawPr {
   isDraft: boolean;
   headRefName: string;
   updatedAt: string;
+  author?: { login: string } | null;
   repository: { nameWithOwner: string };
   commits: {
     nodes: {
@@ -180,6 +185,7 @@ export function normalizePr(raw: RawPr, me: string): GhPullRequest {
     state: raw.state === 'MERGED' ? 'merged' : raw.state === 'CLOSED' ? 'closed' : 'open',
     isDraft: raw.isDraft,
     headRef: raw.headRefName,
+    author: raw.author?.login ?? null,
     updatedAt: raw.updatedAt,
     ...checksOf(raw),
     reviews: raw.reviews.nodes.flatMap((r) =>
@@ -192,6 +198,7 @@ export function normalizePr(raw: RawPr, me: string): GhPullRequest {
 }
 
 const TIMEOUT_MS = 20_000;
+const SEARCH_KEYS_PER_QUERY = 5;
 
 export class GithubClient {
   private readonly url: string;
@@ -244,6 +251,26 @@ export class GithubClient {
     const data = await this.query<{ viewer: { login: string; pullRequests: { nodes: (RawPr | null)[] } } }>(CLOSED_PRS);
     const login = data.viewer.login;
     return { login, prs: data.viewer.pullRequests.nodes.flatMap((p) => (p ? [normalizePr(p, login)] : [])) };
+  }
+
+  /**
+   * PR abiertas de cualquier persona que llevan alguna de esas claves de JIRA en el título. Se busca de 5 en 5
+   * claves (el límite de operadores de la búsqueda de GitHub): con 20 tareas abiertas son 4 consultas.
+   */
+  async openPrsWithKeys(keys: string[], me: string): Promise<GhPullRequest[]> {
+    const found = new Map<string, GhPullRequest>();
+    for (let i = 0; i < keys.length; i += SEARCH_KEYS_PER_QUERY) {
+      const chunk = keys.slice(i, i + SEARCH_KEYS_PER_QUERY);
+      const q = `is:pr is:open in:title (${chunk.map((k) => `"${k}"`).join(' OR ')})`;
+      const data = await this.query<{ search: { nodes: (RawPr | { id?: undefined } | null)[] } }>(SEARCH_PRS, { q });
+      for (const node of data.search.nodes) {
+        if (!node || !('number' in node) || !node.id) continue;
+        const pr = normalizePr(node as RawPr, me);
+        // La búsqueda de texto es aproximada: solo vale si la clave está de verdad en el título.
+        if (chunk.some((k) => new RegExp(`(^|[^A-Za-z0-9_-])${k}(?!\\d)`, 'i').test(pr.title))) found.set(pr.id, pr);
+      }
+    }
+    return [...found.values()];
   }
 
   /** PR concretas por id (para saber si una que ya no está abierta se mergeó o se cerró). */

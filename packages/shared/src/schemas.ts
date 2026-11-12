@@ -653,6 +653,10 @@ export interface PullRequestInfo {
   updatedAt: string;
   /** false = no avisa en Hoy ni con notificaciones. */
   watched: boolean;
+  /** Quién la abrió en GitHub. */
+  author: string | null;
+  /** false = la abrió otra persona: solo sale en su tarea. */
+  mine: boolean;
 }
 
 export const PR_LIST_FILTERS = ['open', 'merged', 'closed', 'all'] as const;

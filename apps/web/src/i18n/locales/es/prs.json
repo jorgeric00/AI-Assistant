@@ -30,7 +30,8 @@
     "title": "Pull requests",
     "fromGithub": "De GitHub",
     "fromGithubChecked": "De GitHub · comprobado {{when}}",
-    "empty": "Aún no hay PR con {{taskKey}} en la rama o el título."
+    "empty": "Aún no hay PR con {{taskKey}} en la rama o el título.",
+    "by": "Abierta por {{name}}"
   },
   "failures": {
     "title": "Checks en rojo",

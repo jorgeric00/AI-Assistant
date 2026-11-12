@@ -57,6 +57,13 @@
       "when": 1794307084583,
       "tag": "0007_pr_watched",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1794473367797,
+      "tag": "0008_pr_author",
+      "breakpoints": true
     }
   ]
 }
