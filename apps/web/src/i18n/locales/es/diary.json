@@ -57,6 +57,7 @@
     "result": "Imputados {{done}} registros.",
     "failed": "No se imputaron {{count}}:",
     "nothing": "No hay nada que imputar.",
-    "diff": "No suma las horas del día"
+    "diff": "No suma las horas del día",
+    "doneToday": "Ya imputado: {{hours}} h ({{tasks}}). Se propone solo lo que falta."
   }
 }

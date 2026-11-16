@@ -999,8 +999,11 @@ export interface WorklogLine {
 
 export interface WorklogDay {
   date: string;
-  /** Horas que hay que completar ese día (9 de lunes a jueves, 6 el viernes). */
+  /** Horas que faltan por imputar ese día: 9 de lunes a jueves y 6 el viernes, menos lo ya imputado. */
   target: number;
+  /** Lo ya imputado ese día desde la app (por tarea) y su total en horas. */
+  done: WorklogLine[];
+  imputed: number;
   /** pendiente: propuesta lista · imputado: ya se imputó · sin_actividad: la app no sabe qué se hizo ese día. */
   status: 'pendiente' | 'imputado' | 'sin_actividad';
   lines: WorklogLine[];

@@ -57,6 +57,7 @@
     "result": "Logged {{done}} entries.",
     "failed": "{{count}} were not logged:",
     "nothing": "Nothing to log.",
-    "diff": "Does not add up to the day's hours"
+    "diff": "Does not add up to the day's hours",
+    "doneToday": "Already logged: {{hours}} h ({{tasks}}). Only the remainder is proposed."
   }
 }
