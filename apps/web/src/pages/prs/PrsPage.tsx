@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { PR_LIST_FILTERS, type PrListFilter, type PullRequestInfo } from '@dev-assistant/shared';
-import { Check, Eye, EyeOff, LoaderCircle, RefreshCw } from 'lucide-react';
+import { Check, Eye, EyeOff, ListTree, LoaderCircle, RefreshCw } from 'lucide-react';
+import { useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { api, queryKeys } from '../../api';
 import { EmptyState } from '../../components/Card';
@@ -56,8 +57,11 @@ function PrListPage() {
   const queryClient = useQueryClient();
   const [filter, setFilter] = useRemembered<PrListFilter>('prs.filter', 'open');
   const [query, setQuery] = useRemembered('prs.query', '');
+  // «Organizar»: las abiertas por tarea y de más recientes a más antiguas, sea cual sea el filtro.
+  const [organize, setOrganize] = useState(false);
+  const shown: PrListFilter = organize ? 'open' : filter;
   const status = useQuery({ queryKey: queryKeys.prStatus, queryFn: api.prStatus, refetchInterval: 60_000 });
-  const list = useQuery({ queryKey: queryKeys.prList(filter), queryFn: () => api.listPrs(filter), refetchInterval: filter === 'open' ? 60_000 : false });
+  const list = useQuery({ queryKey: queryKeys.prList(shown), queryFn: () => api.listPrs(shown), refetchInterval: shown === 'open' ? 60_000 : false });
   const check = useMutation({ mutationFn: api.checkPrs, onSettled: () => void queryClient.invalidateQueries({ queryKey: ['prs'] }) });
 
   if (status.data && !status.data.configured) {
@@ -96,14 +100,27 @@ function PrListPage() {
             <button
               key={f}
               type="button"
-              aria-pressed={f === filter}
-              onClick={() => setFilter(f)}
-              className={`h-10 px-3.5 ${f === filter ? 'bg-accent font-semibold text-on-accent' : 'text-ink hover:bg-surface-raised'}`}
+              aria-pressed={!organize && f === filter}
+              onClick={() => {
+                setOrganize(false);
+                setFilter(f);
+              }}
+              className={`h-10 px-3.5 ${!organize && f === filter ? 'bg-accent font-semibold text-on-accent' : 'text-ink hover:bg-surface-raised'}`}
             >
               {t(`page.filter.${f}`)}
             </button>
           ))}
         </div>
+        <button
+          type="button"
+          aria-pressed={organize}
+          onClick={() => setOrganize((v) => !v)}
+          title={t('page.organizeTitle')}
+          className={`flex h-10 items-center gap-1.5 rounded-md border px-3.5 ${organize ? 'border-accent bg-accent font-semibold text-on-accent' : 'border-line-strong text-ink hover:bg-surface-raised'}`}
+        >
+          <ListTree size={16} strokeWidth={1.5} aria-hidden />
+          {t('page.organize')}
+        </button>
         <label htmlFor="prs-buscar" className="sr-only">
           {t('page.searchLabel')}
         </label>
@@ -126,32 +143,68 @@ function PrListPage() {
       {list.isPending ? (
         <p className="m-0 text-ink-muted">{t('common:status.loading')}</p>
       ) : !prs.length ? (
-        <EmptyState>{list.data?.prs.length ? t('page.noMatch') : t(`page.empty.${filter}`)}</EmptyState>
+        <EmptyState>{list.data?.prs.length ? t('page.noMatch') : t(`page.empty.${shown}`)}</EmptyState>
       ) : (
-        <ul className="m-0 flex list-none flex-col rounded-lg border border-line bg-surface p-0">
-          {prs.map((pr) => (
-            <li
-              key={pr.id}
-              className={`flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line px-4 py-3 last:border-b-0 ${pr.state === 'open' && !pr.watched ? 'opacity-70' : ''}`}
-            >
-              <a href={`#/prs/${pr.id}`} className="flex min-w-0 flex-[1_1_340px] flex-col text-ink no-underline">
-                <span className="font-mono text-code text-info">
-                  {repoName(pr.repo)} #{pr.number}
-                  <span className="text-ink-muted"> · {pr.taskKey ?? t('page.noTask')}</span>
-                </span>
-                <span className="break-words">{pr.title}</span>
-              </a>
-              <span className="rounded-sm border border-line-strong px-1.5 py-0.5 text-small whitespace-nowrap text-ink-muted">{stateLabel(pr, t)}</span>
-              <Checks pr={pr} />
-              <Reviews pr={pr} />
-              <span className="min-w-[84px] text-small whitespace-nowrap text-ink-faint">{whenLabel(pr.updatedAt)}</span>
-              {pr.state === 'open' && <WatchButton pr={pr} />}
-            </li>
-          ))}
-        </ul>
+        organize ? (
+          <div className="flex flex-col gap-4">
+            {groupByTask(prs).map(([key, group]) => (
+              <section key={key ?? 'sin-tarea'} aria-label={key ?? t('page.noTask')} className="flex flex-col gap-2">
+                <h2 className="m-0 flex items-baseline gap-2 text-small font-medium tracking-[.04em] text-ink-muted uppercase">
+                  {key ? (
+                    <a href={`#/tareas/${key}/detalle`} className="font-mono normal-case">
+                      {key}
+                    </a>
+                  ) : (
+                    t('page.noTask')
+                  )}
+                  <span className="font-normal normal-case">{t('page.organizeCount', { count: group.length })}</span>
+                </h2>
+                <PrRows prs={group} hideTask />
+              </section>
+            ))}
+          </div>
+        ) : (
+          <PrRows prs={prs} />
+        )
       )}
       <p className="m-0 text-small text-ink-faint">{t('page.help')}</p>
     </div>
+  );
+}
+
+/** Agrupa por tarea: los grupos y las PR de cada uno de más reciente a más antiguo; las PR sin tarea, al final. */
+function groupByTask(prs: PullRequestInfo[]): [string | null, PullRequestInfo[]][] {
+  const byRecent = [...prs].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  const groups = new Map<string | null, PullRequestInfo[]>();
+  for (const pr of byRecent) groups.set(pr.taskKey, [...(groups.get(pr.taskKey) ?? []), pr]);
+  // El Map conserva el orden de la primera aparición: ya va de la más reciente a la más antigua.
+  return [...groups.entries()].sort(([a], [b]) => (a === null ? 1 : 0) - (b === null ? 1 : 0));
+}
+
+function PrRows({ prs, hideTask = false }: { prs: PullRequestInfo[]; hideTask?: boolean }) {
+  const { t } = useTranslation('prs');
+  return (
+    <ul className="m-0 flex list-none flex-col rounded-lg border border-line bg-surface p-0">
+      {prs.map((pr) => (
+        <li
+          key={pr.id}
+          className={`flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line px-4 py-3 last:border-b-0 ${pr.state === 'open' && !pr.watched ? 'opacity-70' : ''}`}
+        >
+          <a href={`#/prs/${pr.id}`} className="flex min-w-0 flex-[1_1_340px] flex-col text-ink no-underline">
+            <span className="font-mono text-code text-info">
+              {repoName(pr.repo)} #{pr.number}
+              {!hideTask && <span className="text-ink-muted"> · {pr.taskKey ?? t('page.noTask')}</span>}
+            </span>
+            <span className="break-words">{pr.title}</span>
+          </a>
+          <span className="rounded-sm border border-line-strong px-1.5 py-0.5 text-small whitespace-nowrap text-ink-muted">{stateLabel(pr, t)}</span>
+          <Checks pr={pr} />
+          <Reviews pr={pr} />
+          <span className="min-w-[84px] text-small whitespace-nowrap text-ink-faint">{whenLabel(pr.updatedAt)}</span>
+          {pr.state === 'open' && <WatchButton pr={pr} />}
+        </li>
+      ))}
+    </ul>
   );
 }
 

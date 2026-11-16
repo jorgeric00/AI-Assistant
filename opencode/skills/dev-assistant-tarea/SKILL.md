@@ -75,7 +75,16 @@ En cualquier otro caso, sigue el flujo de desarrollo (secciones 1 a 4). Si no es
 6. Crea la rama con `git switch -c <tipo>/<CLAVE>-<explicacion-breve>`:
    - `<tipo>` es `bugfix` si la incidencia de JIRA es de tipo Bug, y `feature` en cualquier otro caso.
    - `<explicacion-breve>`: pocas palabras, en minúsculas, sin tildes ni eñes, separadas por guiones.
-   - El nombre completo tiene **menos de 64 caracteres**. Ejemplo: `feature/SGARFIDIN-1024-security`.
+   - Regla de Inditex (la comprueba GitHub): **nombre del repositorio + nombre de la rama no pueden pasar de 63
+     caracteres**. Cuenta siempre la barra que separa repo y rama (`<repo>/<rama>`), además de la barra de
+     `<tipo>/`, que ya forma parte del nombre de la rama. Calcula el margen con el repositorio de nombre más largo
+     de la tarea (la rama es la misma en todos): `longitud de <repo>/<rama> ≤ 63`, es decir
+     `longitud de la rama ≤ 62 − longitud del nombre del repo`. Si la rama no cabe, acorta
+     `<explicacion-breve>` (menos palabras) y, si ni así cabe, usa solo `<tipo>/<CLAVE>`, que siempre está permitido.
+   - Formato permitido: `<tipo>/<CLAVE>` o `<tipo>/<CLAVE>-<explicacion-breve>`, p. ej. `feature/SGARFIDIN-1024` o
+     `feature/SGARFIDIN-1024-security`. Nada más en el nombre (sin tu nombre, fechas ni números sueltos).
+   - Antes de `git switch -c` comprueba la longitud con `echo -n "<repo>/<rama>" | wc -c` (debe dar 63 o menos) y
+     no crees la rama si se pasa.
    - Usa la misma rama en todos los repositorios de la tarea. Si ya existe (tarea retomada), cámbiate a ella.
 7. Si la tarea no está ya en "In Progress", pásala con el MCP de JIRA (consulta antes sus transiciones y usa la
    que lleve a "In Progress"). Si no existe esa transición, díselo al usuario y sigue.

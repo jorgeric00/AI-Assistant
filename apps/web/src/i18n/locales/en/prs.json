@@ -92,6 +92,10 @@
     "noReviews": "Nobody has reviewed it yet.",
     "alertsTitle": "Alerts for this PR",
     "noAlerts": "No alerts.",
-    "notFound": "That PR is not one of yours known to the app."
+    "notFound": "That PR is not one of yours known to the app.",
+    "organize": "Organize",
+    "organizeTitle": "Your open PRs grouped by task, newest first",
+    "organizeCount_one": "{{count}} PR",
+    "organizeCount_other": "{{count}} PRs"
   }
 }
