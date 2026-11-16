@@ -310,3 +310,25 @@ describe('Order sin poder leer el servicio de pedidos', () => {
     expect(sent).toMatchObject({ attributes: { _Pedido_: { value: '2', workAttributeId: 41 } } });
   });
 });
+
+describe('imputar varias líneas seguidas', () => {
+  it('pide el usuario y los atributos una sola vez y reintenta un 404 suelto', async () => {
+    const seen: string[] = [];
+    let issueMisses = 1;
+    const { impl } = fakeFetch((url) => {
+      seen.push(url.pathname);
+      if (url.pathname.endsWith('/issue/ABC-1') && issueMisses-- > 0) return { status: 404 };
+      if (url.pathname.includes('/issue/')) return { body: { id: '1' } };
+      if (url.pathname.endsWith('/myself')) return { body: { key: 'K', name: 'jorge' } };
+      if (url.pathname === '/jira/rest/tempo-core/1/work-attribute') return { body: [{ id: 1, key: '_T_', name: 'Type of Work' }] };
+      return { body: {} };
+    });
+    const client = new JiraClient({ baseUrl: 'https://jira.empresa.com/jira', token: 'pat' }, impl);
+    const attrs = { 'Type of Work': 'Support' };
+    await client.logWork('ABC-1', '2026-11-16', 3600, attrs);
+    await client.logWork('ABC-2', '2026-11-16', 3600, attrs);
+    expect(seen.filter((p) => p.endsWith('/myself'))).toHaveLength(1);
+    expect(seen.filter((p) => p === '/jira/rest/tempo-core/1/work-attribute')).toHaveLength(1);
+    expect(seen.filter((p) => p.endsWith('/issue/ABC-1'))).toHaveLength(2);
+  });
+});

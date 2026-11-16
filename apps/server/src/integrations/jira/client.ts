@@ -347,17 +347,44 @@ export class JiraClient {
     return body;
   }
 
-  /**
-   * Imputa tiempo en Tempo (Timesheets): `attributes` va por nombre de atributo y nombre de valor
-   * ("Type of Work" → "New Functionality"); se traducen a las claves que pide Tempo.
-   */
-  async logWork(key: string, date: string, timeSpentSeconds: number, attributes: Record<string, string>): Promise<void> {
-    const issueRes = await this.get<{ id?: string }>(`/issue/${encodeURIComponent(key)}`, { fields: 'summary' });
-    const issue = issueRes.body;
-    if (!issue?.id) throw new JiraError(t('jira.worklogStep', { step: `GET /issue/${key}`, status: issueRes.status }));
-    const meRes = await this.get<{ key?: string; name?: string; accountId?: string }>('/myself', {});
-    const me = meRes.body;
-    if (!me) throw new JiraError(t('jira.worklogStep', { step: 'GET /myself', status: meRes.status }));
+  /** GET que se reintenta si JIRA contesta 404 sin datos: con muchas llamadas seguidas a veces lo hace en rutas que existen. */
+  private async getRetry<T>(path: string, params: Record<string, string>, attempts = 4): Promise<{ status: number; body: T | null }> {
+    let res = await this.get<T>(path, params);
+    for (let i = 1; i < attempts && !res.body && res.status === 404; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 600 * i));
+      res = await this.get<T>(path, params);
+    }
+    return res;
+  }
+
+  private tempoMe: Promise<{ key?: string; name?: string; accountId?: string }> | null = null;
+  private tempoResolved = new Map<string, Promise<Record<string, { name: string; workAttributeId: number; value: string }>>>();
+
+  /** El usuario que imputa: se pide una vez por cliente. */
+  private async worklogUser() {
+    this.tempoMe ??= (async () => {
+      const res = await this.getRetry<{ key?: string; name?: string; accountId?: string }>('/myself', {});
+      if (!res.body) throw new JiraError(t('jira.worklogStep', { step: 'GET /myself', status: res.status }));
+      return res.body;
+    })();
+    this.tempoMe.catch(() => (this.tempoMe = null));
+    return this.tempoMe;
+  }
+
+  /** Atributos de Tempo ya traducidos a sus claves y valores; se calculan una vez por combinación para no repetir llamadas. */
+  private resolveTempoAttributes(attributes: Record<string, string>) {
+    const cacheKey = JSON.stringify(attributes);
+    let pending = this.tempoResolved.get(cacheKey);
+    if (!pending) {
+      pending = this.buildTempoAttributes(attributes);
+      this.tempoResolved.set(cacheKey, pending);
+      pending.catch(() => this.tempoResolved.delete(cacheKey));
+    }
+    return pending;
+  }
+
+  private async buildTempoAttributes(attributes: Record<string, string>) {
+    const me = await this.worklogUser();
     const definitions = await this.tempoAttributes();
     const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
     const sent: Record<string, { name: string; workAttributeId: number; value: string }> = {};
@@ -388,6 +415,19 @@ export class JiraClient {
       }
       sent[def.key ?? `_${def.name.replace(/\s+/g, '')}_`] = { name: def.name, workAttributeId: def.id, value: option.value ?? option.name };
     }
+    return sent;
+  }
+
+  /**
+   * Imputa tiempo en Tempo (Timesheets): `attributes` va por nombre de atributo y nombre de valor
+   * ("Type of Work" → "New Functionality"); se traducen a las claves que pide Tempo.
+   */
+  async logWork(key: string, date: string, timeSpentSeconds: number, attributes: Record<string, string>): Promise<void> {
+    const issueRes = await this.getRetry<{ id?: string }>(`/issue/${encodeURIComponent(key)}`, { fields: 'summary' });
+    const issue = issueRes.body;
+    if (!issue?.id) throw new JiraError(t('jira.worklogStep', { step: `GET /issue/${key}`, status: issueRes.status }));
+    const sent = await this.resolveTempoAttributes(attributes);
+    const me = await this.worklogUser();
     const { status } = await this.request('POST', '/rest/tempo-timesheets/4/worklogs', {
       originTaskId: String(issue.id),
       worker: me.key ?? me.name ?? me.accountId,
