@@ -112,13 +112,26 @@ export interface TempoAttribute {
 
 type TempoOption = { name: string; value?: string; removed?: boolean };
 
-/** Valores de la lista de un atributo de Tempo: según la versión llegan como `staticListValues`, `values`, `options`... */
+/** Nombre visible de una opción: según el origen llega como `name`, `label`, `text` o `displayName`. */
+function optionName(o: unknown): string | null {
+  if (!o || typeof o !== 'object') return null;
+  const r = o as Record<string, unknown>;
+  for (const k of ['name', 'label', 'text', 'displayName']) if (typeof r[k] === 'string') return r[k] as string;
+  return null;
+}
+
+const toOptions = (list: unknown[]): TempoOption[] =>
+  list.map((o) => ({ name: optionName(o)!, value: (o as { value?: unknown }).value != null ? String((o as { value?: unknown }).value) : undefined, removed: (o as { removed?: boolean }).removed }));
+
+/** Valores de la lista de un atributo de Tempo: según la versión llegan como `staticListValues`, `values`, `options`... o como un array suelto. */
 export function tempoOptions(def: unknown): TempoOption[] {
   if (!def || typeof def !== 'object') return [];
+  const isList = (v: unknown): v is unknown[] => Array.isArray(v) && v.length > 0 && v.every((o) => optionName(o) !== null);
+  if (isList(def)) return toOptions(def).filter((o) => !o.removed);
   const found: TempoOption[] = [];
   for (const v of Object.values(def)) {
-    if (Array.isArray(v) && v.length && v.every((o) => o && typeof o === 'object' && typeof (o as TempoOption).name === 'string')) found.push(...(v as TempoOption[]));
-    else if (v && typeof v === 'object' && !Array.isArray(v)) found.push(...tempoOptions(v));
+    if (isList(v)) found.push(...toOptions(v));
+    else if (v && typeof v === 'object') found.push(...tempoOptions(v));
   }
   return found.filter((o) => !o.removed);
 }
@@ -322,13 +335,21 @@ export class JiraClient {
       if (!def) throw new JiraError(t('jira.tempoAttribute', { name, known: definitions.map((d) => d.name).join(', ') }));
       let options = tempoOptions(def);
       // Si el listado no trae los valores, se pide la ficha de ese atributo.
+      let raw = JSON.stringify(def);
       if (!options.length) {
         const detail = await this.request<unknown>('GET', `/rest/tempo-core/1/work-attribute/${def.id}`, undefined, this.baseUrl).catch(() => null);
         options = tempoOptions(detail?.body);
       }
+      // Desplegable dinámico: los valores salen de la URL externa que tiene configurada (p. ej. un endpoint de ScriptRunner).
+      if (!options.length && typeof def.externalUrl === 'string') {
+        const origin = new URL(this.baseUrl).origin;
+        const ext = await this.request<unknown>('GET', def.externalUrl.startsWith('/') ? def.externalUrl : `/${def.externalUrl}`, undefined, origin).catch((e: unknown) => ({ status: 0, body: String(e instanceof Error ? e.message : e) }));
+        options = tempoOptions(ext.body);
+        if (!options.length) raw = `${raw} → ${def.externalUrl}: ${JSON.stringify(ext.body)}`;
+      }
       const option = options.find((o) => norm(o.name) === norm(wanted));
       if (!option) {
-        const known = options.length ? options.map((o) => o.name).join(', ') : t('jira.tempoNoValues', { raw: JSON.stringify(def).slice(0, 700) });
+        const known = options.length ? options.map((o) => o.name).join(', ') : t('jira.tempoNoValues', { raw: raw.slice(0, 900) });
         throw new JiraError(t('jira.tempoValue', { name, value: wanted, known }));
       }
       sent[def.key ?? `_${def.name.replace(/\s+/g, '')}_`] = { name: def.name, workAttributeId: def.id, value: option.value ?? option.name };
