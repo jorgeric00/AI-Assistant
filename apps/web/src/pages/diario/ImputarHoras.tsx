@@ -160,6 +160,11 @@ function DayRow({ day: d, onSkip, onHours, onRemove, onAdd }: { day: DayState; o
           )}
         </span>
       </div>
+      {!!d.done.length && (
+        <p className="m-0 text-small text-ink-muted">
+          {t('worklog.doneToday', { hours: d.imputed, tasks: d.done.map((x) => `${x.key} ${x.hours} h`).join(', ') })}
+        </p>
+      )}
       {needsTask && <p className="m-0 text-small text-danger">{t('worklog.noActivity')}</p>}
       {editable && (
         <>

@@ -1,7 +1,7 @@
 // Imputación de horas en JIRA desde el diario: lunes a jueves 9 h y viernes 6 h, repartidas entre las tareas
 // con actividad ese día (proporcional al número de entradas del diario) en tramos de media hora.
 import { and, between, eq, isNotNull } from 'drizzle-orm';
-import type { WorklogDay, WorklogRange, WorklogSubmit, WorklogSubmitResult } from '@dev-assistant/shared';
+import type { WorklogDay, WorklogLine, WorklogRange, WorklogSubmit, WorklogSubmitResult } from '@dev-assistant/shared';
 import type { Db } from '../../db/client.js';
 import { journalEntries, tasks, worklogImputations } from '../../db/schema.js';
 import { JiraError, type JiraClient } from '../../integrations/jira/client.js';
@@ -69,17 +69,28 @@ export class WorklogService {
       .innerJoin(tasks, eq(tasks.id, journalEntries.taskId))
       .where(and(between(journalEntries.date, range.from, range.to), isNotNull(journalEntries.taskId)))
       .all();
-    const done = new Set(this.db.select({ date: worklogImputations.date }).from(worklogImputations).where(between(worklogImputations.date, range.from, range.to)).all().map((r) => r.date));
+    const imputations = this.db
+      .select({ date: worklogImputations.date, key: worklogImputations.jiraKey, seconds: worklogImputations.seconds })
+      .from(worklogImputations)
+      .where(between(worklogImputations.date, range.from, range.to))
+      .all();
+    const summaries = new Map(rows.map((r) => [r.key, r.summary]));
     const result: WorklogDay[] = [];
     for (const date of days(range.from, range.to)) {
-      const target = targetHours(date);
-      if (!target) continue;
+      const total = targetHours(date);
+      if (!total) continue;
+      const done: WorklogLine[] = imputations
+        .filter((x) => x.date === date)
+        .map((x) => ({ key: x.key, summary: summaries.get(x.key) ?? '', hours: x.seconds / 3600 }));
+      const imputed = done.reduce((s, l) => s + l.hours, 0);
+      // Se propone solo lo que falta hasta completar el día, entre las tareas con actividad que aún no se imputaron ese día.
+      const target = Math.max(0, Math.round((total - imputed) * 2) / 2);
       const perTask = new Map<string, { summary: string; count: number }>();
-      for (const r of rows.filter((x) => x.date === date)) perTask.set(r.key, { summary: r.summary, count: (perTask.get(r.key)?.count ?? 0) + 1 });
+      for (const r of rows.filter((x) => x.date === date && !done.some((d) => d.key === x.key))) perTask.set(r.key, { summary: r.summary, count: (perTask.get(r.key)?.count ?? 0) + 1 });
       const entries = [...perTask.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-      const hours = allocate(entries.map(([, v]) => v.count), target);
+      const hours = target ? allocate(entries.map(([, v]) => v.count), target) : [];
       const lines = entries.map(([key, v], i) => ({ key, summary: v.summary, hours: hours[i]! })).filter((l) => l.hours > 0);
-      result.push({ date, target, status: done.has(date) ? 'imputado' : lines.length ? 'pendiente' : 'sin_actividad', lines });
+      result.push({ date, target, done, imputed, status: !target ? 'imputado' : lines.length ? 'pendiente' : 'sin_actividad', lines });
     }
     return result;
   }

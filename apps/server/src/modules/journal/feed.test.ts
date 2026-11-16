@@ -136,3 +136,18 @@ describe('imputación de horas', () => {
     expect((await app.inject({ method: 'GET', url })).json<{ status: string }[]>()[0]!.status).toBe('imputado');
   });
 });
+
+describe('imputación parcial', () => {
+  it('con parte del día imputada propone solo lo que falta y no repite la tarea ya imputada', async () => {
+    const { db } = openDatabase(':memory:');
+    const jira = { logWork: async () => undefined } as never;
+    const app = await buildApp(db, { devAssistantHome: mkdtempSync(join(tmpdir(), 'da-wl2-')), jiraClient: jira });
+    new TasksRepository(db).upsertFromJira([issue('To Do'), { ...issue('To Do'), key: 'ABC-2', summary: 'Otra' }], '2026-11-09T08:00:00Z');
+    const ids = db.select().from(tasksTable).all();
+    for (const k of ['ABC-1', 'ABC-2']) db.insert(journalEntries).values({ date: '2026-11-09', source: 'manual', taskId: ids.find((t) => t.jiraKey === k)!.id, text: 'x' }).run();
+    await app.inject({ method: 'POST', url: '/api/journal/worklog', payload: { entries: [{ date: '2026-11-09', key: 'ABC-1', hours: 2 }] } });
+    const [day] = (await app.inject({ method: 'GET', url: '/api/journal/worklog?from=2026-11-09&to=2026-11-09' })).json<{ status: string; target: number; imputed: number; lines: { key: string; hours: number }[] }[]>();
+    expect(day).toMatchObject({ status: 'pendiente', imputed: 2, target: 7 });
+    expect(day!.lines).toEqual([expect.objectContaining({ key: 'ABC-2', hours: 7 })]);
+  });
+});
