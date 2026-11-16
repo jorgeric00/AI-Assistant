@@ -225,3 +225,22 @@ describe('valores de los atributos de Tempo', () => {
     expect(sent).toMatchObject({ attributes: { _TypeofWork_: { value: 'NF', workAttributeId: 7 } } });
   });
 });
+
+describe('atributo de Tempo con desplegable dinámico', () => {
+  it('lee los valores de la URL externa del atributo', async () => {
+    let sent: unknown;
+    const { impl, calls } = fakeFetch((url, init) => {
+      if (url.pathname === '/jira/rest/api/2/issue/ABC-1') return { body: { id: '10001' } };
+      if (url.pathname === '/jira/rest/api/2/myself') return { body: { key: 'U1' } };
+      if (url.pathname === '/jira/rest/tempo-core/1/work-attribute') return { body: [{ id: 1, key: '_TipodeTrabajo_', name: 'Type of Work', type: { value: 'DYNAMIC_DROPDOWN' }, externalUrl: '/jira/rest/scriptrunner/latest/custom/getTempoAttributeTypeOfWork' }] };
+      if (url.pathname === '/jira/rest/tempo-core/1/work-attribute/1') return { body: { id: 1, name: 'Type of Work' } };
+      if (url.pathname === '/jira/rest/scriptrunner/latest/custom/getTempoAttributeTypeOfWork') return { body: [{ name: 'New Functionality', value: 'NEW' }, { label: 'Support', value: 'SUP' }] };
+      sent = JSON.parse(String(init.body));
+      return { body: {} };
+    });
+    const client = new JiraClient({ baseUrl: 'https://jira.empresa.com/jira', token: 'pat' }, impl);
+    await client.logWork('ABC-1', '2026-11-16', 3600, { 'Type of Work': 'support' });
+    expect(calls.some((c) => c.url.pathname === '/jira/rest/scriptrunner/latest/custom/getTempoAttributeTypeOfWork')).toBe(true);
+    expect(sent).toMatchObject({ attributes: { _TipodeTrabajo_: { value: 'SUP', workAttributeId: 1 } } });
+  });
+});
