@@ -107,6 +107,20 @@ export interface TempoAttribute {
   key?: string;
   name: string;
   staticListValues?: { id?: number; name: string; value?: string; removed?: boolean }[];
+  [other: string]: unknown;
+}
+
+type TempoOption = { name: string; value?: string; removed?: boolean };
+
+/** Valores de la lista de un atributo de Tempo: según la versión llegan como `staticListValues`, `values`, `options`... */
+export function tempoOptions(def: unknown): TempoOption[] {
+  if (!def || typeof def !== 'object') return [];
+  const found: TempoOption[] = [];
+  for (const v of Object.values(def)) {
+    if (Array.isArray(v) && v.length && v.every((o) => o && typeof o === 'object' && typeof (o as TempoOption).name === 'string')) found.push(...(v as TempoOption[]));
+    else if (v && typeof v === 'object' && !Array.isArray(v)) found.push(...tempoOptions(v));
+  }
+  return found.filter((o) => !o.removed);
 }
 
 export class JiraClient {
@@ -306,9 +320,17 @@ export class JiraClient {
     for (const [name, wanted] of Object.entries(attributes)) {
       const def = definitions.find((d) => norm(d.name) === norm(name));
       if (!def) throw new JiraError(t('jira.tempoAttribute', { name, known: definitions.map((d) => d.name).join(', ') }));
-      const options = (def.staticListValues ?? []).filter((o) => !o.removed);
+      let options = tempoOptions(def);
+      // Si el listado no trae los valores, se pide la ficha de ese atributo.
+      if (!options.length) {
+        const detail = await this.request<unknown>('GET', `/rest/tempo-core/1/work-attribute/${def.id}`, undefined, this.baseUrl).catch(() => null);
+        options = tempoOptions(detail?.body);
+      }
       const option = options.find((o) => norm(o.name) === norm(wanted));
-      if (!option) throw new JiraError(t('jira.tempoValue', { name, value: wanted, known: options.map((o) => o.name).join(', ') }));
+      if (!option) {
+        const known = options.length ? options.map((o) => o.name).join(', ') : t('jira.tempoNoValues', { raw: JSON.stringify(def).slice(0, 700) });
+        throw new JiraError(t('jira.tempoValue', { name, value: wanted, known }));
+      }
       sent[def.key ?? `_${def.name.replace(/\s+/g, '')}_`] = { name: def.name, workAttributeId: def.id, value: option.value ?? option.name };
     }
     const { status } = await this.request('POST', '/rest/tempo-timesheets/4/worklogs', {

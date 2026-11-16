@@ -203,3 +203,25 @@ describe('imputación con Tempo', () => {
     await expect(client.logWork('ABC-1', '2026-11-11', 60, { 'Type of Work': 'Otra cosa' })).rejects.toThrow(/Support/);
   });
 });
+
+describe('valores de los atributos de Tempo', () => {
+  it('los lee de cualquier lista con nombre, y de la ficha del atributo si el listado no los trae', async () => {
+    const { tempoOptions } = await import('./client.js');
+    expect(tempoOptions({ id: 1, values: [{ name: 'A', value: 'a' }, { name: 'B', removed: true }] }).map((o) => o.name)).toEqual(['A']);
+    expect(tempoOptions({ id: 1, type: { options: [{ name: 'X' }] } }).map((o) => o.name)).toEqual(['X']);
+    expect(tempoOptions({ id: 1, name: 'Order' })).toEqual([]);
+
+    let sent: unknown;
+    const { impl } = fakeFetch((url, init) => {
+      if (url.pathname === '/rest/api/2/issue/ABC-1') return { body: { id: '10001' } };
+      if (url.pathname === '/rest/api/2/myself') return { body: { key: 'U1' } };
+      if (url.pathname === '/rest/tempo-core/1/work-attribute') return { body: [{ id: 7, key: '_TypeofWork_', name: 'Type of Work' }] };
+      if (url.pathname === '/rest/tempo-core/1/work-attribute/7') return { body: { id: 7, values: [{ name: 'New Functionality', value: 'NF' }] } };
+      sent = JSON.parse(String(init.body));
+      return { body: {} };
+    });
+    const client = new JiraClient({ baseUrl: 'https://jira.empresa.com', token: 'pat' }, impl);
+    await client.logWork('ABC-1', '2026-11-16', 3600, { 'Type of Work': 'New Functionality' });
+    expect(sent).toMatchObject({ attributes: { _TypeofWork_: { value: 'NF', workAttributeId: 7 } } });
+  });
+});
