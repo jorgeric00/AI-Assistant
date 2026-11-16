@@ -92,6 +92,10 @@
     "noReviews": "Nadie la ha revisado todavía.",
     "alertsTitle": "Avisos de esta PR",
     "noAlerts": "Sin avisos.",
-    "notFound": "Esa PR no está entre las tuyas que conoce la app."
+    "notFound": "Esa PR no está entre las tuyas que conoce la app.",
+    "organize": "Organizar",
+    "organizeTitle": "Tus PR abiertas agrupadas por tarea, de más recientes a más antiguas",
+    "organizeCount_one": "{{count}} PR",
+    "organizeCount_other": "{{count}} PR"
   }
 }
