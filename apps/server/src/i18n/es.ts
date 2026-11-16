@@ -45,6 +45,7 @@ export const es = {
   'jira.tempoAttribute': 'Tempo no tiene el atributo «{{name}}». Los que hay: {{known}}.',
   'jira.tempoValue': 'El atributo «{{name}}» de Tempo no tiene el valor «{{value}}». Los que hay: {{known}}.',
   'jira.tempoNoValues': 'ninguno (Tempo devolvió: {{raw}})',
+  'jira.worklogStep': 'Al imputar, {{step}} no devolvió datos (estado {{status}}).',
   'jira.notConfigured': 'JIRA no está configurado: añade JIRA_URL y JIRA_TOKEN al fichero .env.',
   'jira.connectFailed': 'No se pudo conectar con JIRA en {{url}}: {{cause}}',
   'jira.loginRedirect': 'JIRA redirige a una página de inicio de sesión{{host}}: desde esta red la API no acepta el token. Prueba desde la red de la empresa o con la VPN.',
