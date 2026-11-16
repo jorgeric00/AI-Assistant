@@ -244,3 +244,69 @@ describe('atributo de Tempo con desplegable dinámico', () => {
     expect(sent).toMatchObject({ attributes: { _TipodeTrabajo_: { value: 'SUP', workAttributeId: 1 } } });
   });
 });
+
+describe('Type of Work con la sesión del navegador como único camino', () => {
+  it('si Tempo no deja leer la lista, usa los valores conocidos (New Functionality = 3, Support = 6)', async () => {
+    let sent: unknown;
+    const { impl } = fakeFetch((url, init) => {
+      if (url.pathname.endsWith('/issue/ABC-1')) return { body: { id: '10001' } };
+      if (url.pathname.endsWith('/myself')) return { body: { key: 'U1' } };
+      if (url.pathname === '/jira/rest/tempo-core/1/work-attribute') return { body: [{ id: 1, key: '_TipodeTrabajo_', name: 'Type of Work', externalUrl: '/jira/rest/scriptrunner/latest/custom/x' }] };
+      if (url.pathname === '/jira/rest/scriptrunner/latest/custom/x') return { body: {} };
+      if (url.pathname.startsWith('/jira/rest/tempo-core/1/work-attribute/')) return { body: { id: 1 } };
+      sent = JSON.parse(String(init.body));
+      return { body: {} };
+    });
+    const client = new JiraClient({ baseUrl: 'https://jira.empresa.com/jira', token: 'pat' }, impl);
+    await client.logWork('ABC-1', '2026-11-16', 3600, { 'Type of Work': 'Support' });
+    expect(sent).toMatchObject({ attributes: { _TipodeTrabajo_: { value: '6' } } });
+    await client.logWork('ABC-1', '2026-11-16', 3600, { 'Type of Work': 'New Functionality' });
+    expect(sent).toMatchObject({ attributes: { _TipodeTrabajo_: { value: '3' } } });
+  });
+
+  it('entiende las listas {key, value: etiqueta} de ScriptRunner', async () => {
+    const { tempoOptions } = await import('./client.js');
+    expect(tempoOptions([{ key: '', value: 'Please, select an option' }, { key: '3', value: 'New Functionality' }]).find((o) => o.name === 'New Functionality')?.value).toBe('3');
+  });
+});
+
+describe('desplegable dinámico con URL absoluta y {author}', () => {
+  it('sustituye {author} por el usuario y lee la lista de esa URL', async () => {
+    let sent: unknown;
+    const asked: string[] = [];
+    const { impl } = fakeFetch((url, init) => {
+      if (url.pathname.endsWith('/issue/ABC-1')) return { body: { id: '10001' } };
+      if (url.pathname.endsWith('/myself')) return { body: { key: 'JIRAUSER9', name: 'jorge' } };
+      if (url.pathname === '/jira/rest/tempo-core/1/work-attribute') return { body: [{ id: 41, key: '_Pedido_', name: 'Order', externalUrl: 'https://jira.empresa.com/gpsweb/pedidosRecurso/{author}' }] };
+      if (url.pathname.startsWith('/gpsweb/')) {
+        asked.push(url.pathname);
+        return { body: { values: [{ key: '77', value: 'Services' }] } };
+      }
+      if (url.pathname.startsWith('/jira/rest/tempo-core/1/work-attribute/')) return { body: { id: 41 } };
+      sent = JSON.parse(String(init.body));
+      return { body: {} };
+    });
+    const client = new JiraClient({ baseUrl: 'https://jira.empresa.com/jira', token: 'pat' }, impl);
+    await client.logWork('ABC-1', '2026-11-16', 3600, { Order: 'Services' });
+    expect(asked).toEqual(['/gpsweb/pedidosRecurso/jorge']);
+    expect(sent).toMatchObject({ attributes: { _Pedido_: { value: '77', workAttributeId: 41 } } });
+  });
+});
+
+describe('Order sin poder leer el servicio de pedidos', () => {
+  it('usa los valores conocidos (Services = 2)', async () => {
+    let sent: unknown;
+    const { impl } = fakeFetch((url, init) => {
+      if (url.pathname.endsWith('/issue/ABC-1')) return { body: { id: '10001' } };
+      if (url.pathname.endsWith('/myself')) return { body: { key: 'K', name: 'jorge' } };
+      if (url.pathname === '/jira/rest/tempo-core/1/work-attribute') return { body: [{ id: 41, key: '_Pedido_', name: 'Order', externalUrl: 'https://jira.empresa.com/gpsweb/pedidosRecurso/{author}' }] };
+      if (url.pathname.startsWith('/gpsweb/')) return { body: {} };
+      if (url.pathname.startsWith('/jira/rest/tempo-core/1/work-attribute/')) return { body: { id: 41 } };
+      sent = JSON.parse(String(init.body));
+      return { body: {} };
+    });
+    const client = new JiraClient({ baseUrl: 'https://jira.empresa.com/jira', token: 'pat' }, impl);
+    await client.logWork('ABC-1', '2026-11-16', 3600, { Order: 'Services' });
+    expect(sent).toMatchObject({ attributes: { _Pedido_: { value: '2', workAttributeId: 41 } } });
+  });
+});

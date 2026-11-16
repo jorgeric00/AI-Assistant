@@ -117,11 +117,38 @@ function optionName(o: unknown): string | null {
   if (!o || typeof o !== 'object') return null;
   const r = o as Record<string, unknown>;
   for (const k of ['name', 'label', 'text', 'displayName']) if (typeof r[k] === 'string') return r[k] as string;
+  // Los endpoints de ScriptRunner de Tempo devuelven {key: "3", value: "New Functionality"}.
+  if (r.key != null && typeof r.value === 'string') return r.value;
   return null;
 }
 
 const toOptions = (list: unknown[]): TempoOption[] =>
-  list.map((o) => ({ name: optionName(o)!, value: (o as { value?: unknown }).value != null ? String((o as { value?: unknown }).value) : undefined, removed: (o as { removed?: boolean }).removed }));
+  list.map((o) => {
+    const r = o as { name?: unknown; key?: unknown; value?: unknown; removed?: boolean };
+    // {key, value: etiqueta}: el valor que guarda Tempo es la clave; en el resto, `value`.
+    const value = typeof r.name !== 'string' && r.key != null && typeof r.value === 'string' ? String(r.key) : r.value != null ? String(r.value) : undefined;
+    return { name: optionName(o)!, value, removed: r.removed };
+  });
+
+/**
+ * Valores de atributos de Tempo que la app conoce por si el JIRA no los deja leer con el token
+ * (el endpoint de ScriptRunner de «Type of Work» solo contesta a la sesión del navegador).
+ */
+const KNOWN_TEMPO_VALUES: Record<string, Record<string, string>> = {
+  typeofwork: {
+    Management: '1',
+    Analysis: '2',
+    'New Functionality': '3',
+    Testing: '5',
+    'Corrective Development': '12',
+    'Technical Improvements': '11',
+    Support: '6',
+    Operation: '7',
+    Training: '8',
+    'Not Applicable': '10',
+  },
+  order: { 'Not Billable': '0', Services: '2', 'Unknown Order': '1' },
+};
 
 /** Valores de la lista de un atributo de Tempo: según la versión llegan como `staticListValues`, `values`, `options`... o como un array suelto. */
 export function tempoOptions(def: unknown): TempoOption[] {
@@ -342,11 +369,14 @@ export class JiraClient {
       }
       // Desplegable dinámico: los valores salen de la URL externa que tiene configurada (p. ej. un endpoint de ScriptRunner).
       if (!options.length && typeof def.externalUrl === 'string') {
+        // La URL puede ser relativa al servidor o absoluta, y lleva {author} (el usuario que imputa).
         const origin = new URL(this.baseUrl).origin;
-        const ext = await this.request<unknown>('GET', def.externalUrl.startsWith('/') ? def.externalUrl : `/${def.externalUrl}`, undefined, origin).catch((e: unknown) => ({ status: 0, body: String(e instanceof Error ? e.message : e) }));
+        const target = new URL(def.externalUrl.replace('{author}', encodeURIComponent(me.name ?? me.key ?? '')), `${origin}/`);
+        const ext = await this.request<unknown>('GET', target.pathname + target.search, undefined, target.origin).catch((e: unknown) => ({ status: 0, body: String(e instanceof Error ? e.message : e) }));
         options = tempoOptions(ext.body);
         if (!options.length) raw = `${raw} → ${def.externalUrl}: ${JSON.stringify(ext.body)}`;
       }
+      if (!options.length) options = Object.entries(KNOWN_TEMPO_VALUES[norm(def.name)] ?? {}).map(([n, v]) => ({ name: n, value: v }));
       const option = options.find((o) => norm(o.name) === norm(wanted));
       if (!option) {
         const known = options.length ? options.map((o) => o.name).join(', ') : t('jira.tempoNoValues', { raw: raw.slice(0, 900) });
