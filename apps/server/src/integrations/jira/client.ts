@@ -368,8 +368,10 @@ export class JiraClient {
       }
       // Desplegable dinámico: los valores salen de la URL externa que tiene configurada (p. ej. un endpoint de ScriptRunner).
       if (!options.length && typeof def.externalUrl === 'string') {
+        // La URL puede ser relativa al servidor o absoluta, y lleva {author} (el usuario que imputa).
         const origin = new URL(this.baseUrl).origin;
-        const ext = await this.request<unknown>('GET', def.externalUrl.startsWith('/') ? def.externalUrl : `/${def.externalUrl}`, undefined, origin).catch((e: unknown) => ({ status: 0, body: String(e instanceof Error ? e.message : e) }));
+        const target = new URL(def.externalUrl.replace('{author}', encodeURIComponent(me.name ?? me.key ?? '')), `${origin}/`);
+        const ext = await this.request<unknown>('GET', target.pathname + target.search, undefined, target.origin).catch((e: unknown) => ({ status: 0, body: String(e instanceof Error ? e.message : e) }));
         options = tempoOptions(ext.body);
         if (!options.length) raw = `${raw} → ${def.externalUrl}: ${JSON.stringify(ext.body)}`;
       }
