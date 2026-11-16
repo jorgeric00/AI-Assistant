@@ -292,3 +292,21 @@ describe('desplegable dinámico con URL absoluta y {author}', () => {
     expect(sent).toMatchObject({ attributes: { _Pedido_: { value: '77', workAttributeId: 41 } } });
   });
 });
+
+describe('Order sin poder leer el servicio de pedidos', () => {
+  it('usa los valores conocidos (Services = 2)', async () => {
+    let sent: unknown;
+    const { impl } = fakeFetch((url, init) => {
+      if (url.pathname.endsWith('/issue/ABC-1')) return { body: { id: '10001' } };
+      if (url.pathname.endsWith('/myself')) return { body: { key: 'K', name: 'jorge' } };
+      if (url.pathname === '/jira/rest/tempo-core/1/work-attribute') return { body: [{ id: 41, key: '_Pedido_', name: 'Order', externalUrl: 'https://jira.empresa.com/gpsweb/pedidosRecurso/{author}' }] };
+      if (url.pathname.startsWith('/gpsweb/')) return { body: {} };
+      if (url.pathname.startsWith('/jira/rest/tempo-core/1/work-attribute/')) return { body: { id: 41 } };
+      sent = JSON.parse(String(init.body));
+      return { body: {} };
+    });
+    const client = new JiraClient({ baseUrl: 'https://jira.empresa.com/jira', token: 'pat' }, impl);
+    await client.logWork('ABC-1', '2026-11-16', 3600, { Order: 'Services' });
+    expect(sent).toMatchObject({ attributes: { _Pedido_: { value: '2', workAttributeId: 41 } } });
+  });
+});

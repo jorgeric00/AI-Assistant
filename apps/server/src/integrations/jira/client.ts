@@ -147,6 +147,7 @@ const KNOWN_TEMPO_VALUES: Record<string, Record<string, string>> = {
     Training: '8',
     'Not Applicable': '10',
   },
+  order: { 'Not Billable': '0', Services: '2', 'Unknown Order': '1' },
 };
 
 /** Valores de la lista de un atributo de Tempo: según la versión llegan como `staticListValues`, `values`, `options`... o como un array suelto. */
