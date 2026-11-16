@@ -46,6 +46,7 @@ export const en: Messages = {
   'jira.tempoAttribute': 'Tempo has no attribute “{{name}}”. Available: {{known}}.',
   'jira.tempoValue': 'The Tempo attribute “{{name}}” has no value “{{value}}”. Available: {{known}}.',
   'jira.tempoNoValues': 'none (Tempo returned: {{raw}})',
+  'jira.worklogStep': 'While logging work, {{step}} returned no data (status {{status}}).',
   'jira.notConfigured': 'JIRA is not configured: add JIRA_URL and JIRA_TOKEN to the .env file.',
   'jira.connectFailed': 'Could not connect to JIRA at {{url}}: {{cause}}',
   'jira.loginRedirect': 'JIRA redirects to a login page{{host}}: from this network the API does not accept the token. Try from the company network or over the VPN.',

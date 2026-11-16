@@ -352,8 +352,12 @@ export class JiraClient {
    * ("Type of Work" → "New Functionality"); se traducen a las claves que pide Tempo.
    */
   async logWork(key: string, date: string, timeSpentSeconds: number, attributes: Record<string, string>): Promise<void> {
-    const issue = this.required((await this.get<{ id?: string }>(`/issue/${encodeURIComponent(key)}`, { fields: 'summary' })));
-    const me = this.required(await this.get<{ key?: string; name?: string; accountId?: string }>('/myself', {}));
+    const issueRes = await this.get<{ id?: string }>(`/issue/${encodeURIComponent(key)}`, { fields: 'summary' });
+    const issue = issueRes.body;
+    if (!issue?.id) throw new JiraError(t('jira.worklogStep', { step: `GET /issue/${key}`, status: issueRes.status }));
+    const meRes = await this.get<{ key?: string; name?: string; accountId?: string }>('/myself', {});
+    const me = meRes.body;
+    if (!me) throw new JiraError(t('jira.worklogStep', { step: 'GET /myself', status: meRes.status }));
     const definitions = await this.tempoAttributes();
     const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
     const sent: Record<string, { name: string; workAttributeId: number; value: string }> = {};
