@@ -548,6 +548,19 @@ export interface TaskDocDetail extends TaskDoc {
   markdown: string;
 }
 
+/** Documento (.md/.txt) de la carpeta de una tarea. */
+export interface TaskFile {
+  name: string;
+  size: number;
+  updatedAt: string;
+}
+
+export interface TaskFileDetail extends TaskFile {
+  text: string;
+  /** El fichero pasa de 1 MB y solo se devuelve el principio. */
+  truncated: boolean;
+}
+
 export interface OpencodeSkillStatus {
   installed: boolean;
   /** false si la instalada es distinta de la versión de la app. */
