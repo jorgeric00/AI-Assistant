@@ -1,8 +1,8 @@
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import type { OpencodeSkillStatus, TaskDevInfo } from '@dev-assistant/shared';
+import type { OpencodeSkillStatus, TaskDevInfo, TaskFile, TaskFileDetail } from '@dev-assistant/shared';
 import { buildApp } from '../../app.js';
 import { openDatabase } from '../../db/client.js';
 import { parseHistory, parsePlan, withReadyStepDone } from './dev-files.js';
@@ -89,6 +89,31 @@ describe('API de desarrollo y skill de opencode', () => {
     expect(info.folder).toBe(join(home, 'worktrees', 'ABC-131'));
 
     expect((await app.inject({ method: 'GET', url: '/api/tasks/..%2F..%2Fetc/dev' })).statusCode).toBe(400);
+  });
+
+  it('lista y lee los documentos de la carpeta de la tarea sin salirse de ella', async () => {
+    const { home, app } = await setup();
+    expect((await app.inject({ method: 'GET', url: '/api/tasks/ABC-131/files' })).json()).toEqual([]);
+
+    const folder = join(home, 'worktrees', 'ABC-131');
+    mkdirSync(join(folder, 'orders-api'), { recursive: true });
+    writeFileSync(join(folder, 'analisis.md'), '# Análisis\nCausa: timeout');
+    writeFileSync(join(folder, 'PLAN.md'), PLAN);
+    writeFileSync(join(folder, 'notas.txt'), 'hola');
+    writeFileSync(join(folder, 'datos.json'), '{}');
+    writeFileSync(join(folder, 'orders-api', 'README.md'), 'de un repo');
+    writeFileSync(join(home, 'secreto.md'), 'fuera');
+    symlinkSync(join(home, 'secreto.md'), join(folder, 'enlace.md'));
+
+    const list = (await app.inject({ method: 'GET', url: '/api/tasks/ABC-131/files' })).json<TaskFile[]>();
+    expect(list.map((f) => f.name)).toEqual(['PLAN.md', 'analisis.md', 'notas.txt']);
+
+    const doc = (await app.inject({ method: 'GET', url: '/api/tasks/ABC-131/files/analisis.md' })).json<TaskFileDetail>();
+    expect(doc).toMatchObject({ name: 'analisis.md', text: '# Análisis\nCausa: timeout', truncated: false });
+
+    for (const name of ['enlace.md', 'datos.json', '..%2Fsecreto.md', 'orders-api']) {
+      expect((await app.inject({ method: 'GET', url: `/api/tasks/ABC-131/files/${name}` })).statusCode).toBe(404);
+    }
   });
 
   it('instala la skill y detecta si está al día', async () => {

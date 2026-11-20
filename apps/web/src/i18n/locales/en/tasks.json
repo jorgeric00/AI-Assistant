@@ -307,5 +307,15 @@
     "remove": "Remove from the app",
     "removeHint": "It's only removed from the app; nothing changes in JIRA.",
     "confirmRemove": "Remove {{key}} from the app? Its links to notes go with it. Nothing changes in JIRA."
+  },
+  "files": {
+    "button": "View documents",
+    "title": "{{key}} documents",
+    "list": "Documents",
+    "empty": "This task has no documents yet. opencode writes them in its folder.",
+    "truncated": "The document is large: only the start is shown.",
+    "loadError": "Could not read the document.",
+    "close": "Close",
+    "updated": "Updated {{when}}"
   }
 }
