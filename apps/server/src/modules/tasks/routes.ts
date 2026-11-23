@@ -5,6 +5,7 @@ import { JiraCreateDraftInput, JiraDraftInput, JiraKey, JiraUpdateInput, Project
 import { t } from '../../i18n/index.js';
 import { readTaskDevInfo, withReadyStepDone } from './dev-files.js';
 import { getTaskDoc, listTaskDocs } from './task-docs.js';
+import { listTaskFiles, readTaskFile } from './task-files.js';
 import type { Db } from '../../db/client.js';
 import { pullRequests } from '../../db/schema.js';
 import type { JiraSync } from './jira-sync.js';
@@ -84,6 +85,14 @@ export async function tasksRoutes(
   app.get('/api/task-docs/:key', async (req, reply) => {
     const { key } = KeyParams.parse(req.params);
     return (await getTaskDoc(devAssistantHome, key)) ?? reply.code(404).send({ error: t('tasks.noSummary', { key }) });
+  });
+
+  // Documentos de la carpeta de la tarea (solo lectura).
+  app.get('/api/tasks/:key/files', async (req) => listTaskFiles(devAssistantHome, KeyParams.parse(req.params).key));
+
+  app.get('/api/tasks/:key/files/:name', async (req, reply) => {
+    const { key, name } = KeyParams.extend({ name: z.string() }).parse(req.params);
+    return (await readTaskFile(devAssistantHome, key, name)) ?? reply.code(404).send({ error: t('tasks.fileNotFound', { name }) });
   });
 
   // Sesión de desarrollo: estado de los repos de la tarea y botón para abrir opencode en la terminal.

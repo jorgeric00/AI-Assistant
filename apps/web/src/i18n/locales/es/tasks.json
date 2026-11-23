@@ -307,5 +307,15 @@
     "remove": "Quitar de la app",
     "removeHint": "Solo la quita de la app; no cambia nada en JIRA.",
     "confirmRemove": "¿Quitar {{key}} de la app? Se van sus vínculos con notas. En JIRA no cambia nada."
+  },
+  "files": {
+    "button": "Ver documentos",
+    "title": "Documentos de {{key}}",
+    "list": "Documentos",
+    "empty": "Esta tarea aún no tiene documentos. opencode los escribe en su carpeta.",
+    "truncated": "El documento es muy grande: se muestra solo el principio.",
+    "loadError": "No se pudo leer el documento.",
+    "close": "Cerrar",
+    "updated": "Actualizado {{when}}"
   }
 }

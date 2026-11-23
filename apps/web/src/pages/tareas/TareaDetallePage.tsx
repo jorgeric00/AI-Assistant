@@ -10,6 +10,7 @@ import { dayAndTime, timeAgo } from '../../dates';
 import { TaskPullRequests } from '../prs/PrWidgets';
 import { ActualizarJiraButton, JiraUpdatesList } from './ActualizarJira';
 import { ImportedBadge, RemoveImportedButton } from './ImportarTarea';
+import { VerDocumentosButton } from './VerDocumentos';
 
 const card = 'flex min-w-0 flex-col gap-4 rounded-lg border border-line bg-surface p-4';
 const caption = 'text-small text-ink-muted';
@@ -105,6 +106,7 @@ function Header({ task }: { task: TaskDetail }) {
         </div>
       </div>
       <div className="flex flex-wrap gap-2">
+        <VerDocumentosButton taskKey={task.key} />
         <a href={`#/tareas/${task.key}/sesion`} className={`${secondaryButtonClass} no-underline`}>
           <SquareTerminal size={16} strokeWidth={1.5} aria-hidden />
           {t('shared.devSession')}
