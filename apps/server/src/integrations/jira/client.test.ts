@@ -171,164 +171,18 @@ describe('ADF a texto', () => {
   });
 });
 
-describe('imputación con Tempo', () => {
-  it('traduce Type of Work y Order a las claves de Tempo y crea el registro', async () => {
-    let sent: unknown;
-    const { impl, calls } = fakeFetch((url, init) => {
-      if (url.pathname === '/rest/api/2/issue/ABC-1') return { body: { id: '10001', key: 'ABC-1' } };
-      if (url.pathname === '/rest/api/2/myself') return { body: { key: 'JIRAUSER1', name: 'jorge' } };
-      if (url.pathname === '/rest/tempo-core/1/work-attribute') {
-        return {
-          body: [
-            { id: 1, key: '_TypeofWork_', name: 'Type of Work', staticListValues: [{ name: 'New Functionality', value: 'NEW' }, { name: 'Support', value: 'SUP' }] },
-            { id: 2, key: '_Order_', name: 'Order', staticListValues: [{ name: 'Services', value: 'SERV' }] },
-          ],
-        };
-      }
-      expect(init.method).toBe('POST');
-      sent = JSON.parse(String(init.body));
-      return { body: {} };
-    });
+describe('imputación de horas', () => {
+  it('crea el registro de trabajo de JIRA con las horas y la fecha, sin comentario', async () => {
+    const { impl, calls } = fakeFetch(() => ({ status: 201 }));
     const client = new JiraClient({ baseUrl: 'https://jira.empresa.com', token: 'pat' }, impl);
-    await client.logWork('ABC-1', '2026-11-11', 7200, { 'Type of Work': 'new functionality', Order: 'Services' });
-    const post = calls.at(-1)!;
-    expect(post.url.pathname).toBe('/rest/tempo-timesheets/4/worklogs');
-    expect(sent).toEqual({
-      originTaskId: '10001',
-      worker: 'JIRAUSER1',
-      started: '2026-11-11',
-      timeSpentSeconds: 7200,
-      attributes: { _TypeofWork_: { name: 'Type of Work', workAttributeId: 1, value: 'NEW' }, _Order_: { name: 'Order', workAttributeId: 2, value: 'SERV' } },
-    });
-    await expect(client.logWork('ABC-1', '2026-11-11', 60, { 'Type of Work': 'Otra cosa' })).rejects.toThrow(/Support/);
+    await client.addWorklog('ABC-1', '2026-11-11T09:00:00.000+0100', 7200);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.url.pathname).toBe('/rest/api/2/issue/ABC-1/worklog');
   });
-});
 
-describe('valores de los atributos de Tempo', () => {
-  it('los lee de cualquier lista con nombre, y de la ficha del atributo si el listado no los trae', async () => {
-    const { tempoOptions } = await import('./client.js');
-    expect(tempoOptions({ id: 1, values: [{ name: 'A', value: 'a' }, { name: 'B', removed: true }] }).map((o) => o.name)).toEqual(['A']);
-    expect(tempoOptions({ id: 1, type: { options: [{ name: 'X' }] } }).map((o) => o.name)).toEqual(['X']);
-    expect(tempoOptions({ id: 1, name: 'Order' })).toEqual([]);
-
-    let sent: unknown;
-    const { impl } = fakeFetch((url, init) => {
-      if (url.pathname === '/rest/api/2/issue/ABC-1') return { body: { id: '10001' } };
-      if (url.pathname === '/rest/api/2/myself') return { body: { key: 'U1' } };
-      if (url.pathname === '/rest/tempo-core/1/work-attribute') return { body: [{ id: 7, key: '_TypeofWork_', name: 'Type of Work' }] };
-      if (url.pathname === '/rest/tempo-core/1/work-attribute/7') return { body: { id: 7, values: [{ name: 'New Functionality', value: 'NF' }] } };
-      sent = JSON.parse(String(init.body));
-      return { body: {} };
-    });
+  it('avisa si JIRA no encuentra la tarea', async () => {
+    const { impl } = fakeFetch(() => ({ status: 404 }));
     const client = new JiraClient({ baseUrl: 'https://jira.empresa.com', token: 'pat' }, impl);
-    await client.logWork('ABC-1', '2026-11-16', 3600, { 'Type of Work': 'New Functionality' });
-    expect(sent).toMatchObject({ attributes: { _TypeofWork_: { value: 'NF', workAttributeId: 7 } } });
-  });
-});
-
-describe('atributo de Tempo con desplegable dinámico', () => {
-  it('lee los valores de la URL externa del atributo', async () => {
-    let sent: unknown;
-    const { impl, calls } = fakeFetch((url, init) => {
-      if (url.pathname === '/jira/rest/api/2/issue/ABC-1') return { body: { id: '10001' } };
-      if (url.pathname === '/jira/rest/api/2/myself') return { body: { key: 'U1' } };
-      if (url.pathname === '/jira/rest/tempo-core/1/work-attribute') return { body: [{ id: 1, key: '_TipodeTrabajo_', name: 'Type of Work', type: { value: 'DYNAMIC_DROPDOWN' }, externalUrl: '/jira/rest/scriptrunner/latest/custom/getTempoAttributeTypeOfWork' }] };
-      if (url.pathname === '/jira/rest/tempo-core/1/work-attribute/1') return { body: { id: 1, name: 'Type of Work' } };
-      if (url.pathname === '/jira/rest/scriptrunner/latest/custom/getTempoAttributeTypeOfWork') return { body: [{ name: 'New Functionality', value: 'NEW' }, { label: 'Support', value: 'SUP' }] };
-      sent = JSON.parse(String(init.body));
-      return { body: {} };
-    });
-    const client = new JiraClient({ baseUrl: 'https://jira.empresa.com/jira', token: 'pat' }, impl);
-    await client.logWork('ABC-1', '2026-11-16', 3600, { 'Type of Work': 'support' });
-    expect(calls.some((c) => c.url.pathname === '/jira/rest/scriptrunner/latest/custom/getTempoAttributeTypeOfWork')).toBe(true);
-    expect(sent).toMatchObject({ attributes: { _TipodeTrabajo_: { value: 'SUP', workAttributeId: 1 } } });
-  });
-});
-
-describe('Type of Work con la sesión del navegador como único camino', () => {
-  it('si Tempo no deja leer la lista, usa los valores conocidos (New Functionality = 3, Support = 6)', async () => {
-    let sent: unknown;
-    const { impl } = fakeFetch((url, init) => {
-      if (url.pathname.endsWith('/issue/ABC-1')) return { body: { id: '10001' } };
-      if (url.pathname.endsWith('/myself')) return { body: { key: 'U1' } };
-      if (url.pathname === '/jira/rest/tempo-core/1/work-attribute') return { body: [{ id: 1, key: '_TipodeTrabajo_', name: 'Type of Work', externalUrl: '/jira/rest/scriptrunner/latest/custom/x' }] };
-      if (url.pathname === '/jira/rest/scriptrunner/latest/custom/x') return { body: {} };
-      if (url.pathname.startsWith('/jira/rest/tempo-core/1/work-attribute/')) return { body: { id: 1 } };
-      sent = JSON.parse(String(init.body));
-      return { body: {} };
-    });
-    const client = new JiraClient({ baseUrl: 'https://jira.empresa.com/jira', token: 'pat' }, impl);
-    await client.logWork('ABC-1', '2026-11-16', 3600, { 'Type of Work': 'Support' });
-    expect(sent).toMatchObject({ attributes: { _TipodeTrabajo_: { value: '6' } } });
-    await client.logWork('ABC-1', '2026-11-16', 3600, { 'Type of Work': 'New Functionality' });
-    expect(sent).toMatchObject({ attributes: { _TipodeTrabajo_: { value: '3' } } });
-  });
-
-  it('entiende las listas {key, value: etiqueta} de ScriptRunner', async () => {
-    const { tempoOptions } = await import('./client.js');
-    expect(tempoOptions([{ key: '', value: 'Please, select an option' }, { key: '3', value: 'New Functionality' }]).find((o) => o.name === 'New Functionality')?.value).toBe('3');
-  });
-});
-
-describe('desplegable dinámico con URL absoluta y {author}', () => {
-  it('sustituye {author} por el usuario y lee la lista de esa URL', async () => {
-    let sent: unknown;
-    const asked: string[] = [];
-    const { impl } = fakeFetch((url, init) => {
-      if (url.pathname.endsWith('/issue/ABC-1')) return { body: { id: '10001' } };
-      if (url.pathname.endsWith('/myself')) return { body: { key: 'JIRAUSER9', name: 'jorge' } };
-      if (url.pathname === '/jira/rest/tempo-core/1/work-attribute') return { body: [{ id: 41, key: '_Pedido_', name: 'Order', externalUrl: 'https://jira.empresa.com/gpsweb/pedidosRecurso/{author}' }] };
-      if (url.pathname.startsWith('/gpsweb/')) {
-        asked.push(url.pathname);
-        return { body: { values: [{ key: '77', value: 'Services' }] } };
-      }
-      if (url.pathname.startsWith('/jira/rest/tempo-core/1/work-attribute/')) return { body: { id: 41 } };
-      sent = JSON.parse(String(init.body));
-      return { body: {} };
-    });
-    const client = new JiraClient({ baseUrl: 'https://jira.empresa.com/jira', token: 'pat' }, impl);
-    await client.logWork('ABC-1', '2026-11-16', 3600, { Order: 'Services' });
-    expect(asked).toEqual(['/gpsweb/pedidosRecurso/jorge']);
-    expect(sent).toMatchObject({ attributes: { _Pedido_: { value: '77', workAttributeId: 41 } } });
-  });
-});
-
-describe('Order sin poder leer el servicio de pedidos', () => {
-  it('usa los valores conocidos (Services = 2)', async () => {
-    let sent: unknown;
-    const { impl } = fakeFetch((url, init) => {
-      if (url.pathname.endsWith('/issue/ABC-1')) return { body: { id: '10001' } };
-      if (url.pathname.endsWith('/myself')) return { body: { key: 'K', name: 'jorge' } };
-      if (url.pathname === '/jira/rest/tempo-core/1/work-attribute') return { body: [{ id: 41, key: '_Pedido_', name: 'Order', externalUrl: 'https://jira.empresa.com/gpsweb/pedidosRecurso/{author}' }] };
-      if (url.pathname.startsWith('/gpsweb/')) return { body: {} };
-      if (url.pathname.startsWith('/jira/rest/tempo-core/1/work-attribute/')) return { body: { id: 41 } };
-      sent = JSON.parse(String(init.body));
-      return { body: {} };
-    });
-    const client = new JiraClient({ baseUrl: 'https://jira.empresa.com/jira', token: 'pat' }, impl);
-    await client.logWork('ABC-1', '2026-11-16', 3600, { Order: 'Services' });
-    expect(sent).toMatchObject({ attributes: { _Pedido_: { value: '2', workAttributeId: 41 } } });
-  });
-});
-
-describe('imputar varias líneas seguidas', () => {
-  it('pide el usuario y los atributos una sola vez y reintenta un 404 suelto', async () => {
-    const seen: string[] = [];
-    let issueMisses = 1;
-    const { impl } = fakeFetch((url) => {
-      seen.push(url.pathname);
-      if (url.pathname.endsWith('/issue/ABC-1') && issueMisses-- > 0) return { status: 404 };
-      if (url.pathname.includes('/issue/')) return { body: { id: '1' } };
-      if (url.pathname.endsWith('/myself')) return { body: { key: 'K', name: 'jorge' } };
-      if (url.pathname === '/jira/rest/tempo-core/1/work-attribute') return { body: [{ id: 1, key: '_T_', name: 'Type of Work' }] };
-      return { body: {} };
-    });
-    const client = new JiraClient({ baseUrl: 'https://jira.empresa.com/jira', token: 'pat' }, impl);
-    const attrs = { 'Type of Work': 'Support' };
-    await client.logWork('ABC-1', '2026-11-16', 3600, attrs);
-    await client.logWork('ABC-2', '2026-11-16', 3600, attrs);
-    expect(seen.filter((p) => p.endsWith('/myself'))).toHaveLength(1);
-    expect(seen.filter((p) => p === '/jira/rest/tempo-core/1/work-attribute')).toHaveLength(1);
-    expect(seen.filter((p) => p.endsWith('/issue/ABC-1'))).toHaveLength(2);
+    await expect(client.addWorklog('ABC-1', '2026-11-11T09:00:00.000+0100', 60)).rejects.toThrow(JiraError);
   });
 });
