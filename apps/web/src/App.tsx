@@ -74,6 +74,12 @@ export function App() {
 
   const sectionTitle = t(`sections.${section}`);
 
+  // Título de la pestaña del navegador: la sección actual o, dentro de una tarea, su clave de JIRA.
+  const taskKey = section === 'tareas' && /^[A-Za-z][A-Za-z0-9_]*-\d+$/.test(params[0] ?? '') ? params[0]!.toUpperCase() : null;
+  useEffect(() => {
+    document.title = `Assistant - ${taskKey ?? sectionTitle}`;
+  }, [taskKey, sectionTitle]);
+
   return (
     <div className="flex min-h-screen flex-wrap">
       <Sidebar current={section} serverOk={health.isError ? false : health.data ? true : undefined} onQuickCapture={() => setCaptureOpen(true)} onAsk={() => setAskOpen(true)} />

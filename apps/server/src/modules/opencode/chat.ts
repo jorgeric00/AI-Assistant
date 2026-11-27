@@ -9,6 +9,7 @@ import { LlmUnavailableError } from '../../integrations/opencode/connection.js';
 import { t } from '../../i18n/index.js';
 import type { DevSessionService } from '../tasks/session.js';
 import type { AiSettingsStore } from './ai-settings.js';
+import { saveAttachments, withAttachments } from './attachments.js';
 import type { OpencodeChat } from './chat-core.js';
 
 interface Stored {
@@ -92,7 +93,8 @@ export class TaskChatService {
       stored = { sessionId: session.id, model, agent };
     }
     this.save(key, { sessionId: stored.sessionId, model, agent });
-    await this.chat.prompt(stored.sessionId, folder, input.text, model, agent);
+    const text = withAttachments(input.text, await saveAttachments(folder, input.files));
+    await this.chat.prompt(stored.sessionId, folder, text, model, agent);
     // opencode tarda un instante en marcar la sesión como ocupada: recién enviado, lo está.
     return { ...(await this.get(key)), busy: true };
   }

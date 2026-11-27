@@ -197,7 +197,22 @@
       "helpBuild": "Build can change files and run commands.",
       "helpPlan": "Plan only reads and proposes; it changes nothing.",
       "unavailable": "Cannot talk to opencode: {{error}}",
-      "emptyTitleDev": "You haven't started this task with opencode yet."
+      "emptyTitleDev": "You haven't started this task with opencode yet.",
+      "attach": "Attach",
+      "attachTitle": "Attach files (or drop them here)",
+      "removeFile": "Remove {{name}}",
+      "dropHere": "Drop files to attach them",
+      "tooMany": "At most {{count}} files per message.",
+      "tooBig": "{{name}} is larger than {{mb}} MB.",
+      "readError": "Could not read {{name}}.",
+      "search": "Search",
+      "searchTitle": "Search the conversation",
+      "searchLabel": "Text to search for",
+      "searchNext": "Next match",
+      "searchPrev": "Previous match",
+      "searchClose": "Close search",
+      "searchCount": "{{current}} of {{total}}",
+      "searchNone": "No results"
     }
   },
   "updateJira": {
