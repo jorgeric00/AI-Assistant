@@ -197,7 +197,14 @@
       "helpBuild": "Build puede modificar ficheros y ejecutar comandos.",
       "helpPlan": "Plan solo lee y propone, no modifica nada.",
       "unavailable": "No se puede hablar con opencode: {{error}}",
-      "emptyTitleDev": "Aún no has empezado esta tarea con opencode."
+      "emptyTitleDev": "Aún no has empezado esta tarea con opencode.",
+      "attach": "Adjuntar",
+      "attachTitle": "Adjuntar archivos (o arrástralos aquí)",
+      "removeFile": "Quitar {{name}}",
+      "dropHere": "Suelta los archivos para adjuntarlos",
+      "tooMany": "Máximo {{count}} archivos por mensaje.",
+      "tooBig": "{{name}} pesa más de {{mb}} MB.",
+      "readError": "No se pudo leer {{name}}."
     }
   },
   "updateJira": {

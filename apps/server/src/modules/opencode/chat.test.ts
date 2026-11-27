@@ -134,6 +134,28 @@ describe('sesión con opencode en la app', () => {
     expect(ctx.oc.calls.filter((c) => c.path.endsWith('/prompt_async'))[2]!.body.model).toBeUndefined();
   });
 
+  it('los archivos adjuntos se guardan en la carpeta de la tarea y el mensaje lleva sus rutas', async () => {
+    ctx = await setup();
+    const data = (text: string) => Buffer.from(text).toString('base64');
+    const sent = await ctx.call<TaskChat>('POST', '/api/tasks/ABC-1/chat/messages', {
+      text: 'Mira esto',
+      files: [{ name: '../../etc/informe final.txt', data: data('hola') }, { name: 'img.png', data: data('png') }],
+    });
+    expect(sent.status).toBe(200);
+    const prompt = ctx.oc.calls.find((c) => c.path.endsWith('/prompt_async'))!;
+    const text = (prompt.body as { parts: { text: string }[] }).parts[0]!.text;
+    const paths = [...text.matchAll(/^- (adjuntos\/\S.*)$/gm)].map((m) => m[1]!);
+    expect(text.startsWith('Mira esto\n\n')).toBe(true);
+    expect(paths).toHaveLength(2);
+    expect(paths[0]).toMatch(/^adjuntos\/\d{14}-1-informe final\.txt$/);
+    expect(readFileSync(join(ctx.folder, paths[0]!), 'utf8')).toBe('hola');
+    expect(readFileSync(join(ctx.folder, paths[1]!), 'utf8')).toBe('png');
+
+    // Más de cinco archivos no se aceptan.
+    const many = Array.from({ length: 6 }, (_, i) => ({ name: `f${i}`, data: data('x') }));
+    expect((await ctx.call('POST', '/api/tasks/ABC-1/chat/messages', { text: 'x', files: many })).status).toBe(400);
+  });
+
   it('enseña la conversación, la actividad, el contexto usado y los permisos de la sesión en marcha', async () => {
     ctx = await setup();
     await ctx.call('GET', '/api/ai/options'); // carga los límites de contexto

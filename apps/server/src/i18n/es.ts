@@ -25,6 +25,7 @@ export const es = {
   'chat.aborted': 'Parado.',
   'chat.general.untitled': 'Conversación nueva',
   'chat.general.notFound': 'Esa conversación ya no existe.',
+  'chat.attachments.intro': 'Archivos adjuntos (están en la carpeta de trabajo; léelos con tu herramienta de lectura):',
   'chat.general.instructions':
     '# Chat general de AI-Assistant\n\nEsta carpeta es solo el sitio desde el que arranca el chat general de la app: no guardes nada aquí.\n\n- Si el usuario te pide crear o guardar un fichero y no dice dónde, pregúntale en qué carpeta antes de escribirlo. No hay una carpeta por defecto.\n- Cuando hayas guardado un fichero, di su ruta completa (absoluta).\n- Contesta en castellano.\n',
   'ai.ask.noMatches': 'No he encontrado nada en la app relacionado con la pregunta.',

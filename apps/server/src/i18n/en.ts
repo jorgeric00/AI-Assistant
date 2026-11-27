@@ -26,6 +26,7 @@ export const en: Messages = {
   'chat.aborted': 'Stopped.',
   'chat.general.untitled': 'New conversation',
   'chat.general.notFound': 'That conversation no longer exists.',
+  'chat.attachments.intro': 'Attached files (they are in the working folder; read them with your read tool):',
   'chat.general.instructions':
     '# AI-Assistant general chat\n\nThis folder is only where the app\'s general chat starts: do not save anything here.\n\n- If the user asks you to create or save a file and does not say where, ask which folder before writing it. There is no default folder.\n- Once you have saved a file, give its full (absolute) path.\n- Answer in English.\n',
   'ai.ask.noMatches': "I didn't find anything in the app related to the question.",

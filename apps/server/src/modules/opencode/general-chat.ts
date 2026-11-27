@@ -10,6 +10,7 @@ import { settings } from '../../db/schema.js';
 import { LlmUnavailableError } from '../../integrations/opencode/connection.js';
 import { t } from '../../i18n/index.js';
 import type { AiSettingsStore } from './ai-settings.js';
+import { saveAttachments, withAttachments } from './attachments.js';
 import { clip, type OpencodeChat } from './chat-core.js';
 
 const STORE_KEY = 'chat.general';
@@ -143,7 +144,8 @@ export class GeneralChatService {
       firstText: clip(input.text.replace(/\s+/g, ' ').trim(), MAX_TITLE),
     };
     this.upsert(stored);
-    await this.chat.prompt(stored.sessionId, this.folder, input.text, stored.model, stored.agent);
+    const text = withAttachments(input.text, await saveAttachments(this.folder, input.files));
+    await this.chat.prompt(stored.sessionId, this.folder, text, stored.model, stored.agent);
     return { ...((await this.get(stored.sessionId)) ?? this.empty({ id: stored.sessionId })), busy: true };
   }
 
@@ -157,7 +159,8 @@ export class GeneralChatService {
     const updated = { ...stored, model: input.model !== undefined ? input.model : stored.model, agent: input.agent ?? stored.agent };
     this.upsert(updated);
     await this.prepareFolder();
-    await this.chat.prompt(id, this.folder, input.text, updated.model, updated.agent);
+    const text = withAttachments(input.text, await saveAttachments(this.folder, input.files));
+    await this.chat.prompt(id, this.folder, text, updated.model, updated.agent);
     const chat = await this.get(id);
     return chat && { ...chat, busy: true };
   }

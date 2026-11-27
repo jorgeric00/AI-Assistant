@@ -987,8 +987,19 @@ export interface GeneralChat extends ChatState {
 
 export const ConversationId = z.string().regex(/^[A-Za-z0-9_-]{1,100}$/);
 
+/** Archivo adjunto a un mensaje: nombre y contenido en base64. */
+export const MAX_CHAT_FILES = 5;
+export const MAX_CHAT_FILE_BYTES = 10 * 1024 * 1024;
+export const ChatFile = z.object({
+  name: z.string().trim().min(1).max(255),
+  // base64: 4 caracteres por cada 3 bytes
+  data: z.string().max(Math.ceil((MAX_CHAT_FILE_BYTES * 4) / 3) + 4),
+});
+export type ChatFile = z.infer<typeof ChatFile>;
+
 export const ChatSendInput = z.object({
   text: z.string().trim().min(1, 'Escribe un mensaje').max(20_000),
+  files: z.array(ChatFile).max(MAX_CHAT_FILES).optional(),
   model: ModelRef.nullable().optional(),
   agent: z.string().trim().min(1).max(60).optional(),
 });
