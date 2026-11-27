@@ -100,3 +100,13 @@
     @apply mr-2 accent-accent;
   }
 }
+
+/* Buscador del chat (CSS Custom Highlight API): todas las coincidencias y la actual. */
+::highlight(chat-search) {
+  background-color: rgb(242 184 75 / 0.35);
+  color: inherit;
+}
+::highlight(chat-search-current) {
+  background-color: #f2b84b;
+  color: #1a1408;
+}

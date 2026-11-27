@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { MAX_CHAT_FILES, MAX_CHAT_FILE_BYTES, type AiOptions, type ChatFile, type ChatMessage, type ChatPart, type ChatPermission, type ChatPermissionReply, type ChatQuestionReplyInput, type ChatSendInput, type ChatState } from '@dev-assistant/shared';
-import { Circle, Lock, Paperclip, Send, Square, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Circle, Lock, Paperclip, Search, Send, Square, X } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Markdown } from './Markdown';
@@ -51,6 +51,25 @@ function toBase64(file: File): Promise<string> {
     reader.onerror = () => reject(reader.error ?? new Error(file.name));
     reader.readAsDataURL(file);
   });
+}
+
+/** Rangos del texto visible de `root` que contienen `query` (sin distinguir mayúsculas). */
+function findRanges(root: HTMLElement, query: string): Range[] {
+  const needle = query.toLocaleLowerCase();
+  const ranges: Range[] = [];
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const text = node.nodeValue?.toLocaleLowerCase() ?? '';
+    // El texto de un cuadro cerrado (salida de herramientas) no se ve: no cuenta.
+    if (!text.includes(needle) || !node.parentElement?.checkVisibility?.()) continue;
+    for (let at = text.indexOf(needle); at !== -1; at = text.indexOf(needle, at + needle.length)) {
+      const range = document.createRange();
+      range.setStart(node, at);
+      range.setEnd(node, at + needle.length);
+      ranges.push(range);
+    }
+  }
+  return ranges;
 }
 
 /** Conversación con opencode: mensajes, actividad, permisos y la caja para escribir con modo y modelo. */
@@ -115,6 +134,43 @@ export function ChatPanel<S extends ChatState>({ titleId, title, actions, data, 
     if (pinned.current && log.current) log.current.scrollTop = log.current.scrollHeight;
   }, [tail]);
 
+  // Buscador de texto de la conversación: resalta con la API de resaltado del navegador, sin tocar lo que se pinta.
+  const [searching, setSearching] = useState(false);
+  const [query, setQuery] = useState('');
+  const [current, setCurrent] = useState(0);
+  const [total, setTotal] = useState(0);
+  const searchInput = useRef<HTMLInputElement>(null);
+  const supportsHighlight = typeof CSS !== 'undefined' && 'highlights' in CSS;
+  useEffect(() => {
+    if (!supportsHighlight) return;
+    const clear = () => {
+      CSS.highlights.delete('chat-search');
+      CSS.highlights.delete('chat-search-current');
+    };
+    const root = log.current;
+    if (!searching || !query || !root) {
+      clear();
+      setTotal(0);
+      return clear;
+    }
+    const ranges = findRanges(root, query);
+    setTotal(ranges.length);
+    const index = ranges.length ? Math.min(current, ranges.length - 1) : -1;
+    CSS.highlights.set('chat-search', new Highlight(...ranges));
+    if (index >= 0) {
+      CSS.highlights.set('chat-search-current', new Highlight(ranges[index]!));
+      pinned.current = false;
+      ranges[index]!.startContainer.parentElement?.scrollIntoView({ block: 'center' });
+    } else CSS.highlights.delete('chat-search-current');
+    return clear;
+  }, [searching, query, current, tail, supportsHighlight]);
+  const step = (delta: number) => total && setCurrent((c) => (c + delta + total) % total);
+  const closeSearch = () => {
+    setSearching(false);
+    setQuery('');
+    setCurrent(0);
+  };
+
   const submit = (message: string) => {
     const clean = message.trim();
     if (!clean || send.isPending || !data?.available) return;
@@ -160,8 +216,65 @@ export function ChatPanel<S extends ChatState>({ titleId, title, actions, data, 
             )}
           </span>
         </div>
-        {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
+        <div className="flex flex-wrap items-center gap-2">
+          {supportsHighlight && (
+            <button
+              type="button"
+              aria-expanded={searching}
+              title={t('session.chat.searchTitle')}
+              className={smallButton}
+              onClick={() => {
+                if (searching) closeSearch();
+                else {
+                  setSearching(true);
+                  setTimeout(() => searchInput.current?.focus());
+                }
+              }}
+            >
+              <Search size={14} strokeWidth={1.5} aria-hidden />
+              {t('session.chat.search')}
+            </button>
+          )}
+          {actions}
+        </div>
       </div>
+      {searching && (
+        <div role="search" className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-2">
+          <input
+            ref={searchInput}
+            type="search"
+            value={query}
+            aria-label={t('session.chat.searchLabel')}
+            placeholder={t('session.chat.searchLabel')}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setCurrent(0);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                step(e.shiftKey ? -1 : 1);
+              } else if (e.key === 'Escape') {
+                e.stopPropagation();
+                closeSearch();
+              }
+            }}
+            className="h-8 min-w-0 flex-[1_1_220px] rounded-md border border-line-strong bg-surface-raised px-2.5 text-ink placeholder:text-ink-faint focus:border-accent focus:outline-none"
+          />
+          <span role="status" className="min-w-[72px] text-small text-ink-muted">
+            {query && (total ? t('session.chat.searchCount', { current: Math.min(current, total - 1) + 1, total }) : t('session.chat.searchNone'))}
+          </span>
+          <button type="button" aria-label={t('session.chat.searchPrev')} disabled={!total} onClick={() => step(-1)} className={`${smallButton} px-2`}>
+            <ChevronUp size={14} aria-hidden />
+          </button>
+          <button type="button" aria-label={t('session.chat.searchNext')} disabled={!total} onClick={() => step(1)} className={`${smallButton} px-2`}>
+            <ChevronDown size={14} aria-hidden />
+          </button>
+          <button type="button" aria-label={t('session.chat.searchClose')} onClick={closeSearch} className={`${smallButton} px-2`}>
+            <X size={14} aria-hidden />
+          </button>
+        </div>
+      )}
 
       <div
         ref={log}

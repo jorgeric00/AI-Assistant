@@ -204,7 +204,15 @@
       "dropHere": "Suelta los archivos para adjuntarlos",
       "tooMany": "Máximo {{count}} archivos por mensaje.",
       "tooBig": "{{name}} pesa más de {{mb}} MB.",
-      "readError": "No se pudo leer {{name}}."
+      "readError": "No se pudo leer {{name}}.",
+      "search": "Buscar",
+      "searchTitle": "Buscar en la conversación",
+      "searchLabel": "Texto a buscar",
+      "searchNext": "Siguiente coincidencia",
+      "searchPrev": "Coincidencia anterior",
+      "searchClose": "Cerrar búsqueda",
+      "searchCount": "{{current}} de {{total}}",
+      "searchNone": "Sin resultados"
     }
   },
   "updateJira": {
